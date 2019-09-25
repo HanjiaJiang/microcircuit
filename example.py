@@ -41,19 +41,41 @@ from stimulus_params import stim_dict
 
 import os
 from shutil import copy
+import multiprocessing as mp
+from scan_params import *
 
 # HJ
-run_simulation = True
+run_sim = True
 on_server = False
+
+# for parameter scan
+if on_server:
+    cpu_ratio = 1
+else:
+    cpu_ratio = 0.5
+sim_dict['local_num_threads'] = int(mp.cpu_count()*cpu_ratio)
+sim_dict['t_sim'] = 2000.0
+net_dict['K_ext'] = np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan,
+                              2000, PV_ext_scan, SOM_ext_scan,
+                              2000, PV_ext_scan, SOM_ext_scan,
+                              2000, PV_ext_scan, SOM_ext_scan])
+net_dict['g'] = g_scan
+net_dict['bg_rate'] = bg_scan
+stim_dict['thalamic_input'] = False
+stim_dict['th_start'] = np.arange(1000.0, sim_dict['t_sim'], stim_duration*2)
+stim_dict['th_duration'] = stim_duration
+stim_dict['th_rate'] = stim_rate
+stim_dict['orientation'] = stim_orient
 
 # Initialize the network and pass parameters to it.
 tic = time.time()
 net = network.Network(sim_dict, net_dict, stim_dict)
 toc = time.time() - tic
 print("Time to initialize the network: %.2f s" % toc)
+
 # Connect all nodes.
 tic = time.time()
-if run_simulation:
+if run_sim:
     net.setup()
     toc = time.time() - tic
     print("Time to create the connections: %.2f s" % toc)
@@ -62,15 +84,11 @@ if run_simulation:
     net.simulate()
     toc = time.time() - tic
     print("Time to simulate: %.2f s" % toc)
-# Plot a raster plot of the spikes of the simulated neurons and the average
-# spike rate of all populations. For visual purposes only spikes 100 ms
-# before and 100 ms after the thalamic stimulus time are plotted here by
-# default. The computation of spike rates discards the first 500 ms of
-# the simulation to exclude initialization artifacts.
+
 raster_plot_time_idx = np.array(
      [stim_dict['th_start'][0]-100.0, stim_dict['th_start'][0]+100.0]
     )
-fire_rate_time_idx = np.array([1000.0, stim_dict['th_start'][0]])
+fire_rate_time_idx = np.array([1000.0, sim_dict['t_sim']])
 net.evaluate(raster_plot_time_idx, fire_rate_time_idx)
 
 if not on_server:

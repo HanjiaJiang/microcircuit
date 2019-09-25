@@ -1,4 +1,3 @@
-import numpy as np
 bg_scan = 4.0
 g_scan = -4
 PV_ext_scan = 2000

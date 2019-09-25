@@ -29,7 +29,7 @@ Hendrik Rothe, Hannah Bos, Sacha van Albada; May 2016
 '''
 
 import os
-import multiprocessing as mp # HJ
+# import multiprocessing as mp # HJ
 sim_dict = {
     # Simulation time (in ms).
     't_sim': 12000.0,
@@ -40,7 +40,7 @@ sim_dict = {
     # Masterseed for NEST and NumPy.
     'master_seed': 55,
     # Number of threads per MPI process.
-    'local_num_threads': int(mp.cpu_count()/2),
+    'local_num_threads': 1,
     # Recording interval of the membrane potential (in ms).
     'rec_V_int': 1.0,
     # If True, data will be overwritten,

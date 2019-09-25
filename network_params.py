@@ -31,7 +31,7 @@ Hendrik Rothe, Hannah Bos, Sacha van Albada; May 2016
 import numpy as np
 
 # HJ
-from scan_params import *
+# from scan_params import *
 
 def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     """ Creates matrix containing the delay of all connections.
@@ -56,7 +56,7 @@ def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     mean_delays = np.zeros((dim, dim))
     #HJ
     mean_delays[:] = mean_delay_inh
-    mean_delays[:, [0,4,7,10]] = mean_delay_exc
+    mean_delays[:, [0, 4, 7, 10]] = mean_delay_exc
     #mean_delays[:, 0:dim:2] = mean_delay_exc
     #mean_delays[:, 1:dim:2] = mean_delay_inh
     #HJ#
@@ -86,7 +86,7 @@ def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
     std_delays = np.zeros((dim, dim))
     #HJ
     std_delays[:] = std_delay_inh
-    std_delays[:, [0,4,7,10]] = std_delay_exc
+    std_delays[:, [0, 4, 7, 10]] = std_delay_exc
     #std_delays[:, 0:dim:2] = std_delay_exc
     #std_delays[:, 1:dim:2] = std_delay_inh
     #HJ#
@@ -162,7 +162,7 @@ net_dict = {
     # 'voltmeter' to the list.
     'rec_dev': ['spike_detector'],
     # Names of the simulated populations.
-    'populations': ['L23_PC', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_PC', 'L4_PV', 'L4_SOM', 'L5_PC', 'L5_PV', 'L5_SOM', 'L6_PC', 'L6_PV', 'L6_SOM'],
+    'populations': ['L23_E', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_E', 'L4_PV', 'L4_SOM', 'L5_E', 'L5_PV', 'L5_SOM', 'L6_E', 'L6_PV', 'L6_SOM'],
     # Number of neurons in the different populations. The order of the
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
@@ -196,25 +196,6 @@ net_dict = {
                [0.    , 0.0018, 0.0028, 0.0068, 0.0297, 0.0125, 0.0084, 0.0381, 0.017 , 0.0128, 0.021 , 0.3249, 0.3014],
                [0.0025, 0.0001, 0.0003, 0.002 , 0.0045, 0.0016, 0.0004, 0.0149, 0.    , 0.0031, 0.1865, 0.3535, 0.2968],
                [0.0021, 0.    , 0.0002, 0.2618, 0.0004, 0.0014, 0.0003, 0.0141, 0.    , 0.0019, 0.1062, 0.3321, 0.0379]]),
-    # 190705
-    #     np.array([
-    #        [0.0872, 0.3173, 0.4612, 0.0448, 0.1056, 0.4011, 0.0374, 0.0234, 0.09  , 0.1864, 0.    , 0.    , 0.    ],
-    #        [0.3763, 0.3453, 0.2142, 0.0683, 0.0802, 0.012 , 0.0257, 0.0257, 0.1937, 0.2237, 0.0001, 0.0001, 0.0062],
-    #        [0.2288, 0.2857, 0.1242, 0.2618, 0.0033, 0.0097, 0.0363, 0.0003, 0.0222, 0.018 , 0.    , 0.    , 0.    ],
-    #        [0.0224, 0.0516, 0.0567, 0.0274, 0.0021, 0.0086, 0.0142, 0.0002, 0.0008, 0.0051, 0.    , 0.0001, 0.0048],
-    #
-    #        [0.0128, 0.0668, 0.049 , 0.0584, 0.1764, 0.4577, 0.2761, 0.0059, 0.0232, 0.0427, 0.    , 0.0017, 0.0212],
-    #        [0.0317, 0.0121, 0.0198, 0.0428, 0.0937, 0.3487, 0.4068, 0.0072, 0.0231, 0.0369, 0.0009, 0.002 , 0.0157],
-    #        [0.033 , 0.0144, 0.0198, 0.2752, 0.2906, 0.4432, 0.0386, 0.0087, 0.0257, 0.0384, 0.001 , 0.0018, 0.0198],
-    #
-    #        [0.0841, 0.0528, 0.072 , 0.0539, 0.0844, 0.0546, 0.0621, 0.0957, 0.1871, 0.1575, 0.0094, 0.0139, 0.0418],
-    #        [0.0705, 0.1211, 0.0444, 0.0165, 0.0315, 0.0225, 0.0183, 0.0846, 0.3574, 0.2594, 0.0029, 0.0102, 0.0212],
-    #        [0.0998, 0.0072, 0.0089, 0.2752, 0.0343, 0.0225, 0.0209, 0.0587, 0.1182, 0.0427, 0.0038, 0.0124, 0.0262],
-    #
-    #        [0.    , 0.0018, 0.0028, 0.0068, 0.0297, 0.0125, 0.0084, 0.0381, 0.017 , 0.0128, 0.021 , 0.3249, 0.3014],
-    #        [0.0025, 0.0001, 0.0003, 0.002 , 0.0045, 0.0016, 0.0004, 0.0149, 0.    , 0.0031, 0.1865, 0.3535, 0.2968],
-    #        [0.0021, 0.    , 0.0002, 0.2752, 0.0004, 0.0014, 0.0003, 0.0141, 0.    , 0.0019, 0.1062, 0.3321, 0.0379]
-    #     ]),
         # np.array(
         #     [[0.1009, 0.1689, 0.0437, 0.0818, 0.0323, 0.,     0.0076, 0.],
         #      [0.1346, 0.1371, 0.0316, 0.0515, 0.0755, 0.,     0.0042, 0.],
@@ -227,8 +208,8 @@ net_dict = {
         #     ),
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
-    # 'K_ext': np.array([1600, 1500, 1500, 1500, 2200, 1850, 1850, 2300, 1850, 1850, 1600, 1500, 1500]),  # test
-    'K_ext': np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan]),    # layer-independent
+    'K_ext': np.array([1600, 1500, 1500, 1500, 2100, 1900, 1900, 2000, 1900, 1900, 2900, 2100, 2100]),  # test
+    # 'K_ext': np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan]),    # layer-independent
     # Factor to scale the indegrees.
     'K_scaling': 1.0,
     # Factor to scale the number of neurons.
@@ -238,9 +219,9 @@ net_dict = {
     # Relative standard deviation of the postsynaptic potential.
     'PSP_sd': 1.0,
     # Relative inhibitory synaptic strength (in relative units).
-    'g': g_scan,
+    'g': -4,
     # Rate of the Poissonian spike generator (in Hz).
-    'bg_rate': bg_scan, #8.,
+    'bg_rate': 4.0,
     # Turn Poisson input on or off (True or False).
     'poisson_input': True,
     # Delay of the Poisson generator (in ms).
@@ -264,7 +245,7 @@ net_dict = {
         # Threshold potential of the neurons (in mV).
         'V_th': {'default': -40.0, 'PC': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, #-40.0,  # -50.0
         # Membrane potential after a spike (in mV).
-        'V_reset': -67.0,
+        'V_reset': -67.0, #-65.0,
         # Membrane capacitance (in pF).
         'C_m': {'default': 200.0, 'PC': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, #200.0, #250.0,
         # Membrane time constant (in ms).
@@ -274,7 +255,7 @@ net_dict = {
         # Time constant of postsynaptic inhibitory currents (in ms).
         'tau_syn_in': 4.6, #2.0, # 0.5,
         # Time constant of external postsynaptic excitatory current (in ms).
-        'tau_syn_E': 1.74,
+        'tau_syn_E': 1.74,  # 0.5,
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0}
     }

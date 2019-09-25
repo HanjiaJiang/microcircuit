@@ -33,7 +33,7 @@ from network_params import net_dict
 
 # HJ
 from sim_params import sim_dict
-from scan_params import *
+# from scan_params import *
 
 stim_dict = {
     # Turn thalamic input on or off (True or False).
@@ -47,12 +47,12 @@ stim_dict = {
     # Standard deviation of the postsynaptic potential (in relative units).
     'PSP_sd': 0.27, #0.1,   # Bruno, 2006, Cortex Is Driven...
     # Start of the thalamic input (in ms).
-    # 'th_start': np.array([2000.0]),
-    'th_start': np.arange(2000.0, sim_dict['t_sim'], stim_duration*2),
+    'th_start': np.array([sim_dict['t_sim'] - 100.0]),
+    # 'th_start': np.arange(2000.0, sim_dict['t_sim'], stim_duration*2),
     # Duration of the thalamic input (in ms).
-    'th_duration': stim_duration, #10.0,
+    'th_duration': 10.0,
     # Rate of the thalamic input (in Hz).
-    'th_rate': stim_rate, #120.0,
+    'th_rate': 120.0,
     # Start of the DC generator (in ms).
     'dc_start': 0.0,
     # Duration of the DC generator (in ms).
@@ -71,7 +71,5 @@ stim_dict = {
     # Amplitude of the DC generator (in pA).
     'dc_amp': np.ones(len(net_dict['populations'])) * 0.3,
     # stimulus orientation 190614
-    'orientation': stim_orient, #-np.pi/2.0,  # from -pi/2 to pi/2
-    # repeat 190712
-    'repeat': 20
+    'orientation': 0.0,  # from -pi/2 to pi/2
     }
