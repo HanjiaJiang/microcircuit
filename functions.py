@@ -8,7 +8,6 @@ Fmax = False
 # short-term plasticity 190605
 STP = True
 PV_depress = True
-SOM_facilitate = som_facilitate
 
 # relative strengths 190629
 adjust_inh = True
@@ -57,7 +56,7 @@ if STP:
                         'delay': delay_dict
                     }
             elif 'SOM' in target_name:
-                if SOM_facilitate is True:
+                if som_facilitate is True:
                     tau_fac = 200.0
                     syn_dict = {
                         'model': 'tsodyks_synapse',

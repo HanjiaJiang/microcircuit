@@ -47,12 +47,18 @@ from scan_params import *
 # HJ
 run_sim = True
 on_server = False
+conn_probs_from_file = True
+copy_file = True
+cwd = os.getcwd()
 
 # for parameter scan
 if on_server:
     cpu_ratio = 1
 else:
     cpu_ratio = 0.5
+if conn_probs_from_file is True \
+        and os.path.isfile(cwd+'/conn_probs.npy') is True:
+    net_dict['conn_probs'] = np.load(cwd+'/conn_probs.npy')
 sim_dict['local_num_threads'] = int(mp.cpu_count()*cpu_ratio)
 sim_dict['t_sim'] = 2000.0
 net_dict['K_ext'] = np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan,
@@ -91,7 +97,7 @@ raster_plot_time_idx = np.array(
 fire_rate_time_idx = np.array([1000.0, sim_dict['t_sim']])
 net.evaluate(raster_plot_time_idx, fire_rate_time_idx)
 
-if not on_server:
+if copy_file is True:
     file_source = os.listdir(os.getcwd())
     file_dest = sim_dict['data_path']
     for file in file_source:

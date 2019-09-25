@@ -162,7 +162,7 @@ net_dict = {
     # 'voltmeter' to the list.
     'rec_dev': ['spike_detector'],
     # Names of the simulated populations.
-    'populations': ['L23_E', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_E', 'L4_PV', 'L4_SOM', 'L5_E', 'L5_PV', 'L5_SOM', 'L6_E', 'L6_PV', 'L6_SOM'],
+    'populations': ['L23_PC', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_PC', 'L4_PV', 'L4_SOM', 'L5_PC', 'L5_PV', 'L5_SOM', 'L6_PC', 'L6_PV', 'L6_SOM'],
     # Number of neurons in the different populations. The order of the
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
