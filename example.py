@@ -47,7 +47,7 @@ from scan_params import *
 # HJ
 run_sim = True
 on_server = False
-conn_probs_from_file = True
+conn_probs_from_file = False
 copy_file = True
 cwd = os.getcwd()
 
@@ -61,14 +61,15 @@ if conn_probs_from_file is True \
     net_dict['conn_probs'] = np.load(cwd+'/conn_probs.npy')
 sim_dict['local_num_threads'] = int(mp.cpu_count()*cpu_ratio)
 sim_dict['t_sim'] = 2000.0
-net_dict['K_ext'] = np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan,
-                              2000, PV_ext_scan, SOM_ext_scan,
-                              2000, PV_ext_scan, SOM_ext_scan,
-                              2000, PV_ext_scan, SOM_ext_scan])
+
+net_dict['K_ext'] = np.array([3000, 2600, 1200, 500,
+                              2700, 2400, 2800,
+                              1900, 2600, 1300,
+                              2400, 2400, 2100])
 net_dict['g'] = g_scan
 net_dict['bg_rate'] = bg_scan
-stim_dict['thalamic_input'] = False
-stim_dict['th_start'] = np.arange(1000.0, sim_dict['t_sim'], stim_duration*2)
+stim_dict['thalamic_input'] = True
+stim_dict['th_start'] = np.arange(1000.0, sim_dict['t_sim'], 1000.0)
 stim_dict['th_duration'] = stim_duration
 stim_dict['th_rate'] = stim_rate
 stim_dict['orientation'] = stim_orient
@@ -94,7 +95,7 @@ if run_sim:
 raster_plot_time_idx = np.array(
      [stim_dict['th_start'][0]-100.0, stim_dict['th_start'][0]+100.0]
     )
-fire_rate_time_idx = np.array([1000.0, sim_dict['t_sim']])
+fire_rate_time_idx = np.array([500.0, 1000.0])
 net.evaluate(raster_plot_time_idx, fire_rate_time_idx)
 
 if copy_file is True:

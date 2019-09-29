@@ -20,8 +20,8 @@ selective_inh_source = ['PV', 'SOM']
 selective_inh_target = ['PV', 'SOM']
 k_th = 0.8
 k_exc_to_exc = 0.8
-k_exc_to_inh = 0.4
-k_inh_to_exc = 0.0
+k_exc_to_inh = 0.8 #0.4
+k_inh_to_exc = 0.2 #0.0
 
 # cell-type-specific parameters 190704
 ctsp = True
@@ -37,10 +37,10 @@ if STP:
             if 'PC' in target_name:
                 syn_dict = {
                     'model': 'tsodyks_synapse',
-                    'U': 0.75,
+                    'U': 1.0, #0.75,
                     'tau_fac': 0.01,
                     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-                    'tau_rec': 800.0,
+                    'tau_rec': 50.0, #800.0,
                     'weight': weight_dict,
                     'delay': delay_dict
                 }
@@ -48,10 +48,10 @@ if STP:
                 if PV_depress is True:
                     syn_dict = {
                         'model': 'tsodyks_synapse',
-                        'U': 0.75,
+                        'U': 1.0, #0.75,
                         'tau_fac': 0.01,
                         'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-                        'tau_rec': 800.0,
+                        'tau_rec': 50.0, #800.0,
                         'weight': weight_dict,
                         'delay': delay_dict
                     }
@@ -60,7 +60,7 @@ if STP:
                     tau_fac = 200.0
                     syn_dict = {
                         'model': 'tsodyks_synapse',
-                        'U': 0.5,
+                        'U': 0.05,
                         'tau_fac': tau_fac,
                         'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
                         'tau_rec': 0.01,
@@ -68,15 +68,16 @@ if STP:
                         'delay': delay_dict
                     }
         elif 'PV' in source_name:
-            syn_dict = {
-                'model': 'tsodyks_synapse',
-                'U': 0.9,
-                'tau_fac': 0.01,
-                'tau_psc': net_dict['neuron_params']['tau_syn_in'],
-                'tau_rec': 800.0,
-                'weight': weight_dict,
-                'delay': delay_dict
-            }
+            if PV_depress is True:
+                syn_dict = {
+                    'model': 'tsodyks_synapse',
+                    'U': 1.0, #0.9,
+                    'tau_fac': 0.01,
+                    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+                    'tau_rec': 50.0, #800.0,
+                    'weight': weight_dict,
+                    'delay': delay_dict
+                }
         return syn_dict
 
 
