@@ -1,33 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# helpers.py
-#
-# This file is part of NEST.
-#
-# Copyright (C) 2004 The NEST Initiative
-#
-# NEST is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# NEST is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-
-'''
-pynest microcircuit helpers
----------------------------
-
-Helper functions for the simulation and evaluation of the microcircuit.
-
-Hendrik Rothe, Hannah Bos, Sacha van Albada; May 2016
-'''
-
 import numpy as np
 import os
 import sys
@@ -36,14 +6,13 @@ if 'DISPLAY' not in os.environ:
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
-# HJ
 from conn import conn_barrel_integrate
 from scan_params import *
 
 # setting
-use_connectivity_special = False
-para_str = 'bg={0} g={1} PV_ext={2} SOM_ext={3} VIP_ext={4}'.format(bg_scan, g_scan, PV_ext_scan, SOM_ext_scan, VIP_ext_scan)
-box_xlim = 41
+# use_connectivity_special = False
+# para_str = 'bg={0} g={1} PV_ext={2} SOM_ext={3} VIP_ext={4}'.format(bg_scan, g_scan, PV_ext_scan, SOM_ext_scan, VIP_ext_scan)
+# box_xlim = 41
 
 def compute_DC(net_dict, w_ext):
     """ Computes DC input if no Poisson input is provided to the microcircuit.
@@ -135,8 +104,8 @@ def get_total_number_of_synapses(net_dict):
     prod = np.outer(N_full, N_full)
 
     # HJ
-    if use_connectivity_special == True:
-        conn_probs = conn_barrel_integrate()
+    # if use_connectivity_special == True:
+    #     conn_probs = conn_barrel_integrate()
 
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
     N_full_matrix = np.column_stack(
@@ -254,285 +223,285 @@ def adj_w_ext_to_K(K_full, K_scaling, w, w_from_PSP, DC, net_dict, stim_dict):
     return w_new, w_ext_new, I_ext
 
 
-def read_name(path, name):
-    """ Reads names and ids of spike detector.
-
-    The names of the spike detectors are gathered and the lowest and
-    highest id of each spike detector is computed. If the simulation was
-    run on several threads or mpi-processes, one name per spike detector
-    per mpi-process/thread is extracted.
-
-    Arguments
-    ---------
-    path
-        Path where the spike detector files are stored.
-    name
-        Name of the spike detector.
-
-    Returns
-    -------
-    files
-        Name of all spike detectors, which are located in the path.
-    gids
-        Lowest and highest ids of the spike detectors.
-
-    """
-    # Import filenames$
-    files = []
-    for file in os.listdir(path):
-        if file.endswith('.gdf') and file.startswith(name):
-            temp = file.split('-')[0] + '-' + file.split('-')[1]
-            if temp not in files:
-                files.append(temp)
-
-    # Import GIDs
-    gidfile = open(path + 'population_GIDs.dat', 'r')
-    gids = []
-    for l in gidfile:
-        a = l.split()
-        gids.append([int(a[0]), int(a[1])])
-    files = sorted(files)
-    return files, gids
-
-
-def load_spike_times(path, name, begin, end):
-    """ Loads spike times of each spike detector.
-
-    Arguments
-    ---------
-    path
-        Path where the files with the spike times are stored.
-    name
-        Name of the spike detector.
-    begin
-        Lower boundary value to load spike times.
-    end
-        Upper boundary value to load spike times.
-
-    Returns
-    -------
-    data
-        Dictionary containing spike times in the interval from 'begin'
-        to 'end'.
-
-    """
-    # 190512
-    detector_names, gids = read_name(path, name)
-    data = {}
-    if len(detector_names) > 0 and len(gids) > 0:
-        for i in list(range(len(detector_names))):
-            all_filenames = os.listdir(path)
-            thread_filenames = [
-                all_filenames[x] for x in list(range(len(all_filenames)))
-                if all_filenames[x].endswith('gdf') and
-                   all_filenames[x].startswith('spike') and
-                   (all_filenames[x].split('-')[0] + '-' + all_filenames[x].split('-')[1]) in
-                   detector_names[i]
-                ]
-            # ids_temp = np.array([])
-            # times_temp = np.array([])
-            data_temp = []
-            for f in thread_filenames:
-                load_tmp = np.loadtxt(os.path.join(path, f))
-                if len(load_tmp.shape) == 2:
-                    data_temp.append(load_tmp)
-                    # ids_temp = np.append(ids_temp, load_tmp[:, 0])
-                    # times_temp = np.append(times_temp, load_tmp[:, 1])
-            # data_concatenated = np.array([ids_temp, times_temp]).T  # transpose
-            if len(data_temp) > 0:
-                data_concatenated = np.concatenate(data_temp)
-                data_raw = data_concatenated[np.argsort(data_concatenated[:, 1])]
-                idx = ((data_raw[:, 1] > begin) * (data_raw[:, 1] < end))
-                data[i] = data_raw[idx]
-            else:
-                data[i] = []
-    return data
-
-
-def plot_raster(path, name, begin, end):
-    """ Creates a spike raster plot of the microcircuit.
-
-    Arguments
-    ---------
-    path
-        Path where the spike times are stored.
-    name
-        Name of the spike detector.
-    begin
-        Initial value of spike times to plot.
-    end
-        Final value of spike times to plot.
-
-    Returns
-    -------
-    None
-
-    """
-    files, gids = read_name(path, name)
-    data_all = load_spike_times(path, name, begin, end)
-    highest_gid = gids[-1][-1]
-    gids_numpy = np.asarray(gids)
-    gids_numpy_changed = abs(gids_numpy - highest_gid) + 1
-
-    #HJ
-    L23_label_pos = (gids_numpy_changed[0][0] + gids_numpy_changed[3][1])/2
-    L4_label_pos = (gids_numpy_changed[4][0] + gids_numpy_changed[6][1])/2
-    L5_label_pos = (gids_numpy_changed[7][0] + gids_numpy_changed[9][1])/2
-    L6_label_pos = (gids_numpy_changed[10][0] + gids_numpy_changed[12][1])/2
-
-    ylabels = ['L23', 'L4', 'L5', 'L6']
-
-    #HJ
-    color_list = [
-        'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
-        'blue', 'red', 'orange', 'blue', 'red', 'orange'
-    ]
-
-    Fig1 = plt.figure(1, figsize=(16, 12))
-    for i in list(range(len(files))):
-        if len(data_all[i]) > 0:
-            times = data_all[i][:, 1]
-            neurons = np.abs(data_all[i][:, 0] - highest_gid) + 1
-            plt.plot(times, neurons, '.', color=color_list[i])
-
-    # HJ
-    plt.title(para_str)
-
-    plt.xlabel('time [ms]', fontsize=18)
-    plt.xticks(fontsize=18)
-    plt.yticks(
-        [L23_label_pos, L4_label_pos, L5_label_pos, L6_label_pos],
-        ylabels, rotation=10, fontsize=18
-        )
-    plt.savefig(os.path.join(path, 'raster_plot.png'), dpi=300)
-    plt.show()
-
-
-def response(path, name, begin, window, populations):
-    end = begin + window
-    data_all = load_spike_times(path, name, begin, end)
-    for i in list(range(len(data_all))):
-        data = data_all[i]
-        if len(data) > 0:
-            times_sf = data[(data[:, 1] > begin) & (data[:, 1] <= end), 1]
-            std_sf = np.std(times_sf)
-            if 'PC' in populations[i]:
-                print('window = {:.2f} ms'.format(window))
-                print(populations[i] + ' response spread = {:.2f} ms'.format(std_sf))
-                print(populations[i] + ' response number = {:d} spikes'.format(len(times_sf)))
+# def read_name(path, name):
+#     """ Reads names and ids of spike detector.
+#
+#     The names of the spike detectors are gathered and the lowest and
+#     highest id of each spike detector is computed. If the simulation was
+#     run on several threads or mpi-processes, one name per spike detector
+#     per mpi-process/thread is extracted.
+#
+#     Arguments
+#     ---------
+#     path
+#         Path where the spike detector files are stored.
+#     name
+#         Name of the spike detector.
+#
+#     Returns
+#     -------
+#     files
+#         Name of all spike detectors, which are located in the path.
+#     gids
+#         Lowest and highest ids of the spike detectors.
+#
+#     """
+#     # Import filenames$
+#     files = []
+#     for file in os.listdir(path):
+#         if file.endswith('.gdf') and file.startswith(name):
+#             temp = file.split('-')[0] + '-' + file.split('-')[1]
+#             if temp not in files:
+#                 files.append(temp)
+#
+#     # Import GIDs
+#     gidfile = open(path + 'population_GIDs.dat', 'r')
+#     gids = []
+#     for l in gidfile:
+#         a = l.split()
+#         gids.append([int(a[0]), int(a[1])])
+#     files = sorted(files)
+#     return files, gids
+#
+#
+# def load_spike_times(path, name, begin, end):
+#     """ Loads spike times of each spike detector.
+#
+#     Arguments
+#     ---------
+#     path
+#         Path where the files with the spike times are stored.
+#     name
+#         Name of the spike detector.
+#     begin
+#         Lower boundary value to load spike times.
+#     end
+#         Upper boundary value to load spike times.
+#
+#     Returns
+#     -------
+#     data
+#         Dictionary containing spike times in the interval from 'begin'
+#         to 'end'.
+#
+#     """
+#     # 190512
+#     detector_names, gids = read_name(path, name)
+#     data = {}
+#     if len(detector_names) > 0 and len(gids) > 0:
+#         for i in list(range(len(detector_names))):
+#             all_filenames = os.listdir(path)
+#             thread_filenames = [
+#                 all_filenames[x] for x in list(range(len(all_filenames)))
+#                 if all_filenames[x].endswith('gdf') and
+#                    all_filenames[x].startswith('spike') and
+#                    (all_filenames[x].split('-')[0] + '-' + all_filenames[x].split('-')[1]) in
+#                    detector_names[i]
+#                 ]
+#             # ids_temp = np.array([])
+#             # times_temp = np.array([])
+#             data_temp = []
+#             for f in thread_filenames:
+#                 load_tmp = np.loadtxt(os.path.join(path, f))
+#                 if len(load_tmp.shape) == 2:
+#                     data_temp.append(load_tmp)
+#                     # ids_temp = np.append(ids_temp, load_tmp[:, 0])
+#                     # times_temp = np.append(times_temp, load_tmp[:, 1])
+#             # data_concatenated = np.array([ids_temp, times_temp]).T  # transpose
+#             if len(data_temp) > 0:
+#                 data_concatenated = np.concatenate(data_temp)
+#                 data_raw = data_concatenated[np.argsort(data_concatenated[:, 1])]
+#                 idx = ((data_raw[:, 1] > begin) * (data_raw[:, 1] < end))
+#                 data[i] = data_raw[idx]
+#             else:
+#                 data[i] = []
+#     return data
+#
+#
+# def plot_raster(path, name, begin, end):
+#     """ Creates a spike raster plot of the microcircuit.
+#
+#     Arguments
+#     ---------
+#     path
+#         Path where the spike times are stored.
+#     name
+#         Name of the spike detector.
+#     begin
+#         Initial value of spike times to plot.
+#     end
+#         Final value of spike times to plot.
+#
+#     Returns
+#     -------
+#     None
+#
+#     """
+#     files, gids = read_name(path, name)
+#     data_all = load_spike_times(path, name, begin, end)
+#     highest_gid = gids[-1][-1]
+#     gids_numpy = np.asarray(gids)
+#     gids_numpy_changed = abs(gids_numpy - highest_gid) + 1
+#
+#     #HJ
+#     L23_label_pos = (gids_numpy_changed[0][0] + gids_numpy_changed[3][1])/2
+#     L4_label_pos = (gids_numpy_changed[4][0] + gids_numpy_changed[6][1])/2
+#     L5_label_pos = (gids_numpy_changed[7][0] + gids_numpy_changed[9][1])/2
+#     L6_label_pos = (gids_numpy_changed[10][0] + gids_numpy_changed[12][1])/2
+#
+#     ylabels = ['L23', 'L4', 'L5', 'L6']
+#
+#     #HJ
+#     color_list = [
+#         'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
+#         'blue', 'red', 'orange', 'blue', 'red', 'orange'
+#     ]
+#
+#     Fig1 = plt.figure(1, figsize=(16, 12))
+#     for i in list(range(len(files))):
+#         if len(data_all[i]) > 0:
+#             times = data_all[i][:, 1]
+#             neurons = np.abs(data_all[i][:, 0] - highest_gid) + 1
+#             plt.plot(times, neurons, '.', color=color_list[i])
+#
+#     # HJ
+#     plt.title(para_str)
+#
+#     plt.xlabel('time [ms]', fontsize=18)
+#     plt.xticks(fontsize=18)
+#     plt.yticks(
+#         [L23_label_pos, L4_label_pos, L5_label_pos, L6_label_pos],
+#         ylabels, rotation=10, fontsize=18
+#         )
+#     plt.savefig(os.path.join(path, 'raster_plot.png'), dpi=300)
+#     plt.show()
 
 
-def fire_rate(path, name, begin, end):
-    """ Computes firing rate and standard deviation of it.
-
-    The firing rate of each neuron for each population is computed and stored
-    in a numpy file in the directory of the spike detectors. The mean firing
-    rate and its standard deviation is displayed for each population.
-
-    Arguments
-    ---------
-    path
-        Path where the spike times are stored.
-    name
-        Name of the spike detector.
-    begin
-        Initial value of spike times to calculate the firing rate.
-    end
-        Final value of spike times to calculate the firing rate.
-
-    Returns
-    -------
-    None
-
-    """
-    files, gids = read_name(path, name)
-    data_all = load_spike_times(path, name, begin, end)
-    rates_averaged_all = []
-    rates_std_all = []
-    for h in list(range(len(files))):
-        if len(data_all[h]) > 0:
-            n_fil = data_all[h][:, 0]
-            n_fil = n_fil.astype(int)
-            count_of_n = np.bincount(n_fil)
-            count_of_n_fil = count_of_n[gids[h][0]-1:gids[h][1]]
-            rate_each_n = count_of_n_fil * 1000. / (end - begin)
-            rate_averaged = np.mean(rate_each_n)
-            rate_std = np.std(rate_each_n)
-            rates_averaged_all.append(float('%.3f' % rate_averaged))
-            rates_std_all.append(float('%.3f' % rate_std))
-            np.save(os.path.join(path, ('rate' + str(h) + '.npy')), rate_each_n)
-        else:
-            #190606
-            rates_averaged_all.append(0.0)
-            rates_std_all.append(0.0)
-            np.save(os.path.join(path, ('rate' + str(h) + '.npy')), [])
-    print('Mean rates: %r Hz' % rates_averaged_all)
-    print('Standard deviation of rates: %r Hz' % rates_std_all)
-    # HJ
-    f_rates = open(path + para_str + '.dat', 'w')
-    f_rates.write('Mean rates: %r Hz\n' % rates_averaged_all)
-    f_rates.write('Standard deviation of rates: %r Hz\n' % rates_std_all)
-    f_rates.close()
+# def response(path, name, begin, window, populations):
+#     end = begin + window
+#     data_all = load_spike_times(path, name, begin, end)
+#     for i in list(range(len(data_all))):
+#         data = data_all[i]
+#         if len(data) > 0:
+#             times_sf = data[(data[:, 1] > begin) & (data[:, 1] <= end), 1]
+#             std_sf = np.std(times_sf)
+#             if 'PC' in populations[i]:
+#                 print('window = {:.2f} ms'.format(window))
+#                 print(populations[i] + ' response spread = {:.2f} ms'.format(std_sf))
+#                 print(populations[i] + ' response number = {:d} spikes'.format(len(times_sf)))
 
 
-def boxplot(net_dict, path):
-    """ Creates a boxblot of the firing rates of the eight populations.
-
-    To create the boxplot, the firing rates of each population need to be
-    computed with the function 'fire_rate'.
-
-    Arguments
-    ---------
-    net_dict
-        Dictionary containing parameters of the microcircuit.
-    path
-        Path were the firing rates are stored.
-
-    Returns
-    -------
-    None
-
-    """
-    pops = net_dict['N_full']
-    reversed_order_list = list(range(len(pops) - 1, -1, -1))
-    list_rates_rev = []
-    for h in reversed_order_list:
-        rate_filepath = os.path.join(path, ('rate' + str(h) + '.npy'))
-        if os.path.isfile(rate_filepath):
-            list_rates_rev.append(
-                np.load(rate_filepath)
-                )
-    pop_names = net_dict['populations']
-    label_pos = list(range(len(pops), 0, -1))
-    # HJ
-    color_list = [
-        'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
-        'blue', 'red', 'orange', 'blue', 'red', 'orange'
-    ]
-    color_list = color_list[::-1]
-    medianprops = dict(linestyle='-', linewidth=2.5, color='firebrick')
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    bp = plt.boxplot(list_rates_rev, 0, 'rs', 0, medianprops=medianprops)
-
-    # HJ
-    plt.title(para_str)
-    plt.xlim((-1, box_xlim))
-
-    plt.setp(bp['boxes'], color='black')
-    plt.setp(bp['whiskers'], color='black')
-    plt.setp(bp['fliers'], color='red', marker='+')
-    for h in list(range(len(pops))):
-        boxX = []
-        boxY = []
-        box = bp['boxes'][h]
-        for j in list(range(5)):
-            boxX.append(box.get_xdata()[j])
-            boxY.append(box.get_ydata()[j])
-        boxCoords = list(zip(boxX, boxY))
-        boxPolygon = Polygon(boxCoords, facecolor=color_list[h])
-        ax1.add_patch(boxPolygon)
-    plt.xlabel('firing rate [Hz]', fontsize=18)
-    plt.yticks(label_pos, pop_names, fontsize=18)
-    plt.xticks(fontsize=18)
-    plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
-    plt.show()
+# def fire_rate(path, name, begin, end):
+#     """ Computes firing rate and standard deviation of it.
+#
+#     The firing rate of each neuron for each population is computed and stored
+#     in a numpy file in the directory of the spike detectors. The mean firing
+#     rate and its standard deviation is displayed for each population.
+#
+#     Arguments
+#     ---------
+#     path
+#         Path where the spike times are stored.
+#     name
+#         Name of the spike detector.
+#     begin
+#         Initial value of spike times to calculate the firing rate.
+#     end
+#         Final value of spike times to calculate the firing rate.
+#
+#     Returns
+#     -------
+#     None
+#
+#     """
+#     files, gids = read_name(path, name)
+#     data_all = load_spike_times(path, name, begin, end)
+#     rates_averaged_all = []
+#     rates_std_all = []
+#     for h in list(range(len(files))):
+#         if len(data_all[h]) > 0:
+#             n_fil = data_all[h][:, 0]
+#             n_fil = n_fil.astype(int)
+#             count_of_n = np.bincount(n_fil)
+#             count_of_n_fil = count_of_n[gids[h][0]-1:gids[h][1]]
+#             rate_each_n = count_of_n_fil * 1000. / (end - begin)
+#             rate_averaged = np.mean(rate_each_n)
+#             rate_std = np.std(rate_each_n)
+#             rates_averaged_all.append(float('%.3f' % rate_averaged))
+#             rates_std_all.append(float('%.3f' % rate_std))
+#             np.save(os.path.join(path, ('rate' + str(h) + '.npy')), rate_each_n)
+#         else:
+#             #190606
+#             rates_averaged_all.append(0.0)
+#             rates_std_all.append(0.0)
+#             np.save(os.path.join(path, ('rate' + str(h) + '.npy')), [])
+#     print('Mean rates: %r Hz' % rates_averaged_all)
+#     print('Standard deviation of rates: %r Hz' % rates_std_all)
+#     # HJ
+#     f_rates = open(path + para_str + '.dat', 'w')
+#     f_rates.write('Mean rates: %r Hz\n' % rates_averaged_all)
+#     f_rates.write('Standard deviation of rates: %r Hz\n' % rates_std_all)
+#     f_rates.close()
+#
+#
+# def boxplot(net_dict, path):
+#     """ Creates a boxblot of the firing rates of the eight populations.
+#
+#     To create the boxplot, the firing rates of each population need to be
+#     computed with the function 'fire_rate'.
+#
+#     Arguments
+#     ---------
+#     net_dict
+#         Dictionary containing parameters of the microcircuit.
+#     path
+#         Path were the firing rates are stored.
+#
+#     Returns
+#     -------
+#     None
+#
+#     """
+#     pops = net_dict['N_full']
+#     reversed_order_list = list(range(len(pops) - 1, -1, -1))
+#     list_rates_rev = []
+#     for h in reversed_order_list:
+#         rate_filepath = os.path.join(path, ('rate' + str(h) + '.npy'))
+#         if os.path.isfile(rate_filepath):
+#             list_rates_rev.append(
+#                 np.load(rate_filepath)
+#                 )
+#     pop_names = net_dict['populations']
+#     label_pos = list(range(len(pops), 0, -1))
+#     # HJ
+#     color_list = [
+#         'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
+#         'blue', 'red', 'orange', 'blue', 'red', 'orange'
+#     ]
+#     color_list = color_list[::-1]
+#     medianprops = dict(linestyle='-', linewidth=2.5, color='firebrick')
+#     fig, ax1 = plt.subplots(figsize=(10, 6))
+#     bp = plt.boxplot(list_rates_rev, 0, 'rs', 0, medianprops=medianprops)
+#
+#     # HJ
+#     plt.title(para_str)
+#     plt.xlim((-1, box_xlim))
+#
+#     plt.setp(bp['boxes'], color='black')
+#     plt.setp(bp['whiskers'], color='black')
+#     plt.setp(bp['fliers'], color='red', marker='+')
+#     for h in list(range(len(pops))):
+#         boxX = []
+#         boxY = []
+#         box = bp['boxes'][h]
+#         for j in list(range(5)):
+#             boxX.append(box.get_xdata()[j])
+#             boxY.append(box.get_ydata()[j])
+#         boxCoords = list(zip(boxX, boxY))
+#         boxPolygon = Polygon(boxCoords, facecolor=color_list[h])
+#         ax1.add_patch(boxPolygon)
+#     plt.xlabel('firing rate [Hz]', fontsize=18)
+#     plt.yticks(label_pos, pop_names, fontsize=18)
+#     plt.xticks(fontsize=18)
+#     plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
+#     plt.show()

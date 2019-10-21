@@ -1,20 +1,40 @@
 import nest
 import numpy as np
 
-from scan_params import *
+'''
+Max firing rate: 
+    use refractory period t_ref to constrain firing rate.
 
+Short-term plasticity:
+    Tsodyks synapse, see 
+    Ashok Litwin-Kumar, Robert Rosenbaum, Brent Doiron, 2016
+    Tsodyks et al. 1997
+
+Relative strengths:
+    adjustment of relative PV and SOM inhibitory strength
+
+Selectivity:
+    orientation tuning by self-defined cosine functions
+
+Cell-type specific parameters:
+    Garrett T. Neske, Saundra L. Patrick, and Barry W. Connors, 2015
+'''
+
+# Mmax firing rate
 Fmax = False
 
-# short-term plasticity 190605
+# short-term plasticity
 STP = True
+SOM_facilitate = True
 PV_depress = True
+weak_depress = False
 
-# relative strengths 190629
+# relative strengths
 adjust_inh = True
 SOM_g_relative = 1.0
 PV_g_relative = 1.0
 
-# selectivity 190614
+# selectivity
 tuning_orientation = False
 selective_inh_source = ['PV', 'SOM']
 selective_inh_target = ['PV', 'SOM']
@@ -23,7 +43,7 @@ k_exc_to_exc = 0.8
 k_exc_to_inh = 0.8 #0.4
 k_inh_to_exc = 0.2 #0.0
 
-# cell-type-specific parameters 190704
+# cell-type-specific parameters
 ctsp = True
 
 if STP:
@@ -33,51 +53,50 @@ if STP:
             'weight': weight_dict,
             'delay': delay_dict
         }
+        if weak_depress is True:
+            depress = {
+                'model': 'tsodyks_synapse',
+                'U': 1.0,
+                'tau_fac': 0.01,
+                'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+                'tau_rec': 100.0,
+                'weight': weight_dict,
+                'delay': delay_dict
+            }
+        else:
+            depress = {
+                'model': 'tsodyks_synapse',
+                'U': 0.75,  # but U = 0.9 for PV-to-all
+                'tau_fac': 0.01,
+                'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+                'tau_rec': 800.0,
+                'weight': weight_dict,
+                'delay': delay_dict
+            }
+        facilitate = {
+            'model': 'tsodyks_synapse',
+            'U': 0.5,
+            'tau_fac': 200.0,
+            'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+            'tau_rec': 0.01,
+            'weight': weight_dict,
+            'delay': delay_dict
+        }
+
         if 'PC' in source_name:
             if 'PC' in target_name:
-                syn_dict = {
-                    'model': 'tsodyks_synapse',
-                    'U': 1.0, #0.75,
-                    'tau_fac': 0.01,
-                    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-                    'tau_rec': 50.0, #800.0,
-                    'weight': weight_dict,
-                    'delay': delay_dict
-                }
+                syn_dict = depress
             elif 'PV' in target_name:
                 if PV_depress is True:
-                    syn_dict = {
-                        'model': 'tsodyks_synapse',
-                        'U': 1.0, #0.75,
-                        'tau_fac': 0.01,
-                        'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-                        'tau_rec': 50.0, #800.0,
-                        'weight': weight_dict,
-                        'delay': delay_dict
-                    }
+                    syn_dict = depress
             elif 'SOM' in target_name:
-                if som_facilitate is True:
-                    tau_fac = 200.0
-                    syn_dict = {
-                        'model': 'tsodyks_synapse',
-                        'U': 0.05,
-                        'tau_fac': tau_fac,
-                        'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-                        'tau_rec': 0.01,
-                        'weight': weight_dict,
-                        'delay': delay_dict
-                    }
+                if SOM_facilitate is True:
+                    syn_dict = facilitate
         elif 'PV' in source_name:
             if PV_depress is True:
-                syn_dict = {
-                    'model': 'tsodyks_synapse',
-                    'U': 1.0, #0.9,
-                    'tau_fac': 0.01,
-                    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
-                    'tau_rec': 50.0, #800.0,
-                    'weight': weight_dict,
-                    'delay': delay_dict
-                }
+                depress['U'] = 0.9
+                depress['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
+                syn_dict = depress
         return syn_dict
 
 
