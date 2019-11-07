@@ -1,34 +1,53 @@
-import time
 import numpy as np
+import time
 import network
 from network_params import net_dict
 from sim_params import sim_dict
 from stimulus_params import stim_dict
-
-import os
+from functions import special_dict
 from shutil import copy
 import multiprocessing as mp
-from scan_params import *
 from conn import *
 
-# settings
-run_sim = True
-on_server = False
-custom_conn = \
-    {
-        # use conn_probs.npy
-        'file': False,
-        # use conn_barrel_integrate()
-        'integrate': False
-    }
-copy_py_file = True
-
-# set parameters according to given data
 cwd = os.getcwd()
+
+# settings
+run_sim = False
+on_server = False
+copy_py_file = True
+custom_conn = {'file': False, 'integrate': False}
+
+sim_dict['t_sim'] = 2000.0
+
+net_dict['K_ext'] = np.array([2000, 2000, 1500, 500,
+                              2000, 2000, 1500,
+                              2000, 2000, 1500,
+                              2000, 2000, 1500])
+# net_dict['K_ext'] = np.array([2000, 1500, 1000, 500,
+#                               2000, 1500, 1000,
+#                               2000, 1500, 1000,
+#                               2000, 1500, 1000])
+net_dict['g'] = 4.0
+net_dict['bg_rate'] = 4.0
+
+stim_dict['thalamic_input'] = True
+stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 250.0)
+stim_dict['orientation'] = 0.0
+# stim_dict['PSP_th'] = 0.15
+# stim_dict['PSP_sd'] = 0.1
+
+special_dict['orient_tuning'] = False
+special_dict['som_fac'] = True
+special_dict['pv_dep'] = True
+special_dict['pv2all_dep'] = True
+special_dict['weak_dep'] = False
+
 if on_server:
     cpu_ratio = 1
 else:
     cpu_ratio = 0.5
+sim_dict['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
+
 if custom_conn['file'] is True:
     if custom_conn['integrate'] is True:
         conn_barrel_integrate()
@@ -36,27 +55,10 @@ if custom_conn['file'] is True:
         net_dict['conn_probs'] = np.load(cwd + '/conn_probs.npy')
     else:
         print('no conn_probs.npy file; using original map')
-sim_dict['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
-sim_dict['t_sim'] = 2000.0
-# net_dict['K_ext'] = np.array([3000, 2600, 1200, 500,
-#                                   2700, 2400, 2800,
-#                                   1900, 2600, 1300,
-#                                   2400, 2400, 2100])
-net_dict['K_ext'] = np.array([2000, 1500, 1000, 550,
-                              2000, 1500, 1000,
-                              2000, 1500, 1000,
-                              2000, 1500, 1000])
-net_dict['g'] = g_scan
-net_dict['bg_rate'] = bg_scan
-stim_dict['thalamic_input'] = True
-stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 250.0)
-stim_dict['th_duration'] = stim_duration
-stim_dict['th_rate'] = stim_rate
-stim_dict['orientation'] = 0.0
 
 # Initialize the network and pass parameters to it.
 tic = time.time()
-net = network.Network(sim_dict, net_dict, stim_dict)
+net = network.Network(sim_dict, net_dict, stim_dict, special_dict)
 toc = time.time() - tic
 print("Time to initialize the network: %.2f s" % toc)
 
@@ -74,9 +76,10 @@ if run_sim:
 
 # evaluation
 raster_plot_time_idx = np.array(
-    [stim_dict['th_start'][0] - 100.0, stim_dict['th_start'][0] + 100.0]
+    [500.0, 1500.0]
+    # [stim_dict['th_start'][0] - 20.0, stim_dict['th_start'][0] + 80.0]
 )
-fire_rate_time_idx = np.array([500.0, 1500.0])
+fire_rate_time_idx = np.array([500.0, stim_dict['th_start'][0]])
 net.evaluate(raster_plot_time_idx, fire_rate_time_idx)
 
 if copy_py_file is True:

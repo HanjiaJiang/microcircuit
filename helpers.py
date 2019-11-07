@@ -7,7 +7,6 @@ if 'DISPLAY' not in os.environ:
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from conn import conn_barrel_integrate
-from scan_params import *
 
 # setting
 # use_connectivity_special = False
