@@ -1,52 +1,16 @@
-# -*- coding: utf-8 -*-
-#
-# network.py
-#
-# This file is part of NEST.
-#
-# Copyright (C) 2004 The NEST Initiative
-#
-# NEST is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# NEST is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-
-'''
-pynest microcircuit network
----------------------------
-
-Main file for the microcircuit.
-
-Hendrik Rothe, Hannah Bos, Sacha van Albada; May 2016
-
-This example uses the function GetNodes, which is deprecated. A deprecation
-warning is therefore issued. For details about deprecated functions, see
-documentation.
-'''
-
 import nest
 import numpy as np
 import os
-from helpers import adj_w_ext_to_K
-from helpers import synapses_th_matrix
-from helpers import get_total_number_of_synapses
-from helpers import get_weight
-from helpers import plot_raster
-from helpers import fire_rate
-from helpers import boxplot
-from helpers import compute_DC
-
-#HJ
 from functions import *
 from helpers import *
+if os.path.isdir('/home/hanjia/Documents/analysis/'):
+    sys.path.insert(1, '/home/hanjia/Documents/analysis/')
+from microcircuit_tools import plot_raster
+from microcircuit_tools import fire_rate
+from microcircuit_tools import boxplot
+from microcircuit_tools import response
+from microcircuit_tools import plot_psth
+
 synfire_window = 20.0
 
 class Network:
@@ -70,13 +34,14 @@ class Network:
         (see: stimulus_params.py)
 
     """
-    def __init__(self, sim_dict, net_dict, stim_dict=None):
+    def __init__(self, sim_dict, net_dict, stim_dict=None, spe_dict=None):
         self.sim_dict = sim_dict
         self.net_dict = net_dict
         if stim_dict is not None:
             self.stim_dict = stim_dict
         else:
             self.stim_dict = None
+        self.spe_dict = spe_dict
         self.data_path = sim_dict['data_path']
         if nest.Rank() == 0:
             if os.path.isdir(self.sim_dict['data_path']):
@@ -203,7 +168,13 @@ class Network:
             C_m = nest.GetDefaults('iaf_psc_exp')['C_m']
             tau_m = nest.GetDefaults('iaf_psc_exp')['tau_m']
             try:
-                E_L, V_th, C_m, tau_m = ctsp_assign(pop, self.net_dict, E_L, V_th, C_m, tau_m)
+                E_L, V_th, C_m, tau_m = ctsp_assign(pop,
+                                                    self.net_dict,
+                                                    E_L,
+                                                    V_th,
+                                                    C_m,
+                                                    tau_m,
+                                                    self.spe_dict)
             except NameError:
                 print('\'ctsp_assign()\' does not exist')
             else:
@@ -295,7 +266,7 @@ class Network:
             # 190705
             try:
                 self.thalamic_weight = get_weight_ctsp(
-                    self.stim_dict['PSP_th'], self.net_dict, 'PC'
+                    self.stim_dict['PSP_th'], self.net_dict, 'PC', self.spe_dict
                     )
             except NameError:
                 self.thalamic_weight = get_weight(
@@ -313,7 +284,8 @@ class Network:
                 set_thalamus_input(self.thalamic_population, self.poisson_th,
                                    self.stim_dict['th_start'], self.stop_th,
                                    self.stim_dict['th_rate'],
-                                   self.stim_dict['orientation'])
+                                   self.stim_dict['orientation'],
+                                   self.spe_dict)
             except NameError:
                 print('\'set_thalamus_input()\' does not exist')
                 self.poisson_th = nest.Create('poisson_generator')
@@ -403,7 +375,7 @@ class Network:
                 if synapse_nr >= 0.:
                     # 190705
                     try:
-                        weight = get_weight_ctsp(self.net_dict['PSP_mean_matrix'][i, j], self.net_dict, target_name)
+                        weight = get_weight_ctsp(self.net_dict['PSP_mean_matrix'][i, j], self.net_dict, target_name, self.spe_dict)
                     except NameError:
                         weight = self.weight_mat[i][j]
                         # print('\'get_weight_ctsp()\' does not exist')
@@ -412,7 +384,7 @@ class Network:
 
                     # HJ
                     try:
-                        weight = inh_weight(source_name, weight)
+                        weight = inh_weight(source_name, weight, self.spe_dict)
                     except NameError:
                         print('\'ins_weight()\' does not exist')
                     else:
@@ -436,7 +408,7 @@ class Network:
 
                     # HJ
                     try:
-                        syn_dict = assign_syn_dict(source_name, target_name, weight_dict, delay_dict, self.net_dict)
+                        syn_dict = assign_syn_dict(source_name, target_name, weight_dict, delay_dict, self.net_dict, self.spe_dict)
                     except NameError:
                         print('\'assign_syn_dict()\' does not exist')
                         syn_dict = {
@@ -448,7 +420,7 @@ class Network:
                         pass
                     try:
                         connect_by_cluster(source_name, target_name, synapse_nr, syn_dict,
-                                           source_pop, target_pop)
+                                           source_pop, target_pop, self.spe_dict)
                     except NameError:
                         print('\'connect_by_cluster()\' does not exist')
                         nest.Connect(
@@ -467,7 +439,7 @@ class Network:
             conn_dict_poisson = {'rule': 'all_to_all'}
             # HJ
             try:
-                w_ext = get_weight_ctsp(self.net_dict['PSP_e'], self.net_dict, self.net_dict['populations'][i])
+                w_ext = get_weight_ctsp(self.net_dict['PSP_e'], self.net_dict, self.net_dict['populations'][i], self.spe_dict)
             except NameError:
                 # print('\'get_weight_ctsp()\' does not exist')
                 w_ext = self.w_ext
@@ -512,7 +484,7 @@ class Network:
                 }
             try:
                 connect_thalamus_orientation(self.thalamic_population, target_pop, self.net_dict['populations'][i],
-                                             self.nr_synapses_th[i], syn_dict_th)
+                                             self.nr_synapses_th[i], syn_dict_th, self.spe_dict)
             except NameError:
                 print('\'connect_thalamus_with_selectivity()\' does not exist')
                 nest.Connect(
@@ -600,13 +572,16 @@ class Network:
                 )
             response(
                 self.data_path, 'spike_detector',
-                self.stim_dict['th_start'][0], synfire_window,
-                self.net_dict['populations']
+                self.stim_dict['th_start'][0], synfire_window
             )
             plot_raster(
                 self.data_path, 'spike_detector',
                 raster_plot_time_idx[0], raster_plot_time_idx[1]
                 )
+            plot_psth(
+                self.data_path, 'spike_detector',
+                raster_plot_time_idx[0], raster_plot_time_idx[1]
+            )
             boxplot(self.net_dict, self.data_path)
 
 

@@ -1,33 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# network_params.py
-#
-# This file is part of NEST.
-#
-# Copyright (C) 2004 The NEST Initiative
-#
-# NEST is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# NEST is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-
-'''
-pynest microcircuit parameters
-------------------------------
-
-Network parameters for the microcircuit.
-
-Hendrik Rothe, Hannah Bos, Sacha van Albada; May 2016
-'''
-
 import numpy as np
 
 # HJ
@@ -208,7 +178,7 @@ net_dict = {
         #     ),
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
-    'K_ext': np.array([1600, 1500, 1500, 1500, 2100, 1900, 1900, 2000, 1900, 1900, 2900, 2100, 2100]),  # test
+    'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),  # test
     # 'K_ext': np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan]),    # layer-independent
     # Factor to scale the indegrees.
     'K_scaling': 1.0,
