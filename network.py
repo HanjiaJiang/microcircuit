@@ -578,10 +578,10 @@ class Network:
                 self.data_path, 'spike_detector',
                 raster_plot_time_idx[0], raster_plot_time_idx[1]
                 )
-            plot_psth(
-                self.data_path, 'spike_detector',
-                raster_plot_time_idx[0], raster_plot_time_idx[1]
-            )
+            # plot_psth(
+            #     self.data_path, 'spike_detector',
+            #     raster_plot_time_idx[0], raster_plot_time_idx[1]
+            # )
             boxplot(self.net_dict, self.data_path)
 
 

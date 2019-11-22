@@ -103,8 +103,8 @@ def get_total_number_of_synapses(net_dict):
     prod = np.outer(N_full, N_full)
 
     # HJ
-    # if use_connectivity_special == True:
-    #     conn_probs = conn_barrel_integrate()
+    if net_dict['renew_conn'] is True:
+        conn_probs = conn_barrel_integrate(net_dict)
 
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
     N_full_matrix = np.column_stack(

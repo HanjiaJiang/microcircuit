@@ -137,7 +137,8 @@ net_dict = {
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
     'N_full': np.array(
-        [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),
+        [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column
+        # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column
     # 190616 model of c2 barrel column totally 18976 cells
     # 'N_full': np.array([5099, 521, 67, 88, 4089, 287, 61, 3267, 540, 140, 4425, 290, 102]),
     # Mean rates of the different populations in the non-scaled version
@@ -221,13 +222,16 @@ net_dict = {
         # Membrane time constant (in ms).
         'tau_m': {'default': 10.0, 'PC': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, #7.0, #10.0,
         # Time constant of postsynaptic excitatory currents (in ms).
-        'tau_syn_ex': 1.74, #1.0, # 0.5,
+        'tau_syn_ex': 1.74, #1.9,  # Allen mouse #1.74, #1.0, # 0.5,
         # Time constant of postsynaptic inhibitory currents (in ms).
-        'tau_syn_in': 4.6, #2.0, # 0.5,
+        'tau_syn_in': 4.6, #2.9,  # Allen mouse #4.6, #2.0, # 0.5,
         # Time constant of external postsynaptic excitatory current (in ms).
         'tau_syn_E': 1.74,  # 0.5,
         # Refractory period of the neurons after a spike (in ms).
-        't_ref': 2.0}
+        't_ref': 2.0},
+    'animal': 'rat',
+    'renew_conn': False,
+    'conn_set': '190707'
     }
 
 updated_dict = {

@@ -5,6 +5,13 @@ import matplotlib
 matplotlib.rcParams['font.size'] = 30.0
 import numpy as np
 
+'''
+Notes:
+way to get file path by GUI:
+import easygui
+path = easygui.fileopenbox() 
+'''
+
 populations = ['L2/3 E', 'L23 PV', 'L23 SOM', 'L23 VIP',
                'L4 E', 'L4 PV', 'L4 SOM',
                'L5 E', 'L5 PV', 'L5 SOM',
@@ -15,15 +22,7 @@ subtype_label = ['E', 'PV', 'SOM', 'VIP']
 use_box_xlim = True
 box_xlim = 51.0
 
-# data_dict = {
-#     'path': None,
-#     'name': None,
-#     'gids': None,
-#     'data': None
-# }
-
-
-# plots
+# Plots
 def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
     arr_len = len(arr)
     arr_shape = np.array(arr).shape
@@ -61,7 +60,7 @@ def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
     plt.savefig('interaction_barplot.png')
     plt.show()
 
-
+# Calculation
 # correlation
 def get_mean_corr(list_1, list_2=None):
     coef_list = []
@@ -78,10 +77,9 @@ def get_mean_corr(list_1, list_2=None):
             #     print('{} in list1 or {} in list2 no spikes'.format(i, j))
     return np.mean(coef_list)
 
-
-# let print() function print to file
-# use exec()
-def init2txt():
+# System
+# let print() function print to file (use: exec(set2txt))
+def set2txt():
     re_str = 'import sys\n' \
              'orig_stdout = sys.stdout\n' \
              'f = open(\'out.txt\', \'w\')\n' \
@@ -95,6 +93,7 @@ def end2txt():
     return re_str
 
 
+# File & folder, etc.
 # find folders with a target string
 def folders_with(target_str):
     folder_list = next(os.walk('.'))[1]
@@ -138,16 +137,6 @@ def read_name(path, name):
         gids.append([int(a[0]), int(a[1])])
     files = sorted(files)
     return files, gids
-
-
-# def check_data(path, name):
-#     if path == data_dict['path'] \
-#             and name == data_dict['name'] \
-#             and data_dict['data'] is not None \
-#             and data_dict['gids'] is not None:
-#         return True
-#     else:
-#         return False
 
 
 def load_spike_times(path, name, begin, end):
@@ -231,35 +220,6 @@ def fire_rate(path, name, begin, end):
     return rates_averaged_all, rates_std_all
 
 
-def response(path, name, begin, window, n_stim=20, interval=1000.0):
-    # end = begin + window
-    data_all, gids = load_spike_times(path, name, begin, begin+n_stim*interval)
-    data_save = np.full((13, n_stim, 2), np.nan)
-    f = open(os.path.join(path, 'sf-chain.txt'), 'w')
-    f.write('window = {:.2f} ms\n'.format(window))
-    for i in range(len(data_all)):
-        data = data_all[i]
-        if 'E' in populations[i]:
-            print(populations[i]+'\n')
-            f.write(populations[i]+'\n')
-        if len(data) > 0:
-            for j in range(n_stim):
-                times_sf = data[(data[:, 1] > begin + j*interval) &
-                                (data[:, 1] <= begin + j*interval+window), 1]
-                if len(times_sf) > 0:
-                    std_sf = np.std(times_sf)
-                else:
-                    std_sf = np.nan
-                if 'E' in populations[i]:
-                    tmp_str = '{:.2f},{:d}\n'.format(std_sf, len(times_sf))
-                    print(tmp_str)
-                    f.write(tmp_str)
-                data_save[i, j, 0] = std_sf
-                data_save[i, j, 1] = len(times_sf)
-    f.close()
-    np.save(os.path.join(path, 'sf-chain.npy'), data_save)
-
-
 def plot_raster(path, name, begin, end):
     files, gids = read_name(path, name)
     data_all, gids = load_spike_times(path, name, begin, end)
@@ -319,44 +279,6 @@ def plot_raster(path, name, begin, end):
     plt.close()
 
 
-def plot_psth(path, name, begin, end):
-    files, gids = read_name(path, name)
-    data_all, gids = load_spike_times(path, name, begin, end)
-    fig, axs = plt.subplots(4, 1, figsize=(12, 12),
-                            sharex=True, sharey=True, constrained_layout=True)
-    colors = ['b', 'r', 'orange', 'g',
-              'b', 'r', 'orange',
-              'b', 'r', 'orange',
-              'b', 'r', 'orange']
-    bin_width = 1.0
-    for i in list(range(len(data_all))):
-        # times = np.array([])
-        if len(data_all[i]) > 0:
-            times = data_all[i][:, 1]
-            # times = times.astype(int)
-
-            # indexing for plots
-            if i < 4:
-                a = 0
-                # b = i % 3.0
-                # if i == 3:
-                #     b = 3.0
-            else:
-                a = int((i - 1) / 3)
-                # b = (i - 1) % 3.0
-
-            # bar_width = window / 5.0
-            # axs[a].bar(t_plot+b*bar_width, si_abs_arr[:, i], width=bar_width,
-            #            label=populations[i] + ' all cells (abs)', color=colors[i], align='center')
-            axs[a].hist(times, np.arange(begin, end + bin_width, bin_width), color=colors[i], label=populations[i])
-            axs[a].legend(loc='upper right')
-            # axs[a].set_ylim(-0.7, 0.7)
-            # axs[a].set_xlim(t_plot[0] - 10.0, t_plot[-1] + 50.0)
-
-    plt.xlabel('t (ms)')
-    plt.ylabel('spikes')
-    plt.savefig(os.path.join(path, 'psth.png'))
-    plt.close()
 
 
 def boxplot(net_dict, path):
@@ -410,3 +332,73 @@ def boxplot(net_dict, path):
     plt.close()
 
 
+# Other analysis
+# response spread and amplitude
+def response(path, name, begin, window, n_stim=20, interval=1000.0):
+    # end = begin + window
+    data_all, gids = load_spike_times(path, name, begin, begin+n_stim*interval)
+    data_save = np.full((13, n_stim, 2), np.nan)
+    f = open(os.path.join(path, 'sf-chain.txt'), 'w')
+    f.write('window = {:.2f} ms\n'.format(window))
+    for i in range(len(data_all)):
+        data = data_all[i]
+        if 'E' in populations[i]:
+            # print(populations[i]+'\n')
+            f.write(populations[i]+'\n')
+        if len(data) > 0:
+            for j in range(n_stim):
+                times_sf = data[(data[:, 1] > begin + j*interval) &
+                                (data[:, 1] <= begin + j*interval+window), 1]
+                if len(times_sf) > 0:
+                    std_sf = np.std(times_sf)
+                else:
+                    std_sf = np.nan
+                if 'E' in populations[i]:
+                    tmp_str = '{:.2f},{:d}\n'.format(std_sf, len(times_sf))
+                    # print(tmp_str)
+                    f.write(tmp_str)
+                data_save[i, j, 0] = std_sf
+                data_save[i, j, 1] = len(times_sf)
+    f.close()
+    np.save(os.path.join(path, 'sf-chain.npy'), data_save)
+
+
+# to be improved ..
+def plot_psth(path, name, begin, end):
+    files, gids = read_name(path, name)
+    data_all, gids = load_spike_times(path, name, begin, end)
+    fig, axs = plt.subplots(4, 1, figsize=(12, 12),
+                            sharex=True, sharey=True, constrained_layout=True)
+    colors = ['b', 'r', 'orange', 'g',
+              'b', 'r', 'orange',
+              'b', 'r', 'orange',
+              'b', 'r', 'orange']
+    bin_width = 1.0
+    for i in list(range(len(data_all))):
+        # times = np.array([])
+        if len(data_all[i]) > 0:
+            times = data_all[i][:, 1]
+            # times = times.astype(int)
+
+            # indexing for plots
+            if i < 4:
+                a = 0
+                # b = i % 3.0
+                # if i == 3:
+                #     b = 3.0
+            else:
+                a = int((i - 1) / 3)
+                # b = (i - 1) % 3.0
+
+            # bar_width = window / 5.0
+            # axs[a].bar(t_plot+b*bar_width, si_abs_arr[:, i], width=bar_width,
+            #            label=populations[i] + ' all cells (abs)', color=colors[i], align='center')
+            axs[a].hist(times, np.arange(begin, end + bin_width, bin_width), color=colors[i], label=populations[i])
+            axs[a].legend(loc='upper right')
+            # axs[a].set_ylim(-0.7, 0.7)
+            # axs[a].set_xlim(t_plot[0] - 10.0, t_plot[-1] + 50.0)
+
+    plt.xlabel('t (ms)')
+    plt.ylabel('spikes')
+    plt.savefig(os.path.join(path, 'psth.png'))
+    plt.close()
