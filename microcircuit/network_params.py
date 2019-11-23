@@ -1,8 +1,5 @@
 import numpy as np
 
-# HJ
-# from scan_params import *
-
 def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     """ Creates matrix containing the delay of all connections.
 
@@ -132,7 +129,7 @@ net_dict = {
     # 'voltmeter' to the list.
     'rec_dev': ['spike_detector'],
     # Names of the simulated populations.
-    'populations': ['L23_PC', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_PC', 'L4_PV', 'L4_SOM', 'L5_PC', 'L5_PV', 'L5_SOM', 'L6_PC', 'L6_PV', 'L6_SOM'],
+    'populations': ['L23_Exc', 'L23_PV', 'L23_SOM', 'L23_VIP', 'L4_Exc', 'L4_PV', 'L4_SOM', 'L5_Exc', 'L5_PV', 'L5_SOM', 'L6_Exc', 'L6_PV', 'L6_SOM'],
     # Number of neurons in the different populations. The order of the
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
@@ -212,15 +209,15 @@ net_dict = {
         # Standard deviation of the average membrane potential (in mV).
         'V0_sd': 5.0, #10.0,
         # Reset membrane potential of the neurons (in mV).
-        'E_L': {'default': -67.0, 'PC': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, #-67.0,
+        'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, #-67.0,
         # Threshold potential of the neurons (in mV).
-        'V_th': {'default': -40.0, 'PC': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, #-40.0,  # -50.0
+        'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, #-40.0,  # -50.0
         # Membrane potential after a spike (in mV).
         'V_reset': -67.0, #-65.0,
         # Membrane capacitance (in pF).
-        'C_m': {'default': 200.0, 'PC': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, #200.0, #250.0,
+        'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, #200.0, #250.0,
         # Membrane time constant (in ms).
-        'tau_m': {'default': 10.0, 'PC': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, #7.0, #10.0,
+        'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, #7.0, #10.0,
         # Time constant of postsynaptic excitatory currents (in ms).
         'tau_syn_ex': 1.74, #1.9,  # Allen mouse #1.74, #1.0, # 0.5,
         # Time constant of postsynaptic inhibitory currents (in ms).
@@ -230,8 +227,7 @@ net_dict = {
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
     'animal': 'rat',
-    'renew_conn': False,
-    'conn_set': '190707'
+    'renew_conn': False
     }
 
 updated_dict = {

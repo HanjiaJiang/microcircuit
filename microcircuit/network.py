@@ -1,17 +1,12 @@
-import nest
-import numpy as np
 import os
-from functions import *
-from helpers import *
-if os.path.isdir('/home/hanjia/Documents/analysis/'):
-    sys.path.insert(1, '/home/hanjia/Documents/analysis/')
-from microcircuit_tools import plot_raster
-from microcircuit_tools import fire_rate
-from microcircuit_tools import boxplot
-from microcircuit_tools import response
-from microcircuit_tools import plot_psth
+from microcircuit.functions import *
+from microcircuit.helpers import *
+from microcircuit.tools import plot_raster
+from microcircuit.tools import fire_rate
+from microcircuit.tools import boxplot
+from microcircuit.tools import response
+from microcircuit.tools import plot_psth
 
-synfire_window = 20.0
 
 class Network:
     """ Handles the setup of the network parameters and
@@ -572,7 +567,7 @@ class Network:
                 )
             response(
                 self.data_path, 'spike_detector',
-                self.stim_dict['th_start'][0], synfire_window
+                self.stim_dict['th_start'][0], 20.0
             )
             plot_raster(
                 self.data_path, 'spike_detector',

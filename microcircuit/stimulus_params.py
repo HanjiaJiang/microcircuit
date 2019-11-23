@@ -1,6 +1,6 @@
 import numpy as np
-from network_params import net_dict
-from sim_params import sim_dict
+from microcircuit.network_params import net_dict
+from microcircuit.sim_params import sim_dict
 
 stim_dict = {
     # Turn thalamic input on or off (True or False).

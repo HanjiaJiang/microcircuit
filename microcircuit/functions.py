@@ -44,31 +44,6 @@ special_dict = {
     'ctsp': True
 }
 
-# # Mmax firing rate
-# Fmax = False
-#
-# # short-term plasticity
-# STP = True
-# SOM_facilitate = True
-# PV_depress = True
-# weak_depress = False
-#
-# # relative strengths
-# adjust_inh = True
-# SOM_g_relative = 1.0
-# PV_g_relative = 1.0
-#
-# # selectivity
-# tuning_orientation = False
-# selective_inh_source = ['PV', 'SOM']
-# selective_inh_target = ['PV', 'SOM']
-# k_th = 0.8
-# k_exc_to_exc = 0.8
-# k_exc_to_inh = 0.8 #0.4
-# k_inh_to_exc = 0.2 #0.0
-#
-# # cell-type-specific parameters
-# ctsp = True
 
 def assign_syn_dict(source_name,
                     target_name,
@@ -111,8 +86,8 @@ def assign_syn_dict(source_name,
         'delay': delay_dict
     }
 
-    if 'PC' in source_name:
-        if 'PC' in target_name:
+    if 'Exc' in source_name:
+        if 'Exc' in target_name:
             syn_dict = depress
         elif 'PV' in target_name:
             if spe_dict['pv_dep'] is True:
@@ -133,7 +108,7 @@ def set_fmax(names, population, spe_dict):
     # Two Dynamically Distinct Inhibitory Networks in
     # Layer 4 of the Neocortex
     if spe_dict['fmax'] is True:
-        if 'PC' in names:
+        if 'Exc' in names:
             nest.SetStatus(population, {'t_ref': 35.7})
             # if 'L5' in pop:
             #     nest.SetStatus(population, {'I_e': 375.0})
@@ -205,7 +180,7 @@ def connect_thalamus_orientation(th_pop,
                                  spe_dict):
     # do it only if connection is not 0
     if nr_synapses > 0:
-        if spe_dict['orient_tuning'] and 'PC' in target_name:
+        if spe_dict['orient_tuning'] and 'Exc' in target_name:
             nr_cluster = 8
             len_th = len(th_pop)
             len_target = len(target_pop)
@@ -278,13 +253,13 @@ def connect_by_cluster(source_name,
                        spe_dict):
     nr_cluster = 8
     k = 0.0
-    if 'PC' in source_name and 'PC' in target_name:
+    if 'Exc' in source_name and 'Exc' in target_name:
         k = spe_dict['k_e2e']
     for inh_target in spe_dict['sel_inh_trg']:
-        if 'PC' in source_name and inh_target in target_name:
+        if 'Exc' in source_name and inh_target in target_name:
             k = spe_dict['k_e2i']
     for inh_source in spe_dict['sel_inh_src']:
-        if inh_source in source_name and 'PC' in target_name:
+        if inh_source in source_name and 'Exc' in target_name:
             k = spe_dict['k_i2e']
     if spe_dict['orient_tuning'] is True and k != 0.0:
         # do it only if connection is not 0
@@ -352,7 +327,7 @@ def connect_by_cluster(source_name,
 
 def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
     if spe_dict['ctsp'] is True:
-        for celltype in ['PC', 'PV', 'SOM', 'VIP']:
+        for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
             if celltype in pop:
                 E_L = net_dict['neuron_params']['E_L'][celltype]
                 V_th = net_dict['neuron_params']['V_th'][celltype]

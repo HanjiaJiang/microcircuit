@@ -1,7 +1,7 @@
 import os
 sim_dict = {
     # Simulation time (in ms).
-    't_sim': 12000.0,
+    't_sim': 2000.0,
     # Resolution of the simulation (in ms).
     'sim_resolution': 0.1,
     # Path to save the output data.

@@ -3,7 +3,7 @@ from scipy import integrate
 import os
 from multiprocessing import Process
 from multiprocessing import Manager
-from raw_data import rat_dict, mouse_dict, bbp, exp, dia, z_arr
+from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia
 
 
 def conn_barrel_integrate(net_dict):
@@ -16,8 +16,10 @@ def conn_barrel_integrate(net_dict):
 
     if net_dict['animal'] == 'mouse':
         r_barrel = mouse_dict['radius']
+        z_arr = mouse_dict['thickness']
     else:
         r_barrel = rat_dict['radius']
+        z_arr = rat_dict['thickness']
 
     # integration
     data_used = []

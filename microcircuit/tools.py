@@ -12,12 +12,12 @@ import easygui
 path = easygui.fileopenbox() 
 '''
 
-populations = ['L2/3 E', 'L23 PV', 'L23 SOM', 'L23 VIP',
-               'L4 E', 'L4 PV', 'L4 SOM',
-               'L5 E', 'L5 PV', 'L5 SOM',
-               'L6 E', 'L6 PV', 'L6 SOM']
+populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
+               'L4 Exc', 'L4 PV', 'L4 SOM',
+               'L5 Exc', 'L5 PV', 'L5 SOM',
+               'L6 Exc', 'L6 PV', 'L6 SOM']
 
-subtype_label = ['E', 'PV', 'SOM', 'VIP']
+subtype_label = ['Exc', 'PV', 'SOM', 'VIP']
 
 use_box_xlim = True
 box_xlim = 51.0
@@ -244,7 +244,6 @@ def plot_raster(path, name, begin, end):
         if len(data_all[i]) > 0:
             times = data_all[i][:, 1]
             neurons = np.abs(data_all[i][:, 0] - highest_gid) + 1
-            # plt.plot(times, neurons, '.', color=color_list[i])
             # 190819
             if i < 4:
                 plt.plot(times, neurons, '.', color=color_list[i],
@@ -253,8 +252,6 @@ def plot_raster(path, name, begin, end):
                 plt.plot(times, neurons, '.', color=color_list[i])
 
     # legend handling
-    #legend = plt.legend(bbox_to_anchor=(0., 1.02, 1., .102),
-    #       ncol=4, mode="expand", borderaxespad=0.)
     legend = plt.legend(loc='upper center', ncol=4)
     for legend_handle in legend.legendHandles:
         legend_handle._legmarker.set_markersize(30)
@@ -279,8 +276,6 @@ def plot_raster(path, name, begin, end):
     plt.close()
 
 
-
-
 def boxplot(net_dict, path):
     pops = net_dict['N_full']
     # list of population length e.g. [0, 1, ..., 12]
@@ -292,7 +287,6 @@ def boxplot(net_dict, path):
             list_rates_rev.append(
                 np.load(rate_filepath)
                 )
-    pop_names = populations
     label_pos = list(range(len(pops), 0, -1))
     color_list = [
         'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
@@ -326,7 +320,7 @@ def boxplot(net_dict, path):
     ax1.spines['top'].set_visible(False)
 
     plt.xlabel('firing rate (Hz)')
-    plt.yticks(label_pos, pop_names)
+    plt.yticks(label_pos, populations)
     fig.tight_layout()
     plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
     plt.close()
@@ -342,7 +336,7 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
     f.write('window = {:.2f} ms\n'.format(window))
     for i in range(len(data_all)):
         data = data_all[i]
-        if 'E' in populations[i]:
+        if 'Exc' in populations[i]:
             # print(populations[i]+'\n')
             f.write(populations[i]+'\n')
         if len(data) > 0:
@@ -353,7 +347,7 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
                     std_sf = np.std(times_sf)
                 else:
                     std_sf = np.nan
-                if 'E' in populations[i]:
+                if 'Exc' in populations[i]:
                     tmp_str = '{:.2f},{:d}\n'.format(std_sf, len(times_sf))
                     # print(tmp_str)
                     f.write(tmp_str)
