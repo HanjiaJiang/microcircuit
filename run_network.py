@@ -13,25 +13,21 @@ if __name__ == "__main__":
 
     # analysis settings
     plot_half_len = 200.0   # ms
-    fr_interval = [1000.0, 2000.0]
+    fr_interval = [500.0, 1500.0]
     sf_interval = 20  # ms
 
-    # directory
-    cwd = os.getcwd()
-    data_path = os.path.join(cwd, 'data')
-    if not os.path.isdir(data_path):
-        os.mkdir(data_path)
-
-    # check for parameter scan file
+    # check for: parameter scan or single-run
     try:
         pickle_path = sys.argv[1]    # path to pickle file
-        os.system('cp *.py ' + os.path.dirname(pickle_path))
-    # single-run if not
-    except IndexError:
+        os.system('cp run_network.py microcircuit/*.py ' + os.path.dirname(pickle_path))
+    except IndexError:  # single-run if no path input
         print('No argv[1]; single-run.')
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'data')
+        os.mkdir(data_path)
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
         params_single(pickle_path)
-        os.system('cp *.py ' + data_path)
+        os.system('cp *.py microcircuit/*.py ' + data_path)
     # assign parameters
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)

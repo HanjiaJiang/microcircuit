@@ -8,18 +8,29 @@ from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 
 
-def params_single(path):
+def set_constant():
     sim_dict['t_sim'] = 2000.0
+    net_dict['g'] = 4.0
+    net_dict['bg_rate'] = 4.0
+    net_dict['animal'] = 'mouse'
+    net_dict['renew_conn'] = False
+    stim_dict['thalamic_input'] = True
+    stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
+    special_dict['orient_tuning'] = False
+    special_dict['som_fac'] = True
+    special_dict['pv_dep'] = True
+    special_dict['pv2all_dep'] = True
+    special_dict['weak_dep'] = True
+
+def params_single(path):
+    set_constant()
+
     sim_dict['master_seed'] = 55
 
     net_dict['K_ext'] = np.array([2000, 2000, 1000, 400,
                                   2000, 2000, 1000,
                                   2000, 2000, 1000,
                                   2000, 2000, 1000])
-    net_dict['g'] = 4.0
-    net_dict['bg_rate'] = 4.0
-    net_dict['animal'] = 'rat'
-    net_dict['renew_conn'] = False
     net_dict['conn_probs'] = \
         np.array([[0.0872, 0.3173, 0.4612, 0.0443, 0.1056, 0.4011, 0.0374, 0.0234, 0.09  , 0.1864, 0.    , 0.    , 0.    ],
            [0.3763, 0.3453, 0.2142, 0.0683, 0.0802, 0.0135, 0.026 , 0.0257, 0.1937, 0.2237, 0.0001, 0.0001, 0.0051],
@@ -34,57 +45,64 @@ def params_single(path):
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
-    # net_dict['N_full'] = np.array([5096, 400, 136, 136, 4088, 224, 112, 3264, 360, 320, 4424, 224, 184])
-    # net_dict['rec_dev'] = ['spike_detector', 'voltmeter']
 
-    stim_dict['thalamic_input'] = True
-    stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     stim_dict['orientation'] = 0.0
-    # stim_dict['PSP_th'] = 0.15
-    # stim_dict['PSP_sd'] = 0.1
 
-    special_dict['orient_tuning'] = False
-    special_dict['som_fac'] = True
-    special_dict['pv_dep'] = True
-    special_dict['pv2all_dep'] = True
-    special_dict['weak_dep'] = True
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
         'stim_dict': stim_dict,
         'special_dict': special_dict
     }
-    with open(path, 'wb') as handle:
-        pickle.dump(para_dict, handle)
+    with open(path, 'wb') as h:
+        pickle.dump(para_dict, h)
 
 
 if __name__ == "__main__":
     output_list = sys.argv[1:]
+    set_constant()
 
-    para_range = [500.0, 600.0]
-    seed_list = np.arange(55, 65)
-    # para_list = np.linspace(para_range[0], para_range[1],
-    #                         num=int(len(output_list)/len(seed_list)))
+    # conn_probs
+    # cwd = os.getcwd()
+    # conn_probs_list = []
+    # for file in os.listdir(cwd):
+    #     if file.endswith(".npy") and 'conn_probs' in file:
+    #         tmp = np.load(file)
+    #         if tmp.shape == net_dict['conn_probs'].shape:
+    #             conn_probs_list.append(np.load(file))
+    net_dict['conn_probs'] = np.load('conn_probs.npy')
+    # print('net_dict[\'conn_probs\'] = \n{}'.format(net_dict['conn_probs']))
 
-    sim_dict['t_sim'] = 2500.0
-    th_start = 2000.0
-    stim_dict['thalamic_input'] = True
-    stim_dict['th_start'] = np.arange(th_start, sim_dict['t_sim'], 1000.0)
-    special_dict['orient_tuning'] = False
+    # assign loop numbers (levels) to first and second parameters
+    first_loop_n = int(np.sqrt(len(output_list)))
+    for n in np.arange(first_loop_n, 0, -1):
+        if len(output_list) % n == 0:
+            first_loop_n = n
+            break
+    second_loop_n = len(output_list)/first_loop_n
 
+    # set parameters
+    seed_list = np.linspace(55, 75, first_loop_n+1).astype(int)[:-1]
+    # print(seed_list)
+    vip_list = np.linspace(300.0, 400.0, second_loop_n+1)[:-1]
+    # print(vip_list)
+
+    # generate corresponding pickle files
     for i, output_path in enumerate(output_list):
         sim_dict['data_path'] = os.path.join(os.path.dirname(output_path), 'data')
         sim_dict['master_seed'] = seed_list[i%len(seed_list)]
-        net_dict['K_ext'] = np.array([2000, 2000, 1500, para_range[int(i/len(seed_list))],
-                                      2000, 2000, 1500,
-                                      2000, 2000, 1500,
-                                      2000, 2000, 1500])
+        net_dict['K_ext'] = np.array([2000, 2000, 1000, vip_list[int(i/len(seed_list))],
+                                      2000, 2000, 1000,
+                                      2000, 2000, 1000,
+                                      2000, 2000, 1000])
         para_dict = {
             'net_dict': net_dict,
             'sim_dict': sim_dict,
             'stim_dict': stim_dict,
             'special_dict': special_dict
         }
+
+        print('no. {}: K_ext(vip) = {}, master_seed = {}'.format(i, vip_list[int(i/len(seed_list))], sim_dict['master_seed']))
 
         with open(output_path, 'wb') as handle:
             pickle.dump(para_dict, handle)
