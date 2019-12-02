@@ -2,7 +2,7 @@ import numpy as np
 import nest
 from microcircuit.network_params import net_dict
 import matplotlib.pyplot as plt
-from stp_dicts import doiron_stp
+from stp_dicts import doiron_stp, test_stp
 
 # define
 sim_time = 200.0
@@ -78,16 +78,45 @@ def calc_psp_amp(spk_ts, rec_ts, rec_vms):
     return psps
 
 
-def check_compliance(result, target=allen_1to8):
-    result = result.flatten()
-    target = target.flatten()
-    ok_flag = True
-    for r, t in zip(result, target):
-        if np.abs(r - t) > 0.01:
-            ok_flag = False
-            break
-    return ok_flag
+def connect_cells(g_pre, g_post, stp_dict=doiron_stp, c_types=cell_types, w=syn_w, disconnect=False):
+    # set connections
+    for post_type in c_types:
+        for pre_type in c_types:
+            syn_dict = {
+                'model': 'static_synapse',
+                'weight': w
+            }
+            discon_spec = 'static_synapse'
+            if pre_type in stp_dict:
+                if post_type in stp_dict[pre_type]:
+                    syn_dict = stp_dict[pre_type][post_type]
+                    syn_dict['weight'] = w
+                    discon_spec = 'tsodyks_synapse'
+            if disconnect is False:
+                nest.Connect(g_pre[pre_type], g_post[post_type], syn_spec=syn_dict)
+            else:
+                nest.Disconnect(g_pre[pre_type], g_post[post_type], conn_spec={'rule': 'one_to_one'}, syn_spec={'model': discon_spec})
 
+
+def simulate(dev, s_time=sim_time):
+    # simulation
+    nest.Simulate(s_time)
+    dmm = nest.GetStatus(dev)[0]
+    Vms = dmm["events"]["V_m"]
+    ts = dmm["events"]["times"]
+    return Vms, ts
+
+
+def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, c_types=cell_types, resol=mm_resol):
+    connect_cells(g_pre, g_post, stp_dict=s_dict)
+    Vms, ts = simulate(mm)
+    Vms, ts = reshape_mm(Vms, ts, len(c_types), resol)
+    stp_factor = []
+    for i, item in enumerate(c_types):
+        psps = calc_psp_amp(spike_times, ts[:, i], Vms[:, i])
+        stp_factor.append((psps[4] - psps[0]) / psps[0])
+    connect_cells(g_pre, g_post, stp_dict=s_dict, disconnect=True)
+    return stp_factor
 
 
 # create cells and connect to mm
@@ -106,42 +135,25 @@ for i, cell_type in enumerate(cell_types):
 # Connect 1 cell to spike generator
 nest.Connect(spk, cells_pre[input_type], syn_spec={'weight': spk_w})
 
-# set connections
-for post_type in cell_types:
-    for pre_type in cell_types:
-        if pre_type is 'Exc':
-            tau_psc = net_dict['neuron_params']['tau_syn_ex']
-        else:
-            tau_psc = net_dict['neuron_params']['tau_syn_in']
-        syn_dict = {
-            'model': 'static_synapse',
-            'weight': syn_w
-        }
-        if pre_type in doiron_stp:
-            if post_type in doiron_stp[pre_type]:
-                syn_dict = doiron_stp[pre_type][post_type]
-                syn_dict['weight'] = syn_w
-        nest.Connect(cells_pre[pre_type], cells_post[post_type], syn_spec=syn_dict)
+print(test_stp_dicts(cells_pre, cells_post, s_dict=test_stp))
 
-
-# simulation
-nest.Simulate(sim_time)
-dmm = nest.GetStatus(mm)[0]
-Vms = dmm["events"]["V_m"]
-ts = dmm["events"]["times"]
-Vms, ts = reshape_mm(Vms, ts, len(cell_types), mm_resol)
-
-# plotting
-plt.title('presyn. type = ' + input_type)
-for i, cell_type in enumerate(cell_types):
-    x = ts[:, i]
-    y = Vms[:, i]
-    psps = calc_psp_amp(spike_times, x, y)
-    stp_factor = (psps[4]-psps[0])/psps[0]
-    print('{}, 1-to-5th relative diff(psp) = {:f}'.format(cell_type, stp_factor))
-    plt.plot(x, y, color=cell_colors[i], label='{}, stp: {:.2f} ({:.2f})'.format(cell_type, stp_factor, allen_1to8[i][0]))
-plt.vlines(spike_times, -70.0, -40.0, linestyles=':')
-plt.legend()
-plt.xlabel('time (ms)')
-plt.ylabel('V')
-plt.show()
+# connect_cells(cells_pre, cells_post)
+#
+# Vms, ts = simulate(mm)
+#
+# Vms, ts = reshape_mm(Vms, ts, len(cell_types), mm_resol)
+#
+# # plotting
+# plt.title('presyn. type = ' + input_type)
+# for i, cell_type in enumerate(cell_types):
+#     x = ts[:, i]
+#     y = Vms[:, i]
+#     psps = calc_psp_amp(spike_times, x, y)
+#     stp_factor = (psps[4]-psps[0])/psps[0]
+#     print('{}, 1-to-5th relative diff(psp) = {:f}'.format(cell_type, stp_factor))
+#     plt.plot(x, y, color=cell_colors[i], label='{}, stp: {:.2f} ({:.2f})'.format(cell_type, stp_factor, allen_1to8[i][0]))
+# plt.vlines(spike_times, -70.0, -40.0, linestyles=':')
+# plt.legend()
+# plt.xlabel('time (ms)')
+# plt.ylabel('V')
+# plt.show()

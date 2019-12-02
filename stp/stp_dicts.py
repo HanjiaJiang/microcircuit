@@ -38,3 +38,55 @@ doiron_stp = {
         'VIP': doiron_dep_pv
     }
 }
+
+# test stp
+normal_syn = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 10.0,
+}
+
+dep_syn = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 20.0,
+}
+
+fac_syn = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 20.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 0.01,
+}
+
+test_stp = {
+    'Exc': {
+        'Exc': dep_syn,
+        'PV': dep_syn,
+        'SOM': fac_syn,
+        'VIP': normal_syn
+    },
+    'PV': {
+        'Exc': dep_syn,
+        'PV': dep_syn,
+        'SOM': dep_syn,
+        'VIP': dep_syn
+    },
+    'SOM': {
+        'Exc': normal_syn,
+        'PV': normal_syn,
+        'SOM': normal_syn,
+        'VIP': fac_syn
+    },
+    'VIP': {
+        'Exc': normal_syn,
+        'PV': normal_syn,
+        'SOM': normal_syn,
+        'VIP': normal_syn
+    },
+}

@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import matplotlib
-matplotlib.rcParams['font.size'] = 30.0
+matplotlib.rcParams['font.size'] = 20.0
 import numpy as np
 
 '''

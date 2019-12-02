@@ -24,7 +24,8 @@ if __name__ == "__main__":
         print('No argv[1]; single-run.')
         cwd = os.getcwd()
         data_path = os.path.join(cwd, 'data')
-        os.mkdir(data_path)
+        if not os.path.isdir(data_path):
+            os.mkdir(data_path)
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
         params_single(pickle_path)
         os.system('cp *.py microcircuit/*.py ' + data_path)
@@ -43,10 +44,10 @@ if __name__ == "__main__":
         int(mp.cpu_count() * cpu_ratio)
 
     # run simulation
+    net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
+                          para_dict['stim_dict'], para_dict['special_dict'])
+    net.setup()
     if run_sim:
-        net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                              para_dict['stim_dict'], para_dict['special_dict'])
-        net.setup()
         net.simulate()
 
     # analysis

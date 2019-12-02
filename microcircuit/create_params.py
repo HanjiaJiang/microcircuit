@@ -24,9 +24,7 @@ def set_constant():
 
 def params_single(path):
     set_constant()
-
     sim_dict['master_seed'] = 55
-
     net_dict['K_ext'] = np.array([2000, 2000, 1000, 400,
                                   2000, 2000, 1000,
                                   2000, 2000, 1000,
@@ -45,9 +43,10 @@ def params_single(path):
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
-
+    net_dict['neuron_params']['tau_syn_ex'] = 2.1
+    net_dict['neuron_params']['tau_syn_inh'] = 3.2
+    # net_dict['renew_conn'] = True
     stim_dict['orientation'] = 0.0
-
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
