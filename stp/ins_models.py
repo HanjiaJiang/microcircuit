@@ -9,19 +9,25 @@ sim_time = 200.0
 cell_types = ['Exc', 'PV', 'SOM', 'VIP']
 cell_colors = ['b', 'r', 'orange', 'g']
 syn_w = 1000.0
-
-# spike generator
-isi = 20.0
-spike_times = np.arange(isi, sim_time, isi)
-spk = nest.Create('spike_generator')
-nest.SetStatus(spk, {'spike_times': spike_times})
+mm_resol = 0.1
 input_type = 'Exc'
 spk_w = 50000.0
 
+
+# spike generator
+def create_spks(start):
+    isi = 20.0
+    spike_times = np.arange(start, start + sim_time, isi)
+    spk = nest.Create('spike_generator')
+    nest.SetStatus(spk, {'spike_times': spike_times})
+    return spk, spike_times
+
+
 # multimeter
-mm_resol = 0.1
-mm = nest.Create('multimeter')
-nest.SetStatus(mm, {"withtime": True, "record_from": ["V_m"], 'interval': mm_resol})
+def create_mm():
+    mm = nest.Create('multimeter')
+    nest.SetStatus(mm, {"withtime": True, "record_from": ["V_m"], 'interval': mm_resol})
+    return mm
 
 # stp experimental data
 # columns: pre-synaptic, rows: post-synaptic
@@ -71,10 +77,11 @@ def reshape_mm(Vms, ts, cell_n, resolution):
 
 
 def calc_psp_amp(spk_ts, rec_ts, rec_vms):
-    psps = []
+    psps = np.zeros(len(spk_ts) - 1)
     for i in range(len(spk_ts) - 1):
         vms = rec_vms[(rec_ts >= spk_ts[i]) & (rec_ts < spk_ts[i+1])]
-        psps.append(np.max(vms) - np.min(vms))
+        if len(vms) != 0:
+            psps[i] = (np.max(vms) - np.min(vms))
     return psps
 
 
@@ -98,8 +105,10 @@ def connect_cells(g_pre, g_post, stp_dict=doiron_stp, c_types=cell_types, w=syn_
                 nest.Disconnect(g_pre[pre_type], g_post[post_type], conn_spec={'rule': 'one_to_one'}, syn_spec={'model': discon_spec})
 
 
-def simulate(dev, s_time=sim_time):
+def simulate(dev, g_post, s_time=sim_time):
     # simulation
+    for key, value in g_post.items():
+        nest.Connect(dev, value)
     nest.Simulate(s_time)
     dmm = nest.GetStatus(dev)[0]
     Vms = dmm["events"]["V_m"]
@@ -107,15 +116,34 @@ def simulate(dev, s_time=sim_time):
     return Vms, ts
 
 
-def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, c_types=cell_types, resol=mm_resol):
-    connect_cells(g_pre, g_post, stp_dict=s_dict)
-    Vms, ts = simulate(mm)
-    Vms, ts = reshape_mm(Vms, ts, len(c_types), resol)
-    stp_factor = []
-    for i, item in enumerate(c_types):
-        psps = calc_psp_amp(spike_times, ts[:, i], Vms[:, i])
-        stp_factor.append((psps[4] - psps[0]) / psps[0])
-    connect_cells(g_pre, g_post, stp_dict=s_dict, disconnect=True)
+def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol):
+    taus = np.arange(10.0, 100.1, 10.0)
+    stp_factor = np.zeros((len(post_types), len(taus)))
+    # test with a range of tau
+    for j, tau in enumerate(taus):
+        # temporary stp for test
+        test_stp = s_dict
+        # assign tau for mutation in all 4 cells
+        for post_type in post_types:
+            mutated_tau = 'tau_rec'
+            syn_dict = test_stp[pre_type][post_type]
+            if syn_dict['tau_fac'] > 0.0:
+                mutated_tau = 'tau_fac'
+            test_stp[pre_type][post_type][mutated_tau] = tau
+        mm = create_mm()
+        spks, spike_times = create_spks(j*sim_time + mm_resol)
+        nest.Connect(spks, g_pre[pre_type], syn_spec={'weight': spk_w})
+        # print(syn_dict)
+        connect_cells(g_pre, g_post, stp_dict=test_stp)
+        Vms, ts = simulate(mm, g_post)
+        Vms, ts = reshape_mm(Vms, ts, len(post_types), resol)
+        plt.plot(ts, Vms)
+        plt.show()
+        # calculate psps of 4 cells
+        for k in range(4):
+            psps = calc_psp_amp(spike_times, ts[:, k], Vms[:, k])
+            stp_factor[k, j] = ((psps[4] - psps[0]) / psps[0])
+        connect_cells(g_pre, g_post, stp_dict=test_stp, disconnect=True)
     return stp_factor
 
 
@@ -130,10 +158,9 @@ for i, cell_type in enumerate(cell_types):
     nest.SetStatus(neuron_pre, {'tau_syn_ex': 0.1, 'tau_syn_in': 0.1})
     set_neuron_status(neuron_post, cell_type, net_dict)
     # print(nest.GetStatus(cells_post[cell_type]))
-    nest.Connect(mm, neuron_post)
 
 # Connect 1 cell to spike generator
-nest.Connect(spk, cells_pre[input_type], syn_spec={'weight': spk_w})
+# nest.Connect(spk, cells_pre[input_type], syn_spec={'weight': spk_w})
 
 print(test_stp_dicts(cells_pre, cells_post, s_dict=test_stp))
 
