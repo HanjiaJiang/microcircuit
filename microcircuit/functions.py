@@ -1,5 +1,6 @@
 import nest
 import numpy as np
+import copy
 
 '''
 Max firing rate: 
@@ -43,6 +44,17 @@ special_dict = {
     # cell-type specific parameters
     'ctsp': True
 }
+
+
+def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
+    syn_dict = {}
+    for pre_type in stp_dict:
+        for post_type in stp_dict:
+            if pre_type in source_name and post_type in target_name:
+                syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
+                syn_dict['weight'] = weight_dict
+                syn_dict['delay'] = delay_dict
+    return syn_dict
 
 
 def assign_syn_dict(source_name,
