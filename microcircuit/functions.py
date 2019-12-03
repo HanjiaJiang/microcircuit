@@ -1,6 +1,7 @@
 import nest
 import numpy as np
 import copy
+from stp.stp_dicts import cell_types, allen_stp, doiron_stp, doiron_stp_weak
 
 '''
 Max firing rate: 
@@ -24,6 +25,7 @@ Cell-type specific parameters:
 special_dict = {
     'fmax': False,
     # STP
+    'stp_dict': allen_stp,
     'stp': True,
     'som_fac': True,
     'pv_dep': True,
@@ -47,13 +49,19 @@ special_dict = {
 
 
 def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
-    syn_dict = {}
-    for pre_type in stp_dict:
-        for post_type in stp_dict:
+    syn_dict = {
+        'model': 'static_synapse',
+        'weight': weight_dict,
+        'delay': delay_dict
+    }
+    for pre_type in stp_dict.keys():
+        for post_type in stp_dict[pre_type].keys():
             if pre_type in source_name and post_type in target_name:
                 syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
                 syn_dict['weight'] = weight_dict
                 syn_dict['delay'] = delay_dict
+    print(source_name, target_name)
+    print(syn_dict)
     return syn_dict
 
 

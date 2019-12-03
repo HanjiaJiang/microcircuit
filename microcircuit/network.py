@@ -6,7 +6,6 @@ from microcircuit.tools import fire_rate
 from microcircuit.tools import boxplot
 from microcircuit.tools import response
 from microcircuit.tools import plot_psth
-from stp.stp_dicts import allen_stp_dict
 
 
 class Network:
@@ -38,7 +37,7 @@ class Network:
         else:
             self.stim_dict = None
         self.spe_dict = spe_dict
-        self.stp_dict = allen_stp_dict
+        self.stp_dict = spe_dict['stp_dict']
         self.data_path = sim_dict['data_path']
         if nest.Rank() == 0:
             if os.path.isdir(self.sim_dict['data_path']):
@@ -375,6 +374,7 @@ class Network:
                         weight = get_weight_ctsp(self.net_dict['PSP_mean_matrix'][i, j], self.net_dict, target_name, self.spe_dict)
                     except NameError:
                         weight = self.weight_mat[i][j]
+                        print(weight)
                         # print('\'get_weight_ctsp()\' does not exist')
                     else:
                         pass

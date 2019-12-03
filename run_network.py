@@ -58,8 +58,8 @@ if __name__ == "__main__":
     mean_fr_cache, std_fr = \
         tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
                         fr_interval[0], fr_interval[1])
-    tools.response(para_dict['sim_dict']['data_path'], 'spike_detector',
-                   para_dict['stim_dict']['th_start'][0], sf_interval)
+    # tools.response(para_dict['sim_dict']['data_path'], 'spike_detector',
+    #                para_dict['stim_dict']['th_start'][0], sf_interval)
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
     if not on_server:

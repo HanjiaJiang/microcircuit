@@ -3,7 +3,7 @@ import nest
 import copy
 from microcircuit.network_params import net_dict
 import matplotlib.pyplot as plt
-from stp_dicts import cell_types, doiron_stp, test_stp
+from stp_dicts import cell_types, allen_stp, doiron_stp, test_stp, allen_1to5
 np.set_printoptions(precision=3, suppress=True)
 
 # define
@@ -11,10 +11,15 @@ sim_time = 200.0
 cell_colors = ['b', 'r', 'orange', 'g']
 syn_w = 1000.0
 mm_resol = 0.1
-order = 1   # which input cell it is
+order = 3   # which input cell it is
 input_type = cell_types[order]
 spk_w = 50000.0
 plot_Vms = True
+run_single = True
+
+# weights
+exc_w = 72.10248947711023
+inh_w = -288.4099579084409
 
 # spike generator
 def create_spks(start):
@@ -30,14 +35,6 @@ def create_mm():
     mm = nest.Create('multimeter')
     nest.SetStatus(mm, {"withtime": True, "record_from": ["V_m"], 'interval': mm_resol})
     return mm
-
-
-# stp experimental data
-# columns: pre-synaptic, rows: post-synaptic
-allen_1to8 = np.array([[-0.273996, -0.455301, -0.137356, -0.008266],
-                       [-0.185856, -0.365362, -0.130458, -0.066462],
-                       [0.165965, -0.423736, -0.147765, -0.096198],
-                       [-0.007874, -0.327010, 0.132345, -0.128896]])
 
 
 def set_neuron_status(neuron, subtype, n_dict):
@@ -130,10 +127,10 @@ def simulate(dev, g_post, s_time=sim_time):
     return Vms, ts
 
 
-def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol, w=syn_w):
+def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol):
     dt = 1.0
     min_tau = 1.0
-    taus = np.arange(min_tau, 50.0, dt)
+    taus = np.concatenate((np.array([0.1]), np.arange(min_tau, 100.0, dt)))
     stp_factor = np.full((len(post_types) + 1, len(taus)), np.nan)
     # test with a range of tau
     for j, tau in enumerate(taus):
@@ -141,6 +138,8 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
         tmp_stp = copy.deepcopy(s_dict)
         # mutate test_stp
         for post_type in post_types:
+            # set cells to default Vm
+            nest.SetStatus(g_post[post_type], {'V_m': net_dict['neuron_params']['E_L'][post_type]})
             # syn_dict = test_stp[pre_type][post_type]
             if tmp_stp[pre_type][post_type]['tau_fac'] > 0.0:
                 tmp_stp[pre_type][post_type]['tau_fac'] = tau
@@ -148,10 +147,10 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
                 tmp_stp[pre_type][post_type]['tau_rec'] = tau
             if pre_type == 'Exc':
                 tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
-                tmp_stp[pre_type][post_type]['weight'] = w
+                tmp_stp[pre_type][post_type]['weight'] = exc_w
             else:
                 tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
-                tmp_stp[pre_type][post_type]['weight'] = -w
+                tmp_stp[pre_type][post_type]['weight'] = inh_w
             print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
 
         mm = create_mm()
@@ -166,16 +165,52 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
         # calculate psps of 4 cells
         for k in range(4):
             psps = calc_psp_amp(spike_times, ts[:, k], Vms[:, k])
-            diff = np.abs(((psps[4] - psps[0]) / psps[0]) - allen_1to8[k, order])
-            # stp_factor[k + 1, j] = diff
-            if diff < 0.015:
-                stp_factor[k + 1, j] = diff
+            f = (psps[5] - psps[0]) / psps[0]
+            target = allen_1to5[k][order]
+            stp_factor[k + 1, j] = (f - target) / target
         stp_factor[0, j] = tau
         connect_cells(g_pre, g_post, stp_dict=tmp_stp, disconnect=True)
     return stp_factor
 
 
-# create cells and connect to mm
+def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol, spk_gen_w=spk_w):
+    dt = 1.0
+    stp_factor = np.full(len(post_types), np.nan)
+    stp_factor_diff = np.full(len(post_types), np.nan)
+    # temporary stp for test
+    tmp_stp = copy.deepcopy(s_dict)
+    # mutate test_stp
+    for post_type in post_types:
+        # set cells to default Vm
+        nest.SetStatus(g_post[post_type], {'V_m': net_dict['neuron_params']['E_L'][post_type]})
+        # syn_dict = test_stp[pre_type][post_type]
+        if pre_type == 'Exc':
+            tmp_stp[pre_type][post_type]['weight'] = exc_w
+        else:
+            tmp_stp[pre_type][post_type]['weight'] = inh_w
+        print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
+
+    mm = create_mm()
+    spk_gen, spike_times = create_spks(mm_resol)
+    nest.Connect(spk_gen, g_pre[pre_type], syn_spec={'weight': spk_gen_w})
+    connect_cells(g_pre, g_post, stp_dict=tmp_stp)
+    Vms, ts = simulate(mm, g_post)
+    Vms, ts = reshape_mm(Vms, ts, len(post_types), resol)
+    if plot_Vms is True:
+        plt.plot(ts, Vms)
+        plt.show()
+    # calculate psps of 4 cells
+    for k in range(len(post_types)):
+        psps = calc_psp_amp(spike_times, ts[:, k], Vms[:, k])
+        f = (psps[5] - psps[0]) / psps[0]
+        target = allen_1to5[k][order]
+        stp_factor[k] = f
+        stp_factor_diff[k] = (f - target)/target
+    connect_cells(g_pre, g_post, stp_dict=tmp_stp, disconnect=True)
+    return stp_factor, stp_factor_diff
+
+
+# create cells
 cells_pre = {}
 cells_post = {}
 for i, cell_type in enumerate(cell_types):
@@ -187,29 +222,15 @@ for i, cell_type in enumerate(cell_types):
     set_neuron_status(neuron_post, cell_type, net_dict)
     # print(nest.GetStatus(cells_post[cell_type]))
 
-# Connect 1 cell to spike generator
-# nest.Connect(spk, cells_pre[input_type], syn_spec={'weight': spk_w})
-
-result = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
-print(result.T)
-
-# connect_cells(cells_pre, cells_post)
-#
-# Vms, ts = simulate(mm)
-#
-# Vms, ts = reshape_mm(Vms, ts, len(cell_types), mm_resol)
-#
-# # plotting
-# plt.title('presyn. type = ' + input_type)
-# for i, cell_type in enumerate(cell_types):
-#     x = ts[:, i]
-#     y = Vms[:, i]
-#     psps = calc_psp_amp(spike_times, x, y)
-#     stp_factor = (psps[4]-psps[0])/psps[0]
-#     print('{}, 1-to-5th relative diff(psp) = {:f}'.format(cell_type, stp_factor))
-#     plt.plot(x, y, color=cell_colors[i], label='{}, stp: {:.2f} ({:.2f})'.format(cell_type, stp_factor, allen_1to8[i][0]))
-# plt.vlines(spike_times, -70.0, -40.0, linestyles=':')
-# plt.legend()
-# plt.xlabel('time (ms)')
-# plt.ylabel('V')
-# plt.show()
+# run the test
+if run_single:
+    f, f_diff = test_single(cells_pre, cells_post, s_dict=allen_stp)
+    print('pre cell={}'.format(cell_types[order]))
+    print('post cells={}'.format(cell_types))
+    print('target stps={}'.format(np.array(allen_1to5)[:, order].T))
+    print('result stps={}'.format(f.T))
+else:
+    f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
+    print('cell={}'.format(cell_types[order]))
+    print('target={}'.format(np.array(allen_1to5)[:, order].T))
+print('relative diff.=\n{}'.format(f_diff.T))

@@ -6,7 +6,7 @@ from microcircuit.network_params import net_dict
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
-
+from stp.stp_dicts import allen_stp, doiron_stp, doiron_stp_weak
 
 def set_constant():
     sim_dict['t_sim'] = 2000.0
@@ -17,15 +17,20 @@ def set_constant():
     stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     special_dict['orient_tuning'] = False
-    special_dict['som_fac'] = True
-    special_dict['pv_dep'] = True
-    special_dict['pv2all_dep'] = True
-    special_dict['weak_dep'] = True
+    special_dict['stp_dict'] = allen_stp
+    # special_dict['som_fac'] = True
+    # special_dict['pv_dep'] = True
+    # special_dict['pv2all_dep'] = True
+    # special_dict['weak_dep'] = True
 
 def params_single(path):
     set_constant()
     sim_dict['master_seed'] = 55
-    net_dict['K_ext'] = np.array([2000, 2000, 1000, 400,
+    # net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
+    #                               2000, 2000, 1500,
+    #                               2000, 2000, 1500,
+    #                               2000, 2000, 1500])
+    net_dict['K_ext'] = np.array([2000, 2000, 1000, 500,
                                   2000, 2000, 1000,
                                   2000, 2000, 1000,
                                   2000, 2000, 1000])

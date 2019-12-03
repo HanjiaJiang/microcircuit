@@ -2,18 +2,21 @@ from microcircuit.network_params import net_dict
 import copy
 cell_types = ['Exc', 'PV', 'SOM', 'VIP']
 
-# Allen data
-allen_stp_dict = {}
-allen_stps = \
+'''
+Allen data
+'''
+allen_stp = {}
+# relative changes from 1st to 5th PSP
+allen_1to5 = \
     [[-0.273996, -0.455301, -0.137356, -0.008266],
      [-0.185856, -0.365362, -0.130458, -0.066462],
      [0.165965, -0.423736, -0.147765, -0.096198],
      [-0.007874, -0.327010, 0.132345, -0.128896]]
 tau_arr = [
-    [21, 30, 9, 2],
-    [16, 27, 10, 7],
-    [15, 27, 10, 7],
-    [4, 20, 12, 9],
+    [16, 18, 0.1, 0.1],
+    [16, 24, 7, 0.1],
+    [25, 16, 0.1, 0.1],
+    [0.1, 9, 57, 0.1],
 ]
 stp_dict_template = {
     'model': 'tsodyks_synapse',
@@ -22,24 +25,29 @@ stp_dict_template = {
     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
     'tau_rec': 0.01,
 }
+static_template = {
+    'model': 'tsodyks_synapse',
+}
 for pre_type in cell_types:
-    allen_stp_dict[pre_type] = {}
+    allen_stp[pre_type] = {}
 
 for i, post_type in enumerate(cell_types):
     for j, pre_type in enumerate(cell_types):
         tmp_dict = copy.deepcopy(stp_dict_template)
         if pre_type != 'Exc':
             tmp_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
-        if allen_stps[i][j] >= 0:
+        if allen_1to5[i][j] >= 0:
             tmp_dict['tau_fac'] = tau_arr[i][j]
         else:
             tmp_dict['tau_rec'] = tau_arr[i][j]
         # print(tmp_dict)
-        allen_stp_dict[pre_type][post_type] = copy.deepcopy(tmp_dict)
-# print(allen_stp_dict)
+        allen_stp[pre_type][post_type] = copy.deepcopy(tmp_dict)
+# print(allen_stp)
 
-# Doiron data
-doiron_dep_exc = {
+'''
+Doiron data
+'''
+exc_strong = {
     'model': 'tsodyks_synapse',
     'U': 0.75,
     'tau_fac': 0.0,
@@ -47,7 +55,7 @@ doiron_dep_exc = {
     'tau_rec': 800.0,
 }
 
-doiron_dep_pv = {
+pv_strong = {
     'model': 'tsodyks_synapse',
     'U': 0.9,
     'tau_fac': 0.0,
@@ -55,7 +63,23 @@ doiron_dep_pv = {
     'tau_rec': 800.0,
 }
 
-doiron_fac_exc2som = {
+exc_weak = {
+    'model': 'tsodyks_synapse',
+    'U': 0.75,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 100.0,
+}
+
+pv_weak = {
+    'model': 'tsodyks_synapse',
+    'U': 0.9,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+    'tau_rec': 100.0,
+}
+
+som_fac = {
     'model': 'tsodyks_synapse',
     'U': 0.5,
     'tau_fac': 200.0,
@@ -65,19 +89,35 @@ doiron_fac_exc2som = {
 
 doiron_stp = {
     'Exc': {
-        'Exc': doiron_dep_exc,
-        'PV': doiron_dep_exc,
-        'SOM': doiron_fac_exc2som
+        'Exc': exc_strong,
+        'PV': exc_strong,
+        'SOM': som_fac
     },
     'PV': {
-        'Exc': doiron_dep_pv,
-        'PV': doiron_dep_pv,
-        'SOM': doiron_dep_pv,
-        'VIP': doiron_dep_pv
+        'Exc': pv_strong,
+        'PV': pv_strong,
+        'SOM': pv_strong,
+        'VIP': pv_strong
     }
 }
 
-# test stp
+doiron_stp_weak = {
+    'Exc': {
+        'Exc': exc_weak,
+        'PV': exc_weak,
+        'SOM': som_fac
+    },
+    'PV': {
+        'Exc': pv_weak,
+        'PV': pv_weak,
+        'SOM': pv_weak,
+        'VIP': pv_weak
+    }
+}
+
+'''
+For testing in ins_models.py
+'''
 U_test = 0.5
 dep_syn = {
     'model': 'tsodyks_synapse',
