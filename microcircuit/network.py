@@ -374,7 +374,7 @@ class Network:
                         weight = get_weight_ctsp(self.net_dict['PSP_mean_matrix'][i, j], self.net_dict, target_name, self.spe_dict)
                     except NameError:
                         weight = self.weight_mat[i][j]
-                        print(weight)
+                        # print(weight)
                         # print('\'get_weight_ctsp()\' does not exist')
                     else:
                         pass

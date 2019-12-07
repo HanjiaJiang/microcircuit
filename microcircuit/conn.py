@@ -3,23 +3,15 @@ from scipy import integrate
 import os
 from multiprocessing import Process
 from multiprocessing import Manager
-from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia
+from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia, allen, dia_allen
 
 
-def conn_barrel_integrate(net_dict):
-    conn_arr_bbp = bbp
-    conn_arr_exp = exp
-    dia_arr_exp = dia
-
-    arr_shape = conn_arr_exp.shape
+def conn_barrel_integrate(animal_dict, arr_0, arr_1, arr_2, dia):
+    arr_shape = arr_1.shape
     conn_arr_out = np.zeros(arr_shape)
 
-    if net_dict['animal'] == 'mouse':
-        r_barrel = mouse_dict['radius']
-        z_arr = mouse_dict['thickness']
-    else:
-        r_barrel = rat_dict['radius']
-        z_arr = rat_dict['thickness']
+    r_barrel = animal_dict['radius']
+    z_arr = animal_dict['thickness']
 
     # integration
     data_used = []
@@ -33,10 +25,8 @@ def conn_barrel_integrate(net_dict):
             pre_top = z_arr[j][1]
             post_base = z_arr[i][0]
             post_top = z_arr[i][1]
-            r = dia_arr_exp[i, j]/2.0
-            if r == 0:
+            if dia[i, j] == 0:
                 r = 210.0
-            # 0415 integrate exp data if radius != 0
             else:
                 r = 100.0
             pass_flag = False
@@ -69,27 +59,24 @@ def conn_barrel_integrate(net_dict):
         for j in range(arr_len):
             pre_base = z_arr[j][0]
             post_base = z_arr[i][0]
-            r = dia_arr_exp[i, j] / 2.0
-            if r == 0:
+            r = 100.0
+            if dia[i, j] == 0:
                 r = 210.0
-                conn = conn_arr_bbp[i, j]
-                # conn_arr_out[i, j] = conn
+                conn = arr_0[i, j]
+            elif dia[i, j] == 1:
+                conn = arr_1[i, j]
             else:
-                # 0415
-                r = 100.0
-                conn = conn_arr_exp[i, j]
+                conn = arr_2[i, j]
             f = return_dict[keygen(r, pre_base, post_base)]
             f_barrel = return_dict[keygen(r_barrel, pre_base, post_base)]
             print('post{0}, pre{1}: f={2}, f_barrel={3}'.format(i, j, f, f_barrel))
             if f != 0:
                 conn_arr_out[i, j] = conn*f_barrel/f
-            # print('{0}, {1}th f_barrel = {2}'.format(i, j, f_barrel))
-            # conn_arr_out[i, j] = conn*f_barrel
 
     np.set_printoptions(precision=4, suppress=True, linewidth=200)
-    print('raw exp map = \n{0}'.format(repr(conn_arr_exp)))
-    print('raw exp diameter = \n{0}'.format(repr(dia_arr_exp)))
-    print('bbp map = \n{0}'.format(repr(conn_arr_bbp)))
+    print('raw exp map = \n{0}'.format(repr(arr_1)))
+    print('raw exp diameter = \n{0}'.format(repr(dia)))
+    print('bbp map = \n{0}'.format(repr(arr_0)))
     print('combined map = \n{0}'.format(repr(conn_arr_out)))
     np.save('conn_probs.npy', conn_arr_out)
     return conn_arr_out

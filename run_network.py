@@ -39,7 +39,8 @@ if __name__ == "__main__":
         cpu_ratio = 1
         on_server = True
     else:
-        exec(tools.set2txt())
+        # exec(tools.set2txt())
+        pass
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
 
@@ -63,4 +64,5 @@ if __name__ == "__main__":
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
     if not on_server:
-        exec(tools.end2txt())
+        # exec(tools.end2txt())
+        pass

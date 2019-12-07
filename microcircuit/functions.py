@@ -60,8 +60,8 @@ def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
                 syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
                 syn_dict['weight'] = weight_dict
                 syn_dict['delay'] = delay_dict
-    print(source_name, target_name)
-    print(syn_dict)
+    # print(source_name, target_name)
+    # print(syn_dict)
     return syn_dict
 
 

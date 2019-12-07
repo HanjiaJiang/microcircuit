@@ -1,6 +1,6 @@
 import numpy as np
 from microcircuit.conn import conn_barrel_integrate
-
+from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia, allen, dia_allen
 
 def compute_DC(net_dict, w_ext):
     """ Computes DC input if no Poisson input is provided to the microcircuit.
@@ -93,7 +93,11 @@ def get_total_number_of_synapses(net_dict):
 
     # HJ
     if net_dict['renew_conn'] is True:
-        conn_probs = conn_barrel_integrate(net_dict)
+        if net_dict['animal'] == 'mouse':
+            animal_dict = mouse_dict
+        else:
+            animal_dict = rat_dict
+        conn_probs = conn_barrel_integrate(animal_dict, bbp, exp, allen, dia_allen)
 
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
     N_full_matrix = np.column_stack(
