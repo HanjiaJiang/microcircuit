@@ -96,7 +96,7 @@ if __name__ == "__main__":
     set_constant()
     np.set_printoptions(precision=4, suppress=True)
 
-    # get the total count of each parameter
+    # get the size of each dimension from the last target name (e.g. 1_2_2)
     para_total = list(map(float, os.path.basename(output_list[-1]).split('.')[0].split('_')))
     print(para_total)
 
@@ -105,18 +105,24 @@ if __name__ == "__main__":
     for conn_probs in conn_probs_list:
         print(conn_probs)
 
+    # stp list
+    stp_list = [allen_stp, doiron_stp, doiron_stp_weak]
+
     for i, output in enumerate(output_list):
-        para_list = os.path.basename(output).split('.')[0].split('_')
-        som = (float(para_list[1])/para_total[1])*2000
-        vip = (float(para_list[2])/para_total[2])*2000
-        sim_dict['data_path'] = os.path.join(os.path.dirname(output), 'conn{}_som{}_vip{}'.format(
-            para_list[0], para_list[1], para_list[2]
+        # get levels
+        levels_list = os.path.basename(output).split('.')[0].split('_')
+        # assign to dictionary
+        net_dict['conn_probs'] = conn_probs_list[int(levels_list[0])]
+        special_dict['stp'] = stp_list[int(levels_list[1])]
+        som = (float(levels_list[2])+1/para_total[1])*2000
+        vip = (float(levels_list[3])+1/para_total[2])*2000
+        sim_dict['data_path'] = os.path.join(os.path.dirname(output), 'conn{}_stp{}_som{}_vip{}'.format(
+            levels_list[0], levels_list[1], levels_list[2], levels_list[3]
         ))
         net_dict['K_ext'] = np.array([2000, 2000, som, vip,
                                       2000, 2000, som,
                                       2000, 2000, som,
                                       2000, 2000, som])
-        net_dict['conn_probs'] = conn_probs_list[int(para_list[0])]
         para_dict = {
             'net_dict': net_dict,
             'sim_dict': sim_dict,
@@ -128,34 +134,4 @@ if __name__ == "__main__":
         with open(output, 'wb') as handle:
             pickle.dump(para_dict, handle)
         handle.close()
-
-    # # lists of parameters
-    # som_len = vip_len = np.floor(np.sqrt(len(output_list)/len(conn_probs_list)))
-    # som_list = np.linspace(100.0, 2000.0, som_len)
-    # vip_list = np.linspace(100.0, 2000.0, vip_len)
-    #
-    # # to output
-    # idx = 0
-    # scan_folder = os.path.dirname(output_list[idx])
-    # for a, conn_probs in enumerate(conn_probs_list):
-    #     for b, som in enumerate(som_list):
-    #         for c, vip in enumerate(vip_list):
-    #             sim_dict['data_path'] = os.path.join(scan_folder, 'data{}'.format(idx))
-    #             net_dict['K_ext'] = np.array([2000, 2000, som, vip,
-    #                                           2000, 2000, som,
-    #                                           2000, 2000, som,
-    #                                           2000, 2000, som])
-    #             net_dict['conn_probs'] = conn_probs
-    #             para_dict = {
-    #                 'net_dict': net_dict,
-    #                 'sim_dict': sim_dict,
-    #                 'stim_dict': stim_dict,
-    #                 'special_dict': special_dict
-    #             }
-    #             with open(output_list[idx], 'wb') as handle:
-    #                 pickle.dump(para_dict, handle)
-    #
-    #             idx += 1
-
-
 

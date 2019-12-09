@@ -1,24 +1,25 @@
 CONN_COUNT = 2
-SOM_COUNT = 3
-VIP_COUNT = 3
+STP_COUNT = 3
+SOM_COUNT = 2
+VIP_COUNT = 2
 
 localrules: all, create
 
 rule all:
     input:
-        expand('scans/conn{a}_som{b}_vip{c}/box_plot.png', a=range(CONN_COUNT), b=range(SOM_COUNT), c=range(VIP_COUNT))
+        expand('scans/conn{a}_stp{b}_som{c}_vip{d}/box_plot.png', a=range(CONN_COUNT), b=range(STP_COUNT), c=range(SOM_COUNT), d=range(VIP_COUNT))
 
 rule create:
     output:
-        expand('scans/{a}_{b}_{c}.pickle', a=range(CONN_COUNT), b=range(SOM_COUNT), c=range(VIP_COUNT))
+        expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(CONN_COUNT), b=range(STP_COUNT), c=range(SOM_COUNT), d=range(VIP_COUNT))
     shell:
         '''
         python ./microcircuit/create_params.py {output}
         '''
 
 rule simulate:
-    input: 'scans/{a}_{b}_{c}.pickle'
-    output: 'scans/conn{a}_som{b}_vip{c}/box_plot.png'
+    input: 'scans/{a}_{b}_{c}_{d}.pickle'
+    output: 'scans/conn{a}_stp{b}_som{c}_vip{d}/box_plot.png'
     shell:
         '''
         python run_network.py {input} {output}
