@@ -2,6 +2,7 @@ import os
 import sys
 import pickle
 import multiprocessing as mp
+import time
 import microcircuit.network as network
 import microcircuit.tools as tools
 from microcircuit.create_params import params_single
@@ -13,7 +14,7 @@ if __name__ == "__main__":
 
     # analysis settings
     plot_half_len = 200.0   # ms
-    fr_interval = [500.0, 1500.0]
+    fr_interval = [1000.0, 2000.0]
     sf_interval = 20  # ms
 
     # check for: parameter scan or single-run
@@ -63,6 +64,20 @@ if __name__ == "__main__":
     #                para_dict['stim_dict']['th_start'][0], sf_interval)
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
+    t0 = time.time()
+    tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
+        fr_interval[0], fr_interval[1])
+    print('ai analysis time = {}'.format(time.time() - t0))
+
+    # delete .gdf files to save space
+    if os.path.isdir(para_dict['sim_dict']['data_path']):
+        for item in os.listdir(para_dict['sim_dict']['data_path']):
+            if item.endswith('.gdf'):
+                os.remove(os.path.join(para_dict['sim_dict']['data_path'], item))
+
     if not on_server:
         # exec(tools.end2txt())
         pass
+
+
+

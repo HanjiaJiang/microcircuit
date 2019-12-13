@@ -4,6 +4,7 @@ from matplotlib.patches import Polygon
 import matplotlib
 matplotlib.rcParams['font.size'] = 20.0
 import numpy as np
+from random import sample
 
 '''
 Notes:
@@ -21,6 +22,7 @@ subtype_label = ['Exc', 'PV', 'SOM', 'VIP']
 
 use_box_xlim = True
 box_xlim = 51.0
+
 
 # Plots
 def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
@@ -121,7 +123,7 @@ def make_folder(folder_name):
 
 # Potjans_2014 helpers
 def read_name(path, name):
-    # Import filenames$
+    # Import filenames
     files = []
     for file in os.listdir(path):
         if file.endswith('.gdf') and file.startswith(name):
@@ -140,9 +142,6 @@ def read_name(path, name):
 
 
 def load_spike_times(path, name, begin, end):
-    # if check_data(path, name):
-    #     return data_dict['data'], data_dict['gids']
-    # else:
     detector_names, gids = read_name(path, name)    # names: populations
     data = {}
     if len(detector_names) > 0 and len(gids) > 0:
@@ -180,10 +179,6 @@ def load_spike_times(path, name, begin, end):
                 data[i] = data_raw[idx]
             else:
                 data[i] = []
-    # data_dict['path'] = path
-    # data_dict['name'] = name
-    # data_dict['gids'] = gids
-    # data_dict['data'] = data
     return data, gids   # an extra return: gids
 
 
@@ -214,8 +209,8 @@ def fire_rate(path, name, begin, end):
     print('Standard deviation of rates: %r Hz' % rates_std_all)
 
     f_rates = open(os.path.join(path, 'fr.dat'), 'w')
-    f_rates.write('Mean rates: %r Hz\n' % rates_averaged_all)
-    f_rates.write('Standard deviation of rates: %r Hz\n' % rates_std_all)
+    for rate_mean, rate_std in zip(rates_averaged_all, rates_std_all):
+        f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
     return rates_averaged_all, rates_std_all
 
@@ -327,6 +322,63 @@ def boxplot(net_dict, path):
 
 
 # Other analysis
+# Asynchronous irregular state calculation
+def ai_score(path, name, begin, end, limit=200, bw=10, layers=[[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]):
+    data_all, gids = load_spike_times(path, name, begin, end)
+    bin_n = int((end - begin) / bw)
+    corrs = []
+    cvs = []
+    for layer in layers:
+        layer_ids = np.array([])
+        layer_ts = np.array([])
+        n_layer = gids[layer[-1]][1] - gids[layer[0]][0] + 1    # total n in 1 layer
+        corr_ids = []   # sampled ids for correlation
+        for idx in layer:
+            if len(data_all[idx]) > 0:
+                layer_ids = np.concatenate((layer_ids, data_all[idx][:, 0].astype(int)))
+                layer_ts = np.concatenate((layer_ts, data_all[idx][:, 1]))
+            n = gids[idx][1] - gids[idx][0] + 1       # n in 1 group
+            # print('n={}'.format(int(limit*n/n_layer)))
+            corr_ids.append(sample(list(range(gids[idx][0], gids[idx][1]+1)), int(limit*n/n_layer)))     # sample n of all groups by ratio
+
+        hists = []
+        cv = []
+        cnt = 0
+
+        # correlation
+        for group_ids in corr_ids:
+            for gid in group_ids:
+                ts = layer_ts[layer_ids == gid]
+                if len(ts) > 0:
+                    hist, bin_edges = np.histogram(ts, bins=bin_n, range=(begin, end))
+                    hists.append(hist)
+        corrs.append(get_mean_corr(hists))
+
+        # cv of isi
+        for gid in list(range(gids[layer[0]][0], gids[layer[-1]][1] + 1)):
+            ts = layer_ts[layer_ids == gid]
+            isi = np.diff(ts)
+            if len(isi) >= 3:
+                cv.append(np.std(isi)/np.mean(isi))
+            cnt += 1
+            if cnt > limit:
+                break
+        cvs.append(np.mean(cv))
+
+    ai = open(os.path.join(path, 'ai.dat'), 'w')
+    for corr, cv in zip(corrs, cvs):
+        ai.write(str(corr) + ', ' + str(cv) + '\n')
+    ai.close()
+
+    # corr_f = open(os.path.join(path, 'corr.dat'), 'w')
+    # cv_f = open(os.path.join(path, 'cv.dat'), 'w')
+    # for corr, cv in zip(corrs, cvs):
+    #     corr_f.write(str(corr) + '\n')
+    #     cv_f.write(str(cv) + '\n')
+    # corr_f.close()
+    # cv_f.close()
+    return corrs, cvs
+
 # response spread and amplitude
 def response(path, name, begin, window, n_stim=20, interval=1000.0):
     # end = begin + window

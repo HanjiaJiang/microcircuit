@@ -8,12 +8,15 @@ from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 from stp.stp_dicts import allen_stp, doiron_stp, doiron_stp_weak
 
+
 def set_constant():
     sim_dict['t_sim'] = 2000.0
     net_dict['g'] = 4.0
     net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
     net_dict['renew_conn'] = False
+    net_dict['neuron_params']['tau_syn_ex'] = 2.1
+    net_dict['neuron_params']['tau_syn_inh'] = 3.2
     stim_dict['thalamic_input'] = False
     stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     special_dict['orient_tuning'] = False
@@ -23,14 +26,10 @@ def set_constant():
 def params_single(path):
     set_constant()
     sim_dict['master_seed'] = 55
-    net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
+    net_dict['K_ext'] = np.array([2000, 2000, 1500, 550,
                                   2000, 2000, 1500,
                                   2000, 2000, 1500,
                                   2000, 2000, 1500])
-    # net_dict['K_ext'] = np.array([2000, 2000, 1000, 500,
-    #                               2000, 2000, 1000,
-    #                               2000, 2000, 1000,
-    #                               2000, 2000, 1000])
     net_dict['conn_probs'] = \
         np.array([[0.0872, 0.3173, 0.4612, 0.0443, 0.1056, 0.4011, 0.0374, 0.0234, 0.09  , 0.1864, 0.    , 0.    , 0.    ],
            [0.3763, 0.3453, 0.2142, 0.0683, 0.0802, 0.0135, 0.026 , 0.0257, 0.1937, 0.2237, 0.0001, 0.0001, 0.0051],
@@ -45,23 +44,6 @@ def params_single(path):
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
-    # # Allen map
-    # net_dict['conn_probs'] = \
-    #     np.array([[0.1014, 0.3688, 0.536 , 0.0178, 0.1174, 0.3903, 0.0429, 0.0247, 0.0948, 0.0623, 0.    , 0.    , 0.    ],
-    #        [0.4374, 0.3183, 0.249 , 0.0183, 0.223 , 0.1878, 0.0298, 0.0334, 0.055 , 0.2355, 0.    , 0.0001, 0.0054],
-    #        [0.2659, 0.4901, 0.0306, 0.127 , 0.0038, 0.0111, 0.0417, 0.0004, 0.0234, 0.    , 0.    , 0.    , 0.    ],
-    #        [0.1514, 0.    , 0.127 , 0.    , 0.0406, 0.    , 0.1487, 0.    , 0.    , 0.1558, 0.    , 0.0001, 0.005 ],
-    #        [0.0142, 0.1115, 0.0562, 0.    , 0.2058, 0.5339, 0.322 , 0.0065, 0.2232, 0.047 , 0.    , 0.0021, 0.0232],
-    #        [0.2788, 0.1575, 0.0216, 0.    , 0.1093, 0.4068, 0.4746, 0.    , 0.2143, 0.0446, 0.0013, 0.0026, 0.0175],
-    #        [0.0811, 0.0172, 0.0227, 0.1487, 0.339 , 0.5169, 0.0326, 0.0687, 0.0303, 0.0271, 0.0017, 0.0021, 0.0217],
-    #        [0.0885, 0.0334, 0.0758, 0.    , 0.0932, 0.1623, 0.    , 0.1098, 0.1192, 0.1655, 0.0103, 0.0167, 0.0477],
-    #        [0.0742, 0.1168, 0.0467, 0.085 , 0.2061, 0.1595, 0.0216, 0.0812, 0.184 , 0.0919, 0.    , 0.09  , 0.1384],
-    #        [0.1051, 0.0076, 0.0098, 0.    , 0.    , 0.0285, 0.0262, 0.0994, 0.074 , 0.0428, 0.0061, 0.0321, 0.    ],
-    #        [0.    , 0.0018, 0.0031, 0.0075, 0.0306, 0.0145, 0.0094, 0.0418, 0.    , 0.0157, 0.0241, 0.1985, 0.0377],
-    #        [0.0028, 0.0001, 0.0002, 0.002 , 0.0052, 0.0022, 0.0005, 0.0171, 0.0871, 0.093 , 0.1238, 0.2974, 0.1057],
-    #        [0.0022, 0.    , 0.0002, 0.0011, 0.0047, 0.0019, 0.0003, 0.0161, 0.    , 0.0367, 0.1112, 0.0104, 0.0389]])
-    net_dict['neuron_params']['tau_syn_ex'] = 2.1
-    net_dict['neuron_params']['tau_syn_inh'] = 3.2
     # net_dict['renew_conn'] = True
     stim_dict['orientation'] = 0.0
     para_dict = {
@@ -74,7 +56,7 @@ def params_single(path):
         pickle.dump(para_dict, h)
 
 
-def get_conn_probs(list_n):
+def get_conn_probs(list_n=10):
     cwd = os.getcwd()
     conn_probs_list = []
     conn_folder = os.path.join(cwd, 'conn_probs')
@@ -82,7 +64,6 @@ def get_conn_probs(list_n):
         if file.endswith(".npy") and 'conn_probs' in file:
             tmp = np.load(os.path.join(conn_folder, file))
             if tmp.shape == net_dict['conn_probs'].shape:
-                print(file)
                 conn_probs_list.append(tmp)
     if len(conn_probs_list) < list_n:
         return_list = conn_probs_list
@@ -92,16 +73,21 @@ def get_conn_probs(list_n):
 
 
 if __name__ == "__main__":
-    output_list = sys.argv[1:]
-    set_constant()
     np.set_printoptions(precision=4, suppress=True)
 
-    # get the size of each dimension from the last target name (e.g. 1_2_2)
+    # get output names from system input
+    output_list = sys.argv[1:]
+
+    # set constant parameters
+    set_constant()
+
+    # get the size of each dimension from the largest (#_#_#_#)
     para_total = list(map(float, os.path.basename(output_list[-1]).split('.')[0].split('_')))
+    para_total = np.array(para_total).astype(int)
     print(para_total)
 
-    # conn_probs
-    conn_probs_list = get_conn_probs(int(para_total[0]+1))
+    # load conn_probs; default return the whole list
+    conn_probs_list = get_conn_probs()
     for conn_probs in conn_probs_list:
         print(conn_probs)
 
@@ -110,15 +96,19 @@ if __name__ == "__main__":
 
     for i, output in enumerate(output_list):
         # get levels
-        levels_list = os.path.basename(output).split('.')[0].split('_')
+        levels_str = os.path.basename(output).split('.')[0]
+        levels_list = np.array(levels_str.split('_')).astype(int)
+
         # assign to dictionary
-        net_dict['conn_probs'] = conn_probs_list[int(levels_list[0])]
-        special_dict['stp'] = stp_list[int(levels_list[1])]
-        som = (float(levels_list[2])+1/para_total[1])*2000
-        vip = (float(levels_list[3])+1/para_total[2])*2000
-        sim_dict['data_path'] = os.path.join(os.path.dirname(output), 'conn{}_stp{}_som{}_vip{}'.format(
-            levels_list[0], levels_list[1], levels_list[2], levels_list[3]
-        ))
+        net_dict['conn_probs'] = conn_probs_list[levels_list[0]]
+        # print(levels_list[1])
+        special_dict['stp'] = stp_list[levels_list[1]]
+        som = (float(levels_list[2]+1)/(para_total[2]+1))*2000.0    # assign som and vip strengths
+        vip = (float(levels_list[3]+1)/(para_total[3]+1))*2000.0    # according to levels
+        sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
+        # sim_dict['data_path'] = os.path.join(os.path.dirname(output), '{}_{}_{}_{}'.format(
+        #     levels_list[0], levels_list[1], levels_list[2], levels_list[3]
+        # ))
         net_dict['K_ext'] = np.array([2000, 2000, som, vip,
                                       2000, 2000, som,
                                       2000, 2000, som,
@@ -129,8 +119,8 @@ if __name__ == "__main__":
             'stim_dict': stim_dict,
             'special_dict': special_dict
         }
-        print('{}:'.format(output))
-        print('{}'.format(net_dict['K_ext']))
+        # print('{}:'.format(output))
+        # print('{}'.format(net_dict['K_ext'])) # just for validation
         with open(output, 'wb') as handle:
             pickle.dump(para_dict, handle)
         handle.close()

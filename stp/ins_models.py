@@ -3,7 +3,7 @@ import nest
 import copy
 from microcircuit.network_params import net_dict
 import matplotlib.pyplot as plt
-from stp_dicts import cell_types, allen_stp, doiron_stp, test_stp, allen_1to5
+from stp_dicts import cell_types, allen_stp, doiron_stp, test_stp, allen_1to5, tau_arr
 np.set_printoptions(precision=3, suppress=True)
 
 # define
@@ -11,9 +11,9 @@ sim_time = 200.0
 cell_colors = ['b', 'r', 'orange', 'g']
 syn_w = 1000.0
 mm_resol = 0.1
-order = 3   # which input cell it is
+order = 0   # 0 = Exc, 1 = PV, 2 = SOM, 3 = VIP
 input_type = cell_types[order]
-spk_w = 50000.0
+spk_w = 50000.0 # for generator --> pre-synaptic cell
 plot_Vms = True
 run_single = True
 
@@ -102,15 +102,11 @@ def connect_cells(g_pre, g_post, stp_dict=doiron_stp, c_types=cell_types, w=syn_
             if pre_type in stp_dict:
                 if post_type in stp_dict[pre_type]:
                     syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
-                    # if pre_type == 'Exc':
-                    #     syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
-                    #     syn_dict['weight'] = w
-                    # else:
-                    #     syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
-                    #     syn_dict['weight'] = -w
-                    discon_spec = 'tsodyks_synapse'
+                    if 'tau_fac' in syn_dict and 'tau_rec' in syn_dict:
+                        discon_spec = 'tsodyks_synapse'
             # print(syn_dict)
             if disconnect is False:
+                print(syn_dict)
                 nest.Connect(g_pre[pre_type], g_post[post_type], syn_spec=syn_dict)
             else:
                 nest.Disconnect(g_pre[pre_type], g_post[post_type], conn_spec={'rule': 'one_to_one'}, syn_spec={'model': discon_spec})
@@ -132,6 +128,15 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
     min_tau = 1.0
     taus = np.concatenate((np.array([0.1]), np.arange(min_tau, 100.0, dt)))
     stp_factor = np.full((len(post_types) + 1, len(taus)), np.nan)
+    stp_factor_diff = np.full((len(post_types) + 1, len(taus)), np.nan)
+
+    # presynaptic idx
+    idx = 0
+    for a, cell_type in enumerate(cell_types):
+        if cell_type == pre_type:
+            idx = a
+    plt.figure(figsize=(12, 12))
+
     # test with a range of tau
     for j, tau in enumerate(taus):
         # temporary stp for test
@@ -141,15 +146,18 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
             # set cells to default Vm
             nest.SetStatus(g_post[post_type], {'V_m': net_dict['neuron_params']['E_L'][post_type]})
             # syn_dict = test_stp[pre_type][post_type]
-            if tmp_stp[pre_type][post_type]['tau_fac'] > 0.0:
-                tmp_stp[pre_type][post_type]['tau_fac'] = tau
-            else:
-                tmp_stp[pre_type][post_type]['tau_rec'] = tau
+            if 'tau_fac' in tmp_stp[pre_type][post_type] and 'tau_rec' in tmp_stp[pre_type][post_type]:
+                if tmp_stp[pre_type][post_type]['tau_fac'] > 0.0:
+                    tmp_stp[pre_type][post_type]['tau_fac'] = tau
+                else:
+                    tmp_stp[pre_type][post_type]['tau_rec'] = tau
+                if pre_type == 'Exc':
+                    tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
+                else:
+                    tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
             if pre_type == 'Exc':
-                tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
                 tmp_stp[pre_type][post_type]['weight'] = exc_w
             else:
-                tmp_stp[pre_type][post_type]['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
                 tmp_stp[pre_type][post_type]['weight'] = inh_w
             print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
 
@@ -159,18 +167,23 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
         connect_cells(g_pre, g_post, stp_dict=tmp_stp)
         Vms, ts = simulate(mm, g_post)
         Vms, ts = reshape_mm(Vms, ts, len(post_types), resol)
-        if plot_Vms is True and j < 10:
-            plt.plot(ts, Vms)
-            plt.show()
+        for i, post_type in enumerate(post_types):
+            if tau == tau_arr[i][idx]:
+                plt.plot(ts[:, i] - ts[0, i], Vms[:, i], label=post_type, color=cell_colors[i])
         # calculate psps of 4 cells
         for k in range(4):
             psps = calc_psp_amp(spike_times, ts[:, k], Vms[:, k])
             f = (psps[5] - psps[0]) / psps[0]
             target = allen_1to5[k][order]
-            stp_factor[k + 1, j] = (f - target) / target
+            stp_factor[k + 1, j] = f
+            stp_factor_diff[k + 1, j] = (f - target) / target
         stp_factor[0, j] = tau
+        stp_factor_diff[0, j] = tau
         connect_cells(g_pre, g_post, stp_dict=tmp_stp, disconnect=True)
-    return stp_factor
+    plt.legend()
+    plt.savefig('pre_{}_stp.png'.format(pre_type))
+    plt.close()
+    return stp_factor, stp_factor_diff
 
 
 def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol, spk_gen_w=spk_w):
@@ -184,10 +197,11 @@ def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type
         # set cells to default Vm
         nest.SetStatus(g_post[post_type], {'V_m': net_dict['neuron_params']['E_L'][post_type]})
         # syn_dict = test_stp[pre_type][post_type]
-        if pre_type == 'Exc':
-            tmp_stp[pre_type][post_type]['weight'] = exc_w
-        else:
-            tmp_stp[pre_type][post_type]['weight'] = inh_w
+        if pre_type in s_dict and post_type in s_dict[pre_type]:
+            if pre_type == 'Exc':
+                tmp_stp[pre_type][post_type]['weight'] = exc_w
+            else:
+                tmp_stp[pre_type][post_type]['weight'] = inh_w
         print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
 
     mm = create_mm()
@@ -230,7 +244,8 @@ if run_single:
     print('target stps={}'.format(np.array(allen_1to5)[:, order].T))
     print('result stps={}'.format(f.T))
 else:
-    f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
+    f, f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
     print('cell={}'.format(cell_types[order]))
     print('target={}'.format(np.array(allen_1to5)[:, order].T))
+    print('result stps={}'.format(f.T))
 print('relative diff.=\n{}'.format(f_diff.T))

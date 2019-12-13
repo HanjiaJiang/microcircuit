@@ -26,7 +26,7 @@ stp_dict_template = {
     'tau_rec': 0.01,
 }
 static_template = {
-    'model': 'tsodyks_synapse',
+    'model': 'static_synapse'
 }
 for pre_type in cell_types:
     allen_stp[pre_type] = {}
@@ -36,10 +36,15 @@ for i, post_type in enumerate(cell_types):
         tmp_dict = copy.deepcopy(stp_dict_template)
         if pre_type != 'Exc':
             tmp_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
-        if allen_1to5[i][j] >= 0:
-            tmp_dict['tau_fac'] = tau_arr[i][j]
-        else:
-            tmp_dict['tau_rec'] = tau_arr[i][j]
+        #     if post_type == 'VIP':
+        #         tmp_dict = copy.deepcopy(static_template)
+        # if pre_type == 'VIP':
+        #     tmp_dict = copy.deepcopy(static_template)
+        if 'tau_fac' in tmp_dict:
+            if allen_1to5[i][j] >= 0:
+                tmp_dict['tau_fac'] = tau_arr[i][j]
+            else:
+                tmp_dict['tau_rec'] = tau_arr[i][j]
         # print(tmp_dict)
         allen_stp[pre_type][post_type] = copy.deepcopy(tmp_dict)
 # print(allen_stp)
@@ -118,10 +123,9 @@ doiron_stp_weak = {
 '''
 For testing in ins_models.py
 '''
-U_test = 0.5
 dep_syn = {
     'model': 'tsodyks_synapse',
-    'U': U_test,
+    'U': 0.9,
     'tau_fac': 0.0,
     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
     'tau_rec': 10.0,
@@ -129,7 +133,7 @@ dep_syn = {
 
 fac_syn = {
     'model': 'tsodyks_synapse',
-    'U': U_test,
+    'U': 0.5,
     'tau_fac': 10.0,
     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
     'tau_rec': 0.01,
@@ -140,7 +144,7 @@ test_stp = {
         'Exc': dep_syn,
         'PV': dep_syn,
         'SOM': fac_syn,
-        'VIP': dep_syn
+        'VIP': static_template
     },
     'PV': {
         'Exc': dep_syn,
@@ -155,9 +159,9 @@ test_stp = {
         'VIP': fac_syn
     },
     'VIP': {
-        'Exc': dep_syn,
-        'PV': dep_syn,
-        'SOM': dep_syn,
+        'Exc': static_template,
+        'PV': static_template,
+        'SOM': static_template,
         'VIP': dep_syn
     },
 }
