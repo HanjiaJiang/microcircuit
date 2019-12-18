@@ -14,6 +14,9 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(CONN_COUNT), b=range(STP_COUNT), c=range(SOM_COUNT), d=range(VIP_COUNT))
     shell:
         '''
+        cp Snakefile run_network.py ./scans/
+        mkdir ./scans/microcircuit
+        cp ./microcircuit/*.py ./scans/microcircuit
         python ./microcircuit/create_params.py {output}
         '''
 

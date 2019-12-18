@@ -20,7 +20,9 @@ if __name__ == "__main__":
     # check for: parameter scan or single-run
     try:
         pickle_path = sys.argv[1]    # path to pickle file
-        os.system('cp run_network.py microcircuit/*.py ' + os.path.dirname(pickle_path))
+        # os.system('cp Snakefile run_network.py ' + os.path.dirname(pickle_path))
+        # os.mkdir(os.path.join(os.path.dirname(pickle_path), 'microcircuit'))
+        # os.system('cp microcircuit/*.py ' + os.path.join(os.path.dirname(pickle_path), 'microcircuit'))
     except IndexError:  # single-run if no path input
         print('No argv[1]; single-run.')
         cwd = os.getcwd()
@@ -29,7 +31,9 @@ if __name__ == "__main__":
             os.mkdir(data_path)
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
         params_single(pickle_path)
-        os.system('cp *.py microcircuit/*.py ' + data_path)
+        os.system('cp run_network.py ' + data_path)
+        os.mkdir(os.path.join(data_path, 'microcircuit'))
+        os.system('cp microcircuit/*.py ' + os.path.join(data_path, 'microcircuit'))
     # assign parameters
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
