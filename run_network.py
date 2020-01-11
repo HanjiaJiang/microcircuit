@@ -26,14 +26,23 @@ if __name__ == "__main__":
     except IndexError:  # single-run if no path input
         print('No argv[1]; single-run.')
         cwd = os.getcwd()
+
+        # create pickle file
+        pickle_path = os.path.join(cwd, 'para_dict.pickle')
+        params_single(pickle_path)
+
+        # handle data path
         data_path = os.path.join(cwd, 'data')
         if not os.path.isdir(data_path):
             os.mkdir(data_path)
-        pickle_path = os.path.join(cwd, 'para_dict.pickle')
-        params_single(pickle_path)
         os.system('cp run_network.py ' + data_path)
-        os.mkdir(os.path.join(data_path, 'microcircuit'))
+
+        # handle microcircuit files
+        m_path = os.path.join(data_path, 'microcircuit')
+        if not os.path.isdir(m_path):
+            os.mkdir(m_path)
         os.system('cp microcircuit/*.py ' + os.path.join(data_path, 'microcircuit'))
+
     # assign parameters
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
@@ -82,6 +91,3 @@ if __name__ == "__main__":
     if not on_server:
         # exec(tools.end2txt())
         pass
-
-
-
