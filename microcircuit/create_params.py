@@ -102,7 +102,7 @@ if __name__ == "__main__":
         # assign to dictionary
         net_dict['conn_probs'] = conn_probs_list[levels_list[0]]
         # print(levels_list[1])
-        special_dict['stp'] = stp_list[levels_list[1]]
+        special_dict['stp_dict'] = stp_list[levels_list[1]]
         som = (float(levels_list[2]+1)/(para_total[2]+1))*2000.0    # assign som and vip strengths
         vip = (float(levels_list[3]+1)/(para_total[3]+1))*2000.0    # according to levels
         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
