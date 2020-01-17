@@ -325,9 +325,35 @@ def boxplot(net_dict, path):
 # Asynchronous irregular state calculation
 def ai_score(path, name, begin, end, limit=200, bw=10, layers=[[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]):
     data_all, gids = load_spike_times(path, name, begin, end)
-    bin_n = int((end - begin) / bw)
     corrs = []
     cvs = []
+    seg_len = 5000.0
+
+    # selected neurons with fr > 1 Hz
+    pass_ids_all = []
+
+    # for each group
+    for i in range(len(data_all)):
+        pass_ids_group = []
+        if len(data_all[i]) > 0:
+            ids = data_all[i][:, 0]
+            ts = data_all[i][:, 1]
+            # for each neuron
+            for gid in range(gids[i][0], gids[i][-1]+1):
+                flag = True
+                # for each time segment
+                for seg_head in np.arange(begin, end, seg_len):
+                    seg_end = seg_head + seg_len
+                    seg_ids = ids[(ts >= seg_head) & (ts < seg_end)]
+                    if len(seg_ids[seg_ids == gid]) < seg_len/1000.0:
+                        flag = False
+                        break
+                # select the neuron only if it pass the criteria (fr > 1 Hz)
+                if flag is True:
+                    pass_ids_group.append(gid)
+            print('group {} passed neuron = {}'.format(i, len(pass_ids_group)))
+        pass_ids_all.append(pass_ids_group)
+
     for layer in layers:
         layer_ids = np.array([])
         layer_ts = np.array([])
@@ -339,44 +365,53 @@ def ai_score(path, name, begin, end, limit=200, bw=10, layers=[[0, 1, 2, 3], [4,
                 layer_ts = np.concatenate((layer_ts, data_all[idx][:, 1]))
             n = gids[idx][1] - gids[idx][0] + 1       # n in 1 group
             # print('n={}'.format(int(limit*n/n_layer)))
-            corr_ids.append(sample(list(range(gids[idx][0], gids[idx][1]+1)), int(limit*n/n_layer)))     # sample n of all groups by ratio
+            # corr_ids.append(sample(list(range(gids[idx][0], gids[idx][1]+1)), int(limit*n/n_layer)))
+            # sample neurons for each group by ratio
+            corr_ids.append(sample(pass_ids_all[idx], min(len(pass_ids_all[idx]), int(limit*n/n_layer))))
 
-        hists = []
-        cv = []
-        cnt = 0
+        # for layer
+        corr_layer = []
+        cv_layer = []
 
-        # correlation
-        for group_ids in corr_ids:
-            for gid in group_ids:
-                ts = layer_ts[layer_ids == gid]
-                if len(ts) > 0:
-                    hist, bin_edges = np.histogram(ts, bins=bin_n, range=(begin, end))
-                    hists.append(hist)
-        corrs.append(get_mean_corr(hists))
+        # correlation and irregularity
+        for seg_head in np.arange(begin, end, seg_len):
+            seg_end = seg_head + seg_len
+            hists_seg = []
+            cv_seg = []
+            sample_cnt = 0
+            for group_ids in corr_ids:
+                for gid in group_ids:
+                    ts = layer_ts[layer_ids == gid]
+                    ts = ts[(ts >= seg_head) & (ts < seg_end)]
+                    if len(ts) >= seg_len / 1000.0:
+                        hists_seg.append(
+                            np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
+                        isi = np.diff(ts)
+                        cv_seg.append(np.std(isi) / np.mean(isi))
+                        sample_cnt += 1
+            print('group {}, segment {}, n = {}'.format(layer, seg_head, sample_cnt))
+            corr_layer.append(get_mean_corr(hists_seg))
+            cv_layer.append(np.mean(cv_seg))
+        corrs.append(np.mean(corr_layer))
+        cvs.append(np.mean(cv_layer))
 
-        # cv of isi
-        for gid in list(range(gids[layer[0]][0], gids[layer[-1]][1] + 1)):
-            ts = layer_ts[layer_ids == gid]
-            isi = np.diff(ts)
-            if len(isi) >= 3:
-                cv.append(np.std(isi)/np.mean(isi))
-            cnt += 1
-            if cnt > limit:
-                break
-        cvs.append(np.mean(cv))
+        # for group_ids in corr_ids:
+        #     for gid in group_ids:
+        #         ts = layer_ts[layer_ids == gid]
+        #         if len(ts) > 0:
+        #             hist, bin_edges = np.histogram(ts, bins=bin_n, range=(begin, end))
+        #             hists.append(hist)
+        #             if len(ts) >= 4:
+        #                 isi = np.diff(ts)
+        #                 cv.append(np.std(isi) / np.mean(isi))
+        # corrs.append(get_mean_corr(hists))
+        # cvs.append(np.mean(cv))
 
     ai = open(os.path.join(path, 'ai.dat'), 'w')
     for corr, cv in zip(corrs, cvs):
         ai.write(str(corr) + ', ' + str(cv) + '\n')
     ai.close()
 
-    # corr_f = open(os.path.join(path, 'corr.dat'), 'w')
-    # cv_f = open(os.path.join(path, 'cv.dat'), 'w')
-    # for corr, cv in zip(corrs, cvs):
-    #     corr_f.write(str(corr) + '\n')
-    #     cv_f.write(str(cv) + '\n')
-    # corr_f.close()
-    # cv_f.close()
     return corrs, cvs
 
 # response spread and amplitude

@@ -10,8 +10,8 @@ from stp.stp_dicts import allen_stp, doiron_stp, doiron_stp_weak
 
 
 def set_constant():
-    sim_dict['t_sim'] = 2000.0
-    net_dict['g'] = 4.0
+    sim_dict['t_sim'] = 7000.0
+    net_dict['g'] = -4
     net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
     net_dict['renew_conn'] = False
@@ -21,11 +21,6 @@ def set_constant():
     stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
-
-
-def params_single(path):
-    set_constant()
-    sim_dict['master_seed'] = 55
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 550,
                                   2000, 2000, 1500,
                                   2000, 2000, 1500,
@@ -44,8 +39,13 @@ def params_single(path):
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
+
+
+def params_single(path):
+    set_constant()
+    # sim_dict['master_seed'] = 55
     # net_dict['renew_conn'] = True
-    stim_dict['orientation'] = 0.0
+    # stim_dict['orientation'] = 0.0
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
@@ -72,19 +72,43 @@ def get_conn_probs(list_n=10):
     return return_list
 
 
-if __name__ == "__main__":
-    np.set_printoptions(precision=4, suppress=True)
+def read_levels(in_str):
+    out_str = os.path.basename(in_str).split('.')[0]
+    out_list = np.array(out_str.split('_')).astype(int)
+    return out_str, out_list
 
-    # get output names from system input
-    output_list = sys.argv[1:]
 
+def g_bg(out_list):
+    set_constant()
+    max_str, max_list = read_levels(out_list[-1])
+    net_dict['K_ext'] = np.array([2000, 2000, 1600, 600,
+                                  2000, 2000, 1600,
+                                  2000, 2000, 1600,
+                                  2000, 2000, 1600])
+    stp_list = [allen_stp, doiron_stp_weak]
+    for i, output in enumerate(out_list):
+        levels_str, levels_list = read_levels(output)
+        special_dict['stp_dict'] = stp_list[levels_list[0]]
+        net_dict['g'] = -4.0 + -4.0 * (float(levels_list[1]) / (max_list[1]))
+        net_dict['bg_rate'] = 4.0 + 4.0*(float(levels_list[2]) / (max_list[2]))
+        sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
+        para_dict = {
+            'net_dict': net_dict,
+            'sim_dict': sim_dict,
+            'stim_dict': stim_dict,
+            'special_dict': special_dict
+        }
+        with open(output, 'wb') as handle:
+            pickle.dump(para_dict, handle)
+        handle.close()
+
+def conn_stp_som_vip(out_list):
     # set constant parameters
     set_constant()
 
     # get the size of each dimension from the largest (#_#_#_#)
-    para_total = list(map(float, os.path.basename(output_list[-1]).split('.')[0].split('_')))
-    para_total = np.array(para_total).astype(int)
-    print(para_total)
+    max_str, max_list = read_levels(out_list[-1])
+    print(max_list)
 
     # load conn_probs; default return the whole list
     conn_probs_list = get_conn_probs()
@@ -94,7 +118,7 @@ if __name__ == "__main__":
     # stp list
     stp_list = [allen_stp, doiron_stp, doiron_stp_weak]
 
-    for i, output in enumerate(output_list):
+    for i, output in enumerate(out_list):
         # get levels
         levels_str = os.path.basename(output).split('.')[0]
         levels_list = np.array(levels_str.split('_')).astype(int)
@@ -103,12 +127,10 @@ if __name__ == "__main__":
         net_dict['conn_probs'] = conn_probs_list[levels_list[0]]
         # print(levels_list[1])
         special_dict['stp_dict'] = stp_list[levels_list[1]]
-        som = (float(levels_list[2]+1)/(para_total[2]+1))*2000.0    # assign som and vip strengths
-        vip = (float(levels_list[3]+1)/(para_total[3]+1))*2000.0    # according to levels
+        som = (float(levels_list[2] + 1) / (
+                    max_list[2] + 1)) * 2000.0  # assign som and vip strengths
+        vip = (float(levels_list[3] + 1) / (max_list[3] + 1)) * 2000.0  # according to levels
         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
-        # sim_dict['data_path'] = os.path.join(os.path.dirname(output), '{}_{}_{}_{}'.format(
-        #     levels_list[0], levels_list[1], levels_list[2], levels_list[3]
-        # ))
         net_dict['K_ext'] = np.array([2000, 2000, som, vip,
                                       2000, 2000, som,
                                       2000, 2000, som,
@@ -119,9 +141,17 @@ if __name__ == "__main__":
             'stim_dict': stim_dict,
             'special_dict': special_dict
         }
-        # print('{}:'.format(output))
-        # print('{}'.format(net_dict['K_ext'])) # just for validation
+
         with open(output, 'wb') as handle:
             pickle.dump(para_dict, handle)
         handle.close()
 
+
+if __name__ == "__main__":
+    np.set_printoptions(precision=4, suppress=True)
+
+    # get output names from system input
+    output_list = sys.argv[1:]
+
+    g_bg(output_list)
+    # conn_stp_som_vip(out_list)

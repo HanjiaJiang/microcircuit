@@ -230,27 +230,53 @@ net_dict = {
     'renew_conn': False
     }
 
-updated_dict = {
-    # PSP mean matrix.
-    'PSP_mean_matrix': get_mean_PSP_matrix(
-        net_dict['PSP_e'], net_dict['g'], len(net_dict['populations'])
+# updated_dict = {
+#     # PSP mean matrix.
+#     'PSP_mean_matrix': get_mean_PSP_matrix(
+#         net_dict['PSP_e'], net_dict['g'], len(net_dict['populations'])
+#         ),
+#     # PSP std matrix.
+#     'PSP_std_matrix': get_std_PSP_matrix(
+#         net_dict['PSP_sd'], len(net_dict['populations'])
+#         ),
+#     # mean delay matrix.
+#     'mean_delay_matrix': get_mean_delays(
+#         net_dict['mean_delay_exc'], net_dict['mean_delay_inh'],
+#         len(net_dict['populations'])
+#         ),
+#     # std delay matrix.
+#     'std_delay_matrix': get_std_delays(
+#         net_dict['mean_delay_exc'] * net_dict['rel_std_delay'],
+#         net_dict['mean_delay_inh'] * net_dict['rel_std_delay'],
+#         len(net_dict['populations'])
+#         ),
+#     }
+
+
+# net_dict.update(updated_dict)
+
+def net_update(n_dict, g):
+    updated_dict = {
+        # PSP mean matrix.
+        'PSP_mean_matrix': get_mean_PSP_matrix(
+            n_dict['PSP_e'], n_dict['g'], len(n_dict['populations'])
         ),
-    # PSP std matrix.
-    'PSP_std_matrix': get_std_PSP_matrix(
-        net_dict['PSP_sd'], len(net_dict['populations'])
+        # PSP std matrix.
+        'PSP_std_matrix': get_std_PSP_matrix(
+            n_dict['PSP_sd'], len(n_dict['populations'])
         ),
-    # mean delay matrix.
-    'mean_delay_matrix': get_mean_delays(
-        net_dict['mean_delay_exc'], net_dict['mean_delay_inh'],
-        len(net_dict['populations'])
+        # mean delay matrix.
+        'mean_delay_matrix': get_mean_delays(
+            n_dict['mean_delay_exc'], n_dict['mean_delay_inh'],
+            len(n_dict['populations'])
         ),
-    # std delay matrix.
-    'std_delay_matrix': get_std_delays(
-        net_dict['mean_delay_exc'] * net_dict['rel_std_delay'],
-        net_dict['mean_delay_inh'] * net_dict['rel_std_delay'],
-        len(net_dict['populations'])
+        # std delay matrix.
+        'std_delay_matrix': get_std_delays(
+            n_dict['mean_delay_exc'] * n_dict['rel_std_delay'],
+            n_dict['mean_delay_inh'] * n_dict['rel_std_delay'],
+            len(n_dict['populations'])
         ),
     }
+    n_dict.update(updated_dict)
 
 
-net_dict.update(updated_dict)

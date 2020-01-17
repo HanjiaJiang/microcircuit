@@ -6,6 +6,7 @@ from microcircuit.tools import fire_rate
 from microcircuit.tools import boxplot
 from microcircuit.tools import response
 from microcircuit.tools import plot_psth
+from microcircuit.network_params import net_update
 
 
 class Network:
@@ -30,6 +31,7 @@ class Network:
 
     """
     def __init__(self, sim_dict, net_dict, stim_dict=None, spe_dict=None):
+        net_update(net_dict, net_dict['g'])
         self.sim_dict = sim_dict
         self.net_dict = net_dict
         if stim_dict is not None:
@@ -568,18 +570,10 @@ class Network:
                 'Interval to plot spikes: %s ms'
                 % np.array2string(raster_plot_time_idx)
                 )
-            response(
-                self.data_path, 'spike_detector',
-                self.stim_dict['th_start'][0], 20.0
-            )
             plot_raster(
                 self.data_path, 'spike_detector',
                 raster_plot_time_idx[0], raster_plot_time_idx[1]
                 )
-            # plot_psth(
-            #     self.data_path, 'spike_detector',
-            #     raster_plot_time_idx[0], raster_plot_time_idx[1]
-            # )
             boxplot(self.net_dict, self.data_path)
 
 
