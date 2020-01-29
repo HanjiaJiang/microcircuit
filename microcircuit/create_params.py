@@ -10,7 +10,7 @@ from stp.stp_dicts import allen_stp, doiron_stp, doiron_stp_weak
 
 
 def set_constant():
-    sim_dict['t_sim'] = 102000.0
+    # sim_dict['t_sim'] = 102000.0
     net_dict['g'] = -4
     net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
