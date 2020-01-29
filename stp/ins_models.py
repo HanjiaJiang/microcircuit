@@ -10,16 +10,17 @@ np.set_printoptions(precision=3, suppress=True)
 sim_time = 200.0
 cell_colors = ['b', 'r', 'orange', 'g']
 syn_w = 1000.0
-mm_resol = 0.1
-order = 0   # 0 = Exc, 1 = PV, 2 = SOM, 3 = VIP
+meter_resol = 0.1
+order = 3   # 0 = Exc, 1 = PV, 2 = SOM, 3 = VIP
 input_type = cell_types[order]
 spk_w = 50000.0 # for generator --> pre-synaptic cell
 plot_Vms = True
-run_single = True
+run_single = False
 
 # weights
 exc_w = 72.10248947711023
 inh_w = -288.4099579084409
+
 
 # spike generator
 def create_spks(start):
@@ -33,7 +34,7 @@ def create_spks(start):
 # multimeter
 def create_mm():
     mm = nest.Create('multimeter')
-    nest.SetStatus(mm, {"withtime": True, "record_from": ["V_m"], 'interval': mm_resol})
+    nest.SetStatus(mm, {"withtime": True, "record_from": ["V_m"], 'interval': meter_resol})
     return mm
 
 
@@ -123,7 +124,7 @@ def simulate(dev, g_post, s_time=sim_time):
     return Vms, ts
 
 
-def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol):
+def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_type=input_type, resol=meter_resol):
     dt = 1.0
     min_tau = 1.0
     taus = np.concatenate((np.array([0.1]), np.arange(min_tau, 100.0, dt)))
@@ -162,7 +163,7 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
             print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
 
         mm = create_mm()
-        spks, spike_times = create_spks(j*sim_time + mm_resol)
+        spks, spike_times = create_spks(j*sim_time + meter_resol)
         nest.Connect(spks, g_pre[pre_type], syn_spec={'weight': spk_w})
         connect_cells(g_pre, g_post, stp_dict=tmp_stp)
         Vms, ts = simulate(mm, g_post)
@@ -186,7 +187,7 @@ def test_stp_dicts(g_pre, g_post, s_dict=doiron_stp, post_types=cell_types, pre_
     return stp_factor, stp_factor_diff
 
 
-def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type=input_type, resol=mm_resol, spk_gen_w=spk_w):
+def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type=input_type, resol=meter_resol, spk_gen_w=spk_w):
     dt = 1.0
     stp_factor = np.full(len(post_types), np.nan)
     stp_factor_diff = np.full(len(post_types), np.nan)
@@ -205,7 +206,7 @@ def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type
         print('{}=>{}: {}'.format(pre_type, post_type, tmp_stp[pre_type][post_type]))
 
     mm = create_mm()
-    spk_gen, spike_times = create_spks(mm_resol)
+    spk_gen, spike_times = create_spks(meter_resol)
     nest.Connect(spk_gen, g_pre[pre_type], syn_spec={'weight': spk_gen_w})
     connect_cells(g_pre, g_post, stp_dict=tmp_stp)
     Vms, ts = simulate(mm, g_post)
@@ -224,28 +225,29 @@ def test_single(g_pre, g_post, s_dict=allen_stp, post_types=cell_types, pre_type
     return stp_factor, stp_factor_diff
 
 
-# create cells
-cells_pre = {}
-cells_post = {}
-for i, cell_type in enumerate(cell_types):
-    neuron_pre = nest.Create(net_dict['neuron_model'])
-    neuron_post = nest.Create(net_dict['neuron_model'])
-    cells_pre[cell_type] = neuron_pre
-    cells_post[cell_type] = neuron_post
-    nest.SetStatus(neuron_pre, {'tau_syn_ex': 0.1, 'tau_syn_in': 0.1})
-    set_neuron_status(neuron_post, cell_type, net_dict)
-    # print(nest.GetStatus(cells_post[cell_type]))
+if __name__ == "__main__":
+    # create cells
+    cells_pre = {}
+    cells_post = {}
+    for i, cell_type in enumerate(cell_types):
+        neuron_pre = nest.Create(net_dict['neuron_model'])
+        neuron_post = nest.Create(net_dict['neuron_model'])
+        cells_pre[cell_type] = neuron_pre
+        cells_post[cell_type] = neuron_post
+        nest.SetStatus(neuron_pre, {'tau_syn_ex': 0.1, 'tau_syn_in': 0.1})
+        set_neuron_status(neuron_post, cell_type, net_dict)
+        # print(nest.GetStatus(cells_post[cell_type]))
 
-# run the test
-if run_single:
-    f, f_diff = test_single(cells_pre, cells_post, s_dict=allen_stp)
-    print('pre cell={}'.format(cell_types[order]))
-    print('post cells={}'.format(cell_types))
-    print('target stps={}'.format(np.array(allen_1to5)[:, order].T))
-    print('result stps={}'.format(f.T))
-else:
-    f, f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
-    print('cell={}'.format(cell_types[order]))
-    print('target={}'.format(np.array(allen_1to5)[:, order].T))
-    print('result stps={}'.format(f.T))
-print('relative diff.=\n{}'.format(f_diff.T))
+    # run the test
+    if run_single:
+        f, f_diff = test_single(cells_pre, cells_post, s_dict=allen_stp)
+        print('pre cell={}'.format(cell_types[order]))
+        print('post cells={}'.format(cell_types))
+        print('target stps={}'.format(np.array(allen_1to5)[:, order].T))
+        print('result stps={}'.format(f.T))
+    else:
+        f, f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
+        print('cell={}'.format(cell_types[order]))
+        print('target={}'.format(np.array(allen_1to5)[:, order].T))
+        print('result stps={}'.format(f.T))
+    print('relative diff.=\n{}'.format(f_diff.T))

@@ -9,20 +9,17 @@ from microcircuit.create_params import params_single
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     on_server = False
 
     # analysis settings
     plot_half_len = 200.0   # ms
-    fr_interval = [2000.0, 7000.0]
+    fr_interval = [2000.0, 102000.0]
     sf_interval = 20  # ms
 
     # check for: parameter scan or single-run
     try:
         pickle_path = sys.argv[1]    # path to pickle file
-        # os.system('cp Snakefile run_network.py ' + os.path.dirname(pickle_path))
-        # os.mkdir(os.path.join(os.path.dirname(pickle_path), 'microcircuit'))
-        # os.system('cp microcircuit/*.py ' + os.path.join(os.path.dirname(pickle_path), 'microcircuit'))
     except IndexError:  # single-run if no path input
         print('No argv[1]; single-run.')
         cwd = os.getcwd()
@@ -70,13 +67,13 @@ if __name__ == "__main__":
         para_dict['sim_dict']['data_path'], 'spike_detector',
         para_dict['stim_dict']['th_start'][0] - plot_half_len,
         para_dict['stim_dict']['th_start'][0] + plot_half_len)
-    mean_fr_cache, std_fr = \
+    mean_fr, std_fr = \
         tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
                         fr_interval[0], fr_interval[1])
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
     t0 = time.time()
     tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-        fr_interval[0], fr_interval[1])
+        fr_interval[0], fr_interval[1], seg_len=10000.0)
     print('ai analysis time = {}'.format(time.time() - t0))
 
     # delete .gdf files to save space

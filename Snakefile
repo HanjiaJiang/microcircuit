@@ -1,6 +1,6 @@
-STP_COUNT = 2
-G_COUNT = 2
-BG_COUNT = 2
+STP_COUNT = 1
+G_COUNT = 10
+BG_COUNT = 10
 
 localrules: all, create
 
