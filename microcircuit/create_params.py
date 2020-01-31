@@ -79,13 +79,13 @@ def read_levels(in_str):
 
 def g_bg(out_list):
     set_constant()
-    max_str, max_list = read_levels(out_list[-1])
+    # max_str, max_list = read_levels(out_list[-1])
     stp_list = [doiron_stp_weak, allen_stp]
     for i, output in enumerate(out_list):
         levels_str, levels_list = read_levels(output)
         special_dict['stp_dict'] = stp_list[levels_list[0]]
-        net_dict['g'] = -4.0 + -4.0 * (float(levels_list[1]) / (max_list[1]))
-        net_dict['bg_rate'] = 3.0 + 4.0*(float(levels_list[2]) / (max_list[2]))
+        net_dict['g'] = -float(levels_list[1])
+        net_dict['bg_rate'] = float(levels_list[2])
         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
         para_dict = {
             'net_dict': net_dict,

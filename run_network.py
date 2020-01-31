@@ -7,17 +7,17 @@ import microcircuit.network as network
 import microcircuit.tools as tools
 from microcircuit.create_params import params_single
 
-    # analysis settings
 if __name__ == "__main__":
     # simulation settings
     run_sim = True
     on_server = False
 
-    plot_half_len = 200.0   # ms
-    t_start = 2000.0
-    len_analysis = 5000.0
-    seg_analysis = 5000.0
-    analysis_interval = [t_start, t_start + len_analysis]
+    # timing, in ms
+    plot_half_len = 200.0
+    analysis_start = 2000.0
+    analysis_segment = 20000.0
+    analysis_total_length = analysis_segment*5
+    analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 
     # check for: parameter scan or single-run
     try:
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
 
-    para_dict['sim_dict']['t_sim'] = t_start + len_analysis
+    para_dict['sim_dict']['t_sim'] = analysis_start + analysis_total_length
 
     # run simulation
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
     t0 = time.time()
     tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-        analysis_interval[0], analysis_interval[1], seg_len=seg_analysis)
+        analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
     print('ai analysis time = {}'.format(time.time() - t0))
 
     # delete .gdf files to save space
