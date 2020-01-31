@@ -77,7 +77,7 @@ if __name__ == "__main__":
     tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
     t0 = time.time()
     tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-        analysis_interval[0], analysis_interval[1], seg_len=5000.0)
+        analysis_interval[0], analysis_interval[1], seg_len=seg_analysis)
     print('ai analysis time = {}'.format(time.time() - t0))
 
     # delete .gdf files to save space

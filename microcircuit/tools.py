@@ -328,7 +328,6 @@ def ai_score(path, name, begin, end,
     data_all, gids = load_spike_times(path, name, begin, end)
     # corrs = []
     # cvs = []
-    # seg_len = 5000.0
     seg_list = np.arange(begin, end, seg_len)
 
     # selected neurons with fr > 1 Hz
@@ -361,14 +360,14 @@ def ai_score(path, name, begin, end,
                             pass_ids_seg.append(gid)
                 if len(pass_ids_seg) > 0:
                     pass_ids_seg = sample(pass_ids_seg, min(len(pass_ids_seg), n_desired))
-                print('group {}, seg {}, desired and real n = {}, {}'.format(i, seg_head, n_desired, len(pass_ids_seg)))
+                print('group {}, seg {}, desired and obtained n = {}, {}'.format(i, seg_head, n_desired, len(pass_ids_seg)))
                 pass_ids_group.append(pass_ids_seg)
                 # print(pass_ids_group)
+        else:
+            for seg_head in seg_list:
+                pass_ids_group.append([])
         pass_ids_all.append(pass_ids_group)
-    # print(pass_ids_all)
-    # pass_ids_all = np.array(pass_ids_all)
-    # print(pass_ids_all.shape)
-    print(pass_ids_all)
+        # print(pass_ids_group[:10])
 
 
     # calculation and save
@@ -408,10 +407,6 @@ def ai_score(path, name, begin, end,
         ai.write(str(np.mean(corr_layer)) + ', ' + str(np.mean(cv_layer)) + '\n')
         # corrs.append(np.mean(corr_layer))
         # cvs.append(np.mean(cv_layer))
-
-    # ai = open(os.path.join(path, 'ai.dat'), 'w')
-    # for corr, cv in zip(corrs, cvs):
-    #     ai.write(str(corr) + ', ' + str(cv) + '\n')
     ai.close()
 
     # return corrs, cvs
