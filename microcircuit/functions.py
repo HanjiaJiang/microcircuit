@@ -397,3 +397,12 @@ def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
     #     # print(PSC_e)
     #     return PSC_e
 
+def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
+    dim = number_of_pop
+    weights = np.zeros((dim, dim))
+    exc = PSP_e
+    inh = PSP_e * g
+    weights[:] = inh
+    weights[:, [0,4,7,10]] = exc
+    weights[0, 4] = exc * 2
+    return weights
