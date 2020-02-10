@@ -198,7 +198,8 @@ net_dict = {
         # Reset membrane potential of the neurons (in mV).
         'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, #-67.0,
         # Threshold potential of the neurons (in mV).
-        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, #-40.0,  # -50.0
+        # 'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
+        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane potential after a spike (in mV).
         'V_reset': -67.0, #-65.0,
         # Membrane capacitance (in pF).
