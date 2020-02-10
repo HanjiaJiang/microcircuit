@@ -2,6 +2,7 @@ import nest
 import numpy as np
 import copy
 from stp.stp_dicts import cell_types, allen_stp, doiron_stp, doiron_stp_weak
+np.set_printoptions(precision=2, linewidth=500)
 
 '''
 Max firing rate: 
@@ -171,9 +172,9 @@ def set_thalamus_input(th_pop,
             # within each population,
             # rates are distributed according to stimulus angle
             for j, node in enumerate(pop):
-                theta = -np.pi/2.0+np.pi*((j+0.5)/float(len(pop)))
-                rate = rate_0*(1.0+spe_dict['k_th']
-                               *np.cos(2.0*(theta - stim_theta)))
+                theta = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(len(pop)))
+                rate = rate_0 * (1.0 + spe_dict['k_th']
+                                 * np.cos(2.0 * (theta - stim_theta)))
                 nest.SetStatus([node], {
                     'rate': rate,
                     'start': start_times[i],
@@ -212,8 +213,8 @@ def connect_thalamus_orientation(th_pop,
                 len_th_cluster += 1
             th_cluster_list = []
             for x in range(nr_cluster):
-                head_idx = x*len_th_cluster
-                tail_idx = (x+1)*len_th_cluster
+                head_idx = x * len_th_cluster
+                tail_idx = (x + 1) * len_th_cluster
                 if tail_idx <= len(th_pop):
                     th_cluster_list.append(th_pop[head_idx:tail_idx])
                 else:
@@ -240,10 +241,10 @@ def connect_thalamus_orientation(th_pop,
 
             for i, th_cluster in enumerate(th_cluster_list):
                 for j, target_cluster in enumerate(target_cluster_list):
-                    theta_th = -np.pi/2.0+np.pi*((i+0.5)/float(nr_cluster))
-                    theta_target = -np.pi/2.0+np.pi*((j+0.5)/float(nr_cluster))
-                    p = p_0*(1.0+spe_dict['k_e2e']*np.cos(2.0*(theta_th - theta_target)))
-                    conn_nr = int(round(len(th_cluster)*len(target_cluster)*p))
+                    theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
+                    theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
+                    p = p_0 * (1.0 + spe_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
+                    conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
                     # print('theta_th={0}, theta_target={1}, conn_nr={2}'
                     #       .format(theta_th, theta_target, conn_nr))
                     nest.Connect(th_cluster, target_cluster,
@@ -320,8 +321,8 @@ def connect_by_cluster(source_name,
             conn_nr_sum = 0
             for i, source_cluster in enumerate(source_cluster_list):
                 for j, target_cluster in enumerate(target_cluster_list):
-                    theta_source = -np.pi / 2.0 + np.pi * ((i+0.5) / float(nr_cluster))
-                    theta_target = -np.pi / 2.0 + np.pi * ((j+0.5) / float(nr_cluster))
+                    theta_source = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
+                    theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
                     p = p_0 * (1.0 + k * np.cos(2.0 * (theta_source - theta_target)))
                     conn_nr = int(round(len(source_cluster) * len(target_cluster) * p))
                     # print('theta_source={:.2f}, theta_target={:.2f}, conn_nr={:.2f}'
@@ -334,7 +335,8 @@ def connect_by_cluster(source_name,
                                  syn_spec=syn_dict
                                  )
                     conn_nr_sum += conn_nr
-            print(source_name + ' to ' + target_name + ' verify synapse_nr: {0}, {1}'.format(synapse_nr, conn_nr_sum))
+            print(source_name + ' to ' + target_name + ' verify synapse_nr: {0}, {1}'.format(
+                synapse_nr, conn_nr_sum))
     else:
         conn_dict_rec = {
             'rule': 'fixed_total_number', 'N': synapse_nr
@@ -344,6 +346,7 @@ def connect_by_cluster(source_name,
             conn_spec=conn_dict_rec,
             syn_spec=syn_dict
         )
+
 
 def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
     if spe_dict['ctsp'] is True:
@@ -355,7 +358,6 @@ def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
                 tau_m = net_dict['neuron_params']['tau_m'][celltype]
                 break
     return E_L, V_th, C_m, tau_m
-
 
     # def get_weight_ctsp(PSP_val, net_dict, target_name):
     #     """ Computes weight to elicit a change in the membrane potential.
@@ -397,12 +399,41 @@ def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
     #     # print(PSC_e)
     #     return PSC_e
 
-def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
-    dim = number_of_pop
-    weights = np.zeros((dim, dim))
-    exc = PSP_e
-    inh = PSP_e * g
-    weights[:] = inh
-    weights[:, [0,4,7,10]] = exc
-    weights[0, 4] = exc * 2
-    return weights
+
+def get_weight(psp_val, net_dict):
+    C_m = net_dict['neuron_params']['C_m']['Exc']
+    tau_m = net_dict['neuron_params']['tau_m']['Exc']
+    tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
+
+    PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn_ex / (
+        tau_syn_ex - tau_m) * ((tau_m / tau_syn_ex) ** (
+            - tau_m / (tau_m - tau_syn_ex)) - (tau_m / tau_syn_ex) ** (
+                - tau_syn_ex / (tau_m - tau_syn_ex)))) ** (-1))
+    PSC_e = (PSC_e_over_PSP_e * psp_val)
+    return PSC_e
+
+
+def get_psc(net_dict, dim=13, lyr_gps=None):
+    if lyr_gps is None:
+        lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+    psps = np.zeros((dim, dim))
+    # print(net_dict['psp_mtx'])
+    for i, pre_lyr in enumerate(lyr_gps):
+        for j, post_lyr in enumerate(lyr_gps):
+            psp = net_dict['w_dict']['psp_mtx'][j, i]
+            psps[post_lyr[0]:post_lyr[-1]+1, pre_lyr[1]:pre_lyr[-1]+1] = psp*net_dict['g']
+            psps[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]] = psp
+    pscs = get_weight(psps, net_dict)
+    return pscs
+
+
+def get_psc_std(net_dict, dim=13, lyr_gps=None):
+    if lyr_gps is None:
+        lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+    std_ratios = np.zeros((dim, dim))
+    # print(net_dict['psp_std_mtx'])
+    for i, pre_lyr in enumerate(lyr_gps):
+        for j, post_lyr in enumerate(lyr_gps):
+            std_ratio = net_dict['w_dict']['psp_std_mtx'][j, i]
+            std_ratios[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]:pre_lyr[-1]+1] = std_ratio
+    return std_ratios

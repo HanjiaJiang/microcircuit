@@ -111,12 +111,14 @@ class Network:
         self.K_ext = self.net_dict['K_ext'] * self.K_scaling
         # 090705
         self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
-        # self.w_from_PSP = get_weight(self.net_dict['PSP_e'], self.net_dict)
-        self.weight_mat = get_weight(
-            self.net_dict['PSP_mean_matrix'], self.net_dict
-            )
-        self.weight_mat_std = self.net_dict['PSP_std_matrix']   # ratio of std to mean!
-        # self.w_ext = self.w_from_PSP
+        self.weight_mat = get_psc(self.net_dict)
+        self.weight_mat_std = get_psc_std(self.net_dict)
+        # self.weight_mat = get_weight(
+        #     self.net_dict['PSP_mean_matrix'], self.net_dict
+        #     )
+        # self.weight_mat_std = self.net_dict['PSP_std_matrix']   # ratio of std to mean!
+        print(self.weight_mat)
+        print(self.weight_mat_std)
         if self.net_dict['poisson_input']:
             self.DC_amp_e = np.zeros(len(self.net_dict['populations']))
         else:

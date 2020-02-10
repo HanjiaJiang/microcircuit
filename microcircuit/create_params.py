@@ -77,12 +77,38 @@ def read_levels(in_str):
     return out_str, out_list
 
 
+def test_list_psp():
+    w_dict_normal = {
+        'psp_mtx':
+            np.full((4, 4), 0.5),
+        'psp_std_mtx':
+            np.full((4, 4), 1.0)}
+    w_dict_specific = {
+        'psp_mtx':
+        np.array([[0.70, 0.78, 0.47, 0.23],
+                  [0.34, 0.95, 0.38, 0.23],
+                  [0.70, 0.63, 0.68, 0.23],
+                  [0.70, 2.27, 0.40, 0.53]]),
+        'psp_std_mtx':
+        np.array([[0.8958, 1.2372, 0.7228, 1.0000],
+                  [0.4540, 1.3421, 1.0000, 1.0000],
+                  [1.0520, 0.9618, 1.2379, 1.0000],
+                  [1.0520, 1.3124, 0.8739, 1.3884]])}
+    return [w_dict_normal, w_dict_specific]
+
+
+def test_list_stps():
+    return [doiron_stp_weak, allen_stp]
+
+
 def g_bg(out_list):
     set_constant()
-    stp_list = [doiron_stp_weak, allen_stp]
+    # test_list = test_list_stps()
+    test_list = test_list_psp()
     for i, output in enumerate(out_list):
         levels_str, levels_list = read_levels(output)
-        special_dict['stp_dict'] = stp_list[levels_list[0]]
+        # special_dict['stp_dict'] = test_list[levels_list[0]]
+        net_dict['w_dict'] = test_list[levels_list[0]]
         net_dict['g'] = -float(levels_list[1])
         net_dict['bg_rate'] = float(levels_list[2])
         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)

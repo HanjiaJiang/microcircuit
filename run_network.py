@@ -11,12 +11,13 @@ if __name__ == "__main__":
     # simulation settings
     run_sim = True
     on_server = False
+    run_analysis = True
 
     # timing, in ms
     plot_half_len = 200.0
     analysis_start = 2000.0
-    analysis_segment = 10000.0
-    analysis_total_length = analysis_segment*5
+    analysis_segment = 2000.0
+    analysis_total_length = analysis_segment*1
     analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 
     # check for: parameter scan or single-run
@@ -67,18 +68,19 @@ if __name__ == "__main__":
         net.simulate()
 
     # analysis
-    tools.plot_raster(
-        para_dict['sim_dict']['data_path'], 'spike_detector',
-        para_dict['stim_dict']['th_start'][0] - plot_half_len,
-        para_dict['stim_dict']['th_start'][0] + plot_half_len)
-    mean_fr, std_fr = \
-        tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
-                        analysis_interval[0], analysis_interval[1])
-    tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
-    t0 = time.time()
-    tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-        analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
-    print('ai analysis time = {}'.format(time.time() - t0))
+    if run_analysis:
+        tools.plot_raster(
+            para_dict['sim_dict']['data_path'], 'spike_detector',
+            para_dict['stim_dict']['th_start'][0] - plot_half_len,
+            para_dict['stim_dict']['th_start'][0] + plot_half_len)
+        mean_fr, std_fr = \
+            tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
+                            analysis_interval[0], analysis_interval[1])
+        tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
+        t0 = time.time()
+        tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
+            analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
+        print('ai analysis time = {}'.format(time.time() - t0))
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(para_dict['sim_dict']['data_path']):

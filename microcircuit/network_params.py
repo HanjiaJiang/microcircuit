@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     """ Creates matrix containing the delay of all connections.
 
@@ -21,12 +22,8 @@ def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
 
     dim = number_of_pop
     mean_delays = np.zeros((dim, dim))
-    #HJ
     mean_delays[:] = mean_delay_inh
     mean_delays[:, [0, 4, 7, 10]] = mean_delay_exc
-    #mean_delays[:, 0:dim:2] = mean_delay_exc
-    #mean_delays[:, 1:dim:2] = mean_delay_inh
-    #HJ#
     return mean_delays
 
 
@@ -51,12 +48,8 @@ def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
 
     dim = number_of_pop
     std_delays = np.zeros((dim, dim))
-    #HJ
     std_delays[:] = std_delay_inh
     std_delays[:, [0, 4, 7, 10]] = std_delay_exc
-    #std_delays[:, 0:dim:2] = std_delay_exc
-    #std_delays[:, 1:dim:2] = std_delay_inh
-    #HJ#
     return std_delays
 
 
@@ -86,14 +79,9 @@ def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
     weights = np.zeros((dim, dim))
     exc = PSP_e
     inh = PSP_e * g
-    #HJ
     weights[:] = inh
     weights[:, [0,4,7,10]] = exc
     weights[0, 4] = exc * 2
-    #weights[:, 0:dim:2] = exc
-    #weights[:, 1:dim:2] = inh
-    #weights[0, 2] = exc * 2
-    #HJ#
     return weights
 
 
@@ -177,7 +165,6 @@ net_dict = {
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
     'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),  # test
-    # 'K_ext': np.array([2000, PV_ext_scan, SOM_ext_scan, VIP_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan, 2000, PV_ext_scan, SOM_ext_scan]),    # layer-independent
     # Factor to scale the indegrees.
     'K_scaling': 1.0,
     # Factor to scale the number of neurons.
@@ -227,33 +214,22 @@ net_dict = {
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
     'animal': 'rat',
-    'renew_conn': False
+    'renew_conn': False,
+    'w_dict': {
+        'psp_mtx':
+            # np.array([[0.70, 0.78, 0.47, 0.23],
+            #           [0.34, 0.95, 0.38, 0.23],
+            #           [0.70, 0.63, 0.68, 0.23],
+            #           [0.70, 2.27, 0.40, 0.53]]),
+            np.full((4, 4), 0.5),
+        'psp_std_mtx':
+            # np.array([[0.8958, 1.2372, 0.7228, 1.0000],
+            #           [0.4540, 1.3421, 1.0000, 1.0000],
+            #           [1.0520, 0.9618, 1.2379, 1.0000],
+            #           [1.0520, 1.3124, 0.8739, 1.3884]])
+            np.full((4, 4), 1.0)}
     }
 
-# updated_dict = {
-#     # PSP mean matrix.
-#     'PSP_mean_matrix': get_mean_PSP_matrix(
-#         net_dict['PSP_e'], net_dict['g'], len(net_dict['populations'])
-#         ),
-#     # PSP std matrix.
-#     'PSP_std_matrix': get_std_PSP_matrix(
-#         net_dict['PSP_sd'], len(net_dict['populations'])
-#         ),
-#     # mean delay matrix.
-#     'mean_delay_matrix': get_mean_delays(
-#         net_dict['mean_delay_exc'], net_dict['mean_delay_inh'],
-#         len(net_dict['populations'])
-#         ),
-#     # std delay matrix.
-#     'std_delay_matrix': get_std_delays(
-#         net_dict['mean_delay_exc'] * net_dict['rel_std_delay'],
-#         net_dict['mean_delay_inh'] * net_dict['rel_std_delay'],
-#         len(net_dict['populations'])
-#         ),
-#     }
-
-
-# net_dict.update(updated_dict)
 
 def net_update(n_dict, g):
     updated_dict = {
@@ -278,5 +254,3 @@ def net_update(n_dict, g):
         ),
     }
     n_dict.update(updated_dict)
-
-
