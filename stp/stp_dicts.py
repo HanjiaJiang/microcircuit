@@ -3,6 +3,18 @@ import copy
 cell_types = ['Exc', 'PV', 'SOM', 'VIP']
 
 '''
+Static synapses
+'''
+static_template = {
+    'model': 'static_synapse'
+}
+no_stp = {}
+for i, pre_type in enumerate(cell_types):
+    no_stp[pre_type] = {}
+    for j, post_type in enumerate(cell_types):
+        no_stp[pre_type][post_type] = copy.deepcopy(static_template)
+
+'''
 Allen data
 '''
 allen_stp = {}
@@ -25,12 +37,8 @@ stp_dict_template = {
     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
     'tau_rec': 0.01,
 }
-static_template = {
-    'model': 'static_synapse'
-}
 for pre_type in cell_types:
     allen_stp[pre_type] = {}
-
 for i, post_type in enumerate(cell_types):
     for j, pre_type in enumerate(cell_types):
         tmp_dict = copy.deepcopy(stp_dict_template)

@@ -76,7 +76,7 @@ if __name__ == "__main__":
         mean_fr, std_fr = \
             tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
                             analysis_interval[0], analysis_interval[1])
-        tools.boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
+        tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
         t0 = time.time()
         tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
             analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)

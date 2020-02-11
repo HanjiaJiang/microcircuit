@@ -3,9 +3,6 @@ from microcircuit.functions import *
 from microcircuit.helpers import *
 from microcircuit.tools import plot_raster
 from microcircuit.tools import fire_rate
-from microcircuit.tools import boxplot
-from microcircuit.tools import response
-from microcircuit.tools import plot_psth
 from microcircuit.network_params import net_update
 
 
@@ -117,8 +114,8 @@ class Network:
         #     self.net_dict['PSP_mean_matrix'], self.net_dict
         #     )
         # self.weight_mat_std = self.net_dict['PSP_std_matrix']   # ratio of std to mean!
-        print(self.weight_mat)
-        print(self.weight_mat_std)
+        # print(self.weight_mat)
+        # print(self.weight_mat_std)
         if self.net_dict['poisson_input']:
             self.DC_amp_e = np.zeros(len(self.net_dict['populations']))
         else:
@@ -576,6 +573,6 @@ class Network:
                 self.data_path, 'spike_detector',
                 raster_plot_time_idx[0], raster_plot_time_idx[1]
                 )
-            boxplot(self.net_dict, self.data_path)
+            # boxplot(self.net_dict, self.data_path)
 
 

@@ -26,12 +26,12 @@ Cell-type specific parameters:
 special_dict = {
     'fmax': False,
     # STP
-    'stp_dict': allen_stp,
-    'stp': True,
-    'som_fac': True,
-    'pv_dep': True,
-    'pv2all_dep': True,
-    'weak_dep': False,
+    'stp_dict': doiron_stp_weak,
+    # 'stp': True,
+    # 'som_fac': True,
+    # 'pv_dep': True,
+    # 'pv2all_dep': True,
+    # 'weak_dep': False,
     # relative inhibitory strengths
     'adjust_inh': True,
     'som_power': 1.0,
@@ -66,62 +66,62 @@ def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
     return syn_dict
 
 
-def assign_syn_dict(source_name,
-                    target_name,
-                    weight_dict,
-                    delay_dict,
-                    net_dict,
-                    spe_dict):
-    syn_dict = {
-        'model': 'static_synapse',
-        'weight': weight_dict,
-        'delay': delay_dict
-    }
-    if spe_dict['weak_dep'] is True:
-        depress = {
-            'model': 'tsodyks_synapse',
-            'U': 1.0,
-            'tau_fac': 0.01,
-            'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-            'tau_rec': 100.0,
-            'weight': weight_dict,
-            'delay': delay_dict
-        }
-    else:
-        depress = {
-            'model': 'tsodyks_synapse',
-            'U': 0.75,  # but U = 0.9 for PV-to-all
-            'tau_fac': 0.01,
-            'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-            'tau_rec': 800.0,
-            'weight': weight_dict,
-            'delay': delay_dict
-        }
-    facilitate = {
-        'model': 'tsodyks_synapse',
-        'U': 0.5,
-        'tau_fac': 200.0,
-        'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-        'tau_rec': 0.01,
-        'weight': weight_dict,
-        'delay': delay_dict
-    }
-
-    if 'Exc' in source_name:
-        if 'Exc' in target_name:
-            syn_dict = depress
-        elif 'PV' in target_name:
-            if spe_dict['pv_dep'] is True:
-                syn_dict = depress
-        elif 'SOM' in target_name:
-            if spe_dict['som_fac'] is True:
-                syn_dict = facilitate
-    elif 'PV' in source_name:
-        if spe_dict['pv2all_dep'] is True:
-            depress['U'] = 0.9
-            depress['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
-            syn_dict = depress
-    return syn_dict
+# def assign_syn_dict(source_name,
+#                     target_name,
+#                     weight_dict,
+#                     delay_dict,
+#                     net_dict,
+#                     spe_dict):
+#     syn_dict = {
+#         'model': 'static_synapse',
+#         'weight': weight_dict,
+#         'delay': delay_dict
+#     }
+#     if spe_dict['weak_dep'] is True:
+#         depress = {
+#             'model': 'tsodyks_synapse',
+#             'U': 1.0,
+#             'tau_fac': 0.01,
+#             'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+#             'tau_rec': 100.0,
+#             'weight': weight_dict,
+#             'delay': delay_dict
+#         }
+#     else:
+#         depress = {
+#             'model': 'tsodyks_synapse',
+#             'U': 0.75,  # but U = 0.9 for PV-to-all
+#             'tau_fac': 0.01,
+#             'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+#             'tau_rec': 800.0,
+#             'weight': weight_dict,
+#             'delay': delay_dict
+#         }
+#     facilitate = {
+#         'model': 'tsodyks_synapse',
+#         'U': 0.5,
+#         'tau_fac': 200.0,
+#         'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+#         'tau_rec': 0.01,
+#         'weight': weight_dict,
+#         'delay': delay_dict
+#     }
+#
+#     if 'Exc' in source_name:
+#         if 'Exc' in target_name:
+#             syn_dict = depress
+#         elif 'PV' in target_name:
+#             if spe_dict['pv_dep'] is True:
+#                 syn_dict = depress
+#         elif 'SOM' in target_name:
+#             if spe_dict['som_fac'] is True:
+#                 syn_dict = facilitate
+#     elif 'PV' in source_name:
+#         if spe_dict['pv2all_dep'] is True:
+#             depress['U'] = 0.9
+#             depress['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
+#             syn_dict = depress
+#     return syn_dict
 
 
 def set_fmax(names, population, spe_dict):
@@ -358,46 +358,6 @@ def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
                 tau_m = net_dict['neuron_params']['tau_m'][celltype]
                 break
     return E_L, V_th, C_m, tau_m
-
-    # def get_weight_ctsp(PSP_val, net_dict, target_name):
-    #     """ Computes weight to elicit a change in the membrane potential.
-    #
-    #     This function computes the weight which elicits a change in the membrane
-    #     potential of size PSP_val. To implement this, the weight is calculated to
-    #     elicit a current that is high enough to implement the desired change in the
-    #     membrane potential.
-    #
-    #     Parameters
-    #     ----------
-    #     PSP_val
-    #         Evoked postsynaptic potential.
-    #     net_dict
-    #         Dictionary containing parameters of the microcircuit.
-    #
-    #     Returns
-    #     -------
-    #     PSC_e
-    #         Weight value(s).
-    #
-    #     """
-    #     cell_type = 'default'
-    #     for name in ['PC', 'PV', 'SOM', 'VIP']:
-    #         if name in target_name:
-    #             cell_type = name
-    #             break
-    #
-    #     C_m = net_dict['neuron_params']['C_m'][cell_type]
-    #     tau_m = net_dict['neuron_params']['tau_m'][cell_type]
-    #     tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
-    #
-    #     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn_ex / (
-    #             tau_syn_ex - tau_m) * ((tau_m / tau_syn_ex) ** (
-    #             - tau_m / (tau_m - tau_syn_ex)) - (tau_m / tau_syn_ex) ** (
-    #                                            - tau_syn_ex / (
-    #                                                tau_m - tau_syn_ex)))) ** (-1))
-    #     PSC_e = (PSC_e_over_PSP_e * PSP_val)
-    #     # print(PSC_e)
-    #     return PSC_e
 
 
 def get_weight(psp_val, net_dict):

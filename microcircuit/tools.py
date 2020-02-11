@@ -64,7 +64,7 @@ def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
 
 # Calculation
 # correlation
-def get_mean_corr(list_1, list_2=None):
+def get_corr(list_1, list_2=None):
     coef_list = []
     for i, hist1 in enumerate(list_1):
         if list_2 is None:  # same population
@@ -77,7 +77,23 @@ def get_mean_corr(list_1, list_2=None):
                 coef_list.append(coef)
             # else:
             #     print('{} in list1 or {} in list2 no spikes'.format(i, j))
-    return np.mean(coef_list)
+    return coef_list
+
+
+# def get_mean_corr(list_1, list_2=None):
+#     coef_list = []
+#     for i, hist1 in enumerate(list_1):
+#         if list_2 is None:  # same population
+#             list_2_tmp = list_1[i + 1:]
+#         else:
+#             list_2_tmp = list_2
+#         for j, hist2 in enumerate(list_2_tmp):
+#             if np.sum(hist1) != 0 and np.sum(hist2) != 0:
+#                 coef = np.corrcoef(hist1, hist2)[0, 1]
+#                 coef_list.append(coef)
+#             # else:
+#             #     print('{} in list1 or {} in list2 no spikes'.format(i, j))
+#     return np.mean(coef_list)
 
 # System
 # let print() function print to file (use: exec(set2txt))
@@ -259,7 +275,7 @@ def plot_raster(path, name, begin, end):
     bottom, top = ax.get_ylim()
     ax.set_ylim((bottom, top + 1500.0))
 
-    plt.title('(A) raster plot', fontsize=40.0)
+    # plt.title('(A) raster plot', fontsize=40.0)
     plt.xlabel('time (ms)')
     plt.xticks(np.arange(begin, end + 1.0, (end - begin)/4.0))
     plt.yticks(
@@ -271,7 +287,37 @@ def plot_raster(path, name, begin, end):
     plt.close()
 
 
-def boxplot(net_dict, path):
+def do_boxplot(data, path, title, xlbls, ylbls, clr_list, xlims):
+    label_pos = list(range(len(data), 0, -1))
+
+    clr_list = clr_list[::-1]
+    medianprops = dict(linestyle='-', linewidth=2.5, color='black')
+    fig, ax = plt.subplots(figsize=(12, 12))
+    bp = plt.boxplot(data, 0, 'k+', 0, medianprops=medianprops)
+    plt.xlim(xlims)
+    plt.setp(bp['boxes'], color='black')
+    plt.setp(bp['whiskers'], color='black')
+    for h in range(len(data)):
+        boxX = []
+        boxY = []
+        box = bp['boxes'][h]
+        for j in list(range(5)):
+            boxX.append(box.get_xdata()[j])
+            boxY.append(box.get_ydata()[j])
+        boxCoords = list(zip(boxX, boxY))
+        boxPolygon = Polygon(boxCoords, facecolor=clr_list[h])
+        ax.add_patch(boxPolygon)
+    # set top and right frames invisible
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.xlabel(xlbls)
+    plt.yticks(label_pos, ylbls)
+    fig.tight_layout()
+    plt.savefig(os.path.join(path, 'box_plot_' + title + '.png'), dpi=300)
+    plt.close()
+
+def fr_boxplot(net_dict, path):
     pops = net_dict['N_full']
     # list of population length e.g. [0, 1, ..., 12]
     reversed_order_list = list(range(len(pops) - 1, -1, -1))
@@ -282,43 +328,48 @@ def boxplot(net_dict, path):
             list_rates_rev.append(
                 np.load(rate_filepath)
                 )
-    label_pos = list(range(len(pops), 0, -1))
     color_list = [
         'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
         'blue', 'red', 'orange', 'blue', 'red', 'orange'
     ]
-    color_list = color_list[::-1]
-    medianprops = dict(linestyle='-', linewidth=2.5, color='black')
-    fig, ax1 = plt.subplots(figsize=(12, 12))
-    bp = plt.boxplot(list_rates_rev, 0, 'k+', 0, medianprops=medianprops)
-
-    plt.title('(B) firing rate', fontsize=40.0)
-    if use_box_xlim:
-        plt.xlim((-1, box_xlim))
-
-    plt.setp(bp['boxes'], color='black')
-    plt.setp(bp['whiskers'], color='black')
-    #plt.setp(bp['fliers'], color='black', marker='+')
-    for h in list(range(len(pops))):
-        boxX = []
-        boxY = []
-        box = bp['boxes'][h]
-        for j in list(range(5)):
-            boxX.append(box.get_xdata()[j])
-            boxY.append(box.get_ydata()[j])
-        boxCoords = list(zip(boxX, boxY))
-        boxPolygon = Polygon(boxCoords, facecolor=color_list[h])
-        ax1.add_patch(boxPolygon)
-
-    # set top and right frames invisible
-    ax1.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-
-    plt.xlabel('firing rate (Hz)')
-    plt.yticks(label_pos, populations)
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
-    plt.close()
+    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', populations, color_list, (-1.0, 50.0))
+    # label_pos = list(range(len(pops), 0, -1))
+    # color_list = [
+    #     'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
+    #     'blue', 'red', 'orange', 'blue', 'red', 'orange'
+    # ]
+    # color_list = color_list[::-1]
+    # medianprops = dict(linestyle='-', linewidth=2.5, color='black')
+    # fig, ax1 = plt.subplots(figsize=(12, 12))
+    # bp = plt.boxplot(list_rates_rev, 0, 'k+', 0, medianprops=medianprops)
+    #
+    # # plt.title('(B) firing rate', fontsize=40.0)
+    # if use_box_xlim:
+    #     plt.xlim((-1, box_xlim))
+    #
+    # plt.setp(bp['boxes'], color='black')
+    # plt.setp(bp['whiskers'], color='black')
+    # #plt.setp(bp['fliers'], color='black', marker='+')
+    # for h in list(range(len(pops))):
+    #     boxX = []
+    #     boxY = []
+    #     box = bp['boxes'][h]
+    #     for j in list(range(5)):
+    #         boxX.append(box.get_xdata()[j])
+    #         boxY.append(box.get_ydata()[j])
+    #     boxCoords = list(zip(boxX, boxY))
+    #     boxPolygon = Polygon(boxCoords, facecolor=color_list[h])
+    #     ax1.add_patch(boxPolygon)
+    #
+    # # set top and right frames invisible
+    # ax1.spines['right'].set_visible(False)
+    # ax1.spines['top'].set_visible(False)
+    #
+    # plt.xlabel('firing rate (Hz)')
+    # plt.yticks(label_pos, populations)
+    # fig.tight_layout()
+    # plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
+    # plt.close()
 
 
 # Other analysis
@@ -326,8 +377,6 @@ def boxplot(net_dict, path):
 def ai_score(path, name, begin, end,
              limit=200, bw=10, filter_1hz=False, seg_len = 5000.0):
     data_all, gids = load_spike_times(path, name, begin, end)
-    # corrs = []
-    # cvs = []
     seg_list = np.arange(begin, end, seg_len)
 
     # selected neurons with fr > 1 Hz
@@ -372,6 +421,8 @@ def ai_score(path, name, begin, end,
 
     # calculation and save
     ai = open(os.path.join(path, 'ai.dat'), 'w')
+    corrs_by_layer = []
+    cvs_by_layer = []
     for i, layer in enumerate(layers):
         layer_ids = np.array([])
         layer_ts = np.array([])
@@ -381,14 +432,16 @@ def ai_score(path, name, begin, end,
                 layer_ts = np.concatenate((layer_ts, data_all[j][:, 1]))
 
         # for layer
-        corr_layer = []
-        cv_layer = []
+        corr_means_lyr = []
+        cv_means_lyr = []
+        corrs_lyr = np.array([])
+        cvs_lyr =  np.array([])
 
         # correlation and irregularity
         for j, seg_head in enumerate(seg_list):
             seg_end = seg_head + seg_len
             hists = []
-            cv = []
+            cvs = []
             sample_cnt = 0
             seg_ts = layer_ts[(layer_ts >= seg_head) & (layer_ts < seg_end)]
             seg_ids = layer_ids[(layer_ts >= seg_head) & (layer_ts < seg_end)]
@@ -399,17 +452,23 @@ def ai_score(path, name, begin, end,
                         hists.append(
                             np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
                         isi = np.diff(ts)
-                        cv.append(np.std(isi) / np.mean(isi))
+                        cvs.append(np.std(isi) / np.mean(isi))
                         sample_cnt += 1
             print('layer {}, seg {}, n = {}'.format(i, seg_head, sample_cnt))
-            corr_layer.append(get_mean_corr(hists))
-            cv_layer.append(np.mean(cv))
-        ai.write(str(np.mean(corr_layer)) + ', ' + str(np.mean(cv_layer)) + '\n')
-        # corrs.append(np.mean(corr_layer))
-        # cvs.append(np.mean(cv_layer))
+            corrs = get_corr(hists)
+            corrs_lyr = np.concatenate((corrs_lyr, corrs))
+            corr_means_lyr.append(np.mean(corrs))
+            cvs_lyr = np.concatenate((cvs_lyr, cvs))
+            cv_means_lyr.append(np.mean(cvs))
+        ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
+        corrs_by_layer.append(corrs_lyr)
+        cvs_by_layer.append(cvs_lyr)
     ai.close()
+    do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
+               ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-1.0, 1.0))
+    do_boxplot(cvs_by_layer, path, 'cv-isi', 'CV of ISI',
+               ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
 
-    # return corrs, cvs
 
 # response spread and amplitude
 def response(path, name, begin, window, n_stim=20, interval=1000.0):
