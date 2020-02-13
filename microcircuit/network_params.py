@@ -198,8 +198,8 @@ net_dict = {
         # Reset membrane potential of the neurons (in mV).
         'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, #-67.0,
         # Threshold potential of the neurons (in mV).
-        # 'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
-        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
+        'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
+        # 'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane potential after a spike (in mV).
         'V_reset': -67.0, #-65.0,
         # Membrane capacitance (in pF).
@@ -207,28 +207,29 @@ net_dict = {
         # Membrane time constant (in ms).
         'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, #7.0, #10.0,
         # Time constant of postsynaptic excitatory currents (in ms).
-        'tau_syn_ex': 1.74, #1.0, # 0.5,
+        'tau_syn_ex': 2.1, # 1.74, # 0.5,
         # Time constant of postsynaptic inhibitory currents (in ms).
-        'tau_syn_in': 4.6, #2.0, # 0.5,
+        'tau_syn_in': 3.2, # 4.6, # 0.5,
         # Time constant of external postsynaptic excitatory current (in ms).
-        'tau_syn_E': 1.74,  # 0.5,
+        'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
     'animal': 'rat',
     'renew_conn': False,
     'w_dict': {
         'psp_mtx':
-            # np.array([[0.70, 0.78, 0.47, 0.23],
-            #           [0.34, 0.95, 0.38, 0.23],
-            #           [0.70, 0.63, 0.68, 0.23],
-            #           [0.70, 2.27, 0.40, 0.53]]),
-            np.full((4, 4), 0.5),
+            np.array([[0.70, 0.78, 0.47, 0.23],
+                      [0.34, 0.95, 0.38, 0.23],
+                      [0.70, 0.63, 0.68, 0.23],
+                      [0.70, 2.27, 0.40, 0.53]]),
+            # np.full((4, 4), 0.5), # previous
         'psp_std_mtx':
-            # np.array([[0.8958, 1.2372, 0.7228, 1.0000],
-            #           [0.4540, 1.3421, 1.0000, 1.0000],
-            #           [1.0520, 0.9618, 1.2379, 1.0000],
-            #           [1.0520, 1.3124, 0.8739, 1.3884]])
-            np.full((4, 4), 1.0)}
+            np.array([[0.8958, 1.2372, 0.7228, 1.0000],
+                      [0.4540, 1.3421, 1.0000, 1.0000],
+                      [1.0520, 0.9618, 1.2379, 1.0000],
+                      [1.0520, 1.3124, 0.8739, 1.3884]])
+            # np.full((4, 4), 1.0) # previous
+        }
     }
 
 

@@ -13,14 +13,11 @@ def set_constant():
     net_dict['g'] = -6
     net_dict['bg_rate'] = 3.0
     net_dict['animal'] = 'mouse'
-    net_dict['renew_conn'] = False
-    net_dict['neuron_params']['tau_syn_ex'] = 2.1
-    net_dict['neuron_params']['tau_syn_inh'] = 3.2
     stim_dict['thalamic_input'] = False
-    stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
+    # stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
-    net_dict['K_ext'] = np.array([2000, 2000, 1500, 550,
+    net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
                                   2000, 2000, 1500,
                                   2000, 2000, 1500])
@@ -107,8 +104,8 @@ def g_bg(out_list):
     w_list = test_list_psp()
     for i, output in enumerate(out_list):
         levels_str, levels_list = read_levels(output)
-        special_dict['stp_dict'] = stp_list[levels_list[0]]
-        net_dict['w_dict'] = w_list[1]  # specific psps
+        special_dict['stp_dict'] = stp_list[1]
+        net_dict['w_dict'] = w_list[levels_list[0]]  # specific psps
         net_dict['g'] = -float(levels_list[1])
         net_dict['bg_rate'] = float(levels_list[2])
         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)

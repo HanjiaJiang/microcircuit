@@ -361,8 +361,8 @@ def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
 
 
 def get_weight(psp_val, net_dict):
-    C_m = net_dict['neuron_params']['C_m']['Exc']
-    tau_m = net_dict['neuron_params']['tau_m']['Exc']
+    C_m = net_dict['neuron_params']['C_m']['default']
+    tau_m = net_dict['neuron_params']['tau_m']['default']
     tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
 
     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn_ex / (
