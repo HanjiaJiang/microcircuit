@@ -5,6 +5,9 @@ import matplotlib
 matplotlib.rcParams['font.size'] = 20.0
 import numpy as np
 from random import sample
+from multiprocessing import Process
+from multiprocessing import Manager
+import copy
 
 '''
 Notes:
@@ -24,7 +27,9 @@ use_box_xlim = True
 box_xlim = 51.0
 
 
-# Plots
+'''
+Plots
+'''
 def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
     arr_len = len(arr)
     arr_shape = np.array(arr).shape
@@ -62,9 +67,15 @@ def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
     plt.savefig('interaction_barplot.png')
     plt.show()
 
-# Calculation
+'''
+Calculation
+'''
 # correlation
-def get_corr(list_1, list_2=None):
+def get_corr(list_1, list_2=None, proc_id=None, rtr_dict=None):
+    # multiprocessing
+    if proc_id is not None and rtr_dict is not None:
+        print('get_corr() proc {} start'.format(proc_id))
+
     coef_list = []
     for i, hist1 in enumerate(list_1):
         if list_2 is None:  # same population
@@ -75,27 +86,20 @@ def get_corr(list_1, list_2=None):
             if np.sum(hist1) != 0 and np.sum(hist2) != 0:
                 coef = np.corrcoef(hist1, hist2)[0, 1]
                 coef_list.append(coef)
-            # else:
-            #     print('{} in list1 or {} in list2 no spikes'.format(i, j))
+            else:
+                print('no data in one/both histograms')
+
+    # multiprocessing
+    if proc_id is not None and rtr_dict is not None:
+        rtr_dict[str(proc_id)] = coef_list
+        print('get_corr() proc {} end'.format(proc_id))
+
     return coef_list
 
 
-# def get_mean_corr(list_1, list_2=None):
-#     coef_list = []
-#     for i, hist1 in enumerate(list_1):
-#         if list_2 is None:  # same population
-#             list_2_tmp = list_1[i + 1:]
-#         else:
-#             list_2_tmp = list_2
-#         for j, hist2 in enumerate(list_2_tmp):
-#             if np.sum(hist1) != 0 and np.sum(hist2) != 0:
-#                 coef = np.corrcoef(hist1, hist2)[0, 1]
-#                 coef_list.append(coef)
-#             # else:
-#             #     print('{} in list1 or {} in list2 no spikes'.format(i, j))
-#     return np.mean(coef_list)
-
-# System
+'''
+System
+'''
 # let print() function print to file (use: exec(set2txt))
 def set2txt():
     re_str = 'import sys\n' \
@@ -111,7 +115,9 @@ def end2txt():
     return re_str
 
 
-# File & folder, etc.
+'''
+Files and folders, etc.
+'''
 # find folders with a target string
 def folders_with(target_str):
     folder_list = next(os.walk('.'))[1]
@@ -137,7 +143,9 @@ def make_folder(folder_name):
     return data_path, dir_exist
 
 
-# Potjans_2014 helpers
+'''
+From the original helpers.py
+'''
 def read_name(path, name):
     # Import filenames
     files = []
@@ -333,61 +341,29 @@ def fr_boxplot(net_dict, path):
         'blue', 'red', 'orange', 'blue', 'red', 'orange'
     ]
     do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', populations, color_list, (-1.0, 50.0))
-    # label_pos = list(range(len(pops), 0, -1))
-    # color_list = [
-    #     'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
-    #     'blue', 'red', 'orange', 'blue', 'red', 'orange'
-    # ]
-    # color_list = color_list[::-1]
-    # medianprops = dict(linestyle='-', linewidth=2.5, color='black')
-    # fig, ax1 = plt.subplots(figsize=(12, 12))
-    # bp = plt.boxplot(list_rates_rev, 0, 'k+', 0, medianprops=medianprops)
-    #
-    # # plt.title('(B) firing rate', fontsize=40.0)
-    # if use_box_xlim:
-    #     plt.xlim((-1, box_xlim))
-    #
-    # plt.setp(bp['boxes'], color='black')
-    # plt.setp(bp['whiskers'], color='black')
-    # #plt.setp(bp['fliers'], color='black', marker='+')
-    # for h in list(range(len(pops))):
-    #     boxX = []
-    #     boxY = []
-    #     box = bp['boxes'][h]
-    #     for j in list(range(5)):
-    #         boxX.append(box.get_xdata()[j])
-    #         boxY.append(box.get_ydata()[j])
-    #     boxCoords = list(zip(boxX, boxY))
-    #     boxPolygon = Polygon(boxCoords, facecolor=color_list[h])
-    #     ax1.add_patch(boxPolygon)
-    #
-    # # set top and right frames invisible
-    # ax1.spines['right'].set_visible(False)
-    # ax1.spines['top'].set_visible(False)
-    #
-    # plt.xlabel('firing rate (Hz)')
-    # plt.yticks(label_pos, populations)
-    # fig.tight_layout()
-    # plt.savefig(os.path.join(path, 'box_plot.png'), dpi=300)
-    # plt.close()
 
 
-# Other analysis
+'''
+Other analysis
+'''
 # Asynchronous irregular state calculation
-def ai_score_new(path, name, begin, end,
-             limit=200, bw=10, filter_1hz=False, seg_len=5000.0):
+def ai_score_new(path, name, begin, end, bw=10, seg_len=5000.0):
     data_all, gids = load_spike_times(path, name, begin, end)
     seg_list = np.arange(begin, end, seg_len)
 
+    return_dict = Manager().dict()
+    procs = []
+
     # group number in each layer
     layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    layer_head = [0, 0, 0, 0, 4, 4, 4, 7, 7, 7, 10, 10, 10]
-    layer_tail = [3, 3, 3, 3, 6, 6, 6, 9, 9, 9, 12, 12, 12]
+    # layer_head = [0, 0, 0, 0, 4, 4, 4, 7, 7, 7, 10, 10, 10]
+    # layer_tail = [3, 3, 3, 3, 6, 6, 6, 9, 9, 9, 12, 12, 12]
 
     # calculation and save
     ai = open(os.path.join(path, 'ai.dat'), 'w')
     corrs_by_layer = []
     cvs_by_layer = []
+    cv_means_by_layer = []
 
     for i, layer in enumerate(layers):
         layer_ids = np.array([])
@@ -398,37 +374,59 @@ def ai_score_new(path, name, begin, end,
                 layer_ts = np.concatenate((layer_ts, data_all[j][:, 1]))
 
         # for layer
-        corr_means_lyr = []
         cv_means_lyr = []
-        corrs_lyr = np.array([])
         cvs_lyr =  np.array([])
+        # corr_means_lyr = []
+        # corrs_lyr = np.array([])
 
         # correlation and irregularity
         for j, seg_head in enumerate(seg_list):
             seg_end = seg_head + seg_len
             hists = []
             cvs = []
-            sample_cnt = 0
+            cnt_corr = cnt_cv = 0
             seg_ts = layer_ts[(layer_ts >= seg_head) & (layer_ts < seg_end)]
             seg_ids = layer_ids[(layer_ts >= seg_head) & (layer_ts < seg_end)]
             for k in layer:
                 for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
                     ts = seg_ts[seg_ids == gid]
-                    if len(ts) > 3:
+                    if len(ts) > 0:
                         hists.append(
                             np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
-                        isi = np.diff(ts)
-                        cvs.append(np.std(isi) / np.mean(isi))
-                        sample_cnt += 1
-            print('layer {}, seg {}, n = {}'.format(i, seg_head, sample_cnt))
-            corrs = get_corr(hists)
-            corrs_lyr = np.concatenate((corrs_lyr, corrs))
-            corr_means_lyr.append(np.mean(corrs))
+                        cnt_corr += 1
+                        if len(ts) > 3:
+                            isi = np.diff(ts)
+                            cvs.append(np.std(isi) / np.mean(isi))
+                            cnt_cv += 1
+            print('layer {}, seg {}, n of (corr, cv) = ({}, {})'.format(i, seg_head, cnt_corr, cnt_cv))
+
+            proc = Process(target=get_corr, args=(hists, None, int(i*(len(seg_list)) + j), return_dict))
+            procs.append(proc)
+            proc.start()
+            # corrs = get_corr(hists)
+            # corrs_lyr = np.concatenate((corrs_lyr, corrs))
+            # corr_means_lyr.append(np.mean(corrs))
+
             cvs_lyr = np.concatenate((cvs_lyr, cvs))
             cv_means_lyr.append(np.mean(cvs))
-        ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
-        corrs_by_layer.append(corrs_lyr)
+
+        # ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
+        # corrs_by_layer.append(corrs_lyr)
         cvs_by_layer.append(cvs_lyr)
+        cv_means_by_layer.append(np.mean(cv_means_lyr))
+
+    for proc in procs:
+        proc.join()
+    for i in range(len(layers)):
+        corr_means_lyr = []
+        corrs_lyr = np.array([])
+        for j in range(len(seg_list)):
+            corrs = return_dict[str(i*(len(seg_list)) + j)]
+            corrs_lyr = np.concatenate((corrs_lyr, corrs))
+            corr_means_lyr.append(np.mean(corrs))
+        ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(cv_means_by_layer[i]) + '\n')
+        corrs_by_layer.append(corrs_lyr)
+
     ai.close()
     do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
                ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-1.0, 1.0))

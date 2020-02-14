@@ -24,39 +24,6 @@ def compute_DC(net_dict, w_ext):
     return DC
 
 
-# def get_weight(PSP_val, net_dict):
-#     """ Computes weight to elicit a change in the membrane potential.
-#
-#     This function computes the weight which elicits a change in the membrane
-#     potential of size PSP_val. To implement this, the weight is calculated to
-#     elicit a current that is high enough to implement the desired change in the
-#     membrane potential.
-#
-#     Parameters
-#     ----------
-#     PSP_val
-#         Evoked postsynaptic potential.
-#     net_dict
-#         Dictionary containing parameters of the microcircuit.
-#
-#     Returns
-#     -------
-#     PSC_e
-#         Weight value(s).
-#
-#     """
-#     C_m = net_dict['neuron_params']['C_m']['Exc']
-#     tau_m = net_dict['neuron_params']['tau_m']['Exc']
-#     tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
-#
-#     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn_ex / (
-#         tau_syn_ex - tau_m) * ((tau_m / tau_syn_ex) ** (
-#             - tau_m / (tau_m - tau_syn_ex)) - (tau_m / tau_syn_ex) ** (
-#                 - tau_syn_ex / (tau_m - tau_syn_ex)))) ** (-1))
-#     PSC_e = (PSC_e_over_PSP_e * PSP_val)
-#     return PSC_e
-
-
 def get_total_number_of_synapses(net_dict):
     """ Returns the total number of synapses between all populations.
 
