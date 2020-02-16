@@ -13,7 +13,7 @@ import copy
 Notes:
 way to get file path by GUI:
 import easygui
-path = easygui.fileopenbox() 
+path = easygui.fileopenbox()
 '''
 
 populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
@@ -71,23 +71,32 @@ def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
 Calculation
 '''
 # correlation
-def get_corr(list_1, list_2=None, proc_id=None, rtr_dict=None):
+def get_corr(list1, list2=None, proc_id=None, rtr_dict=None):
     # multiprocessing
     if proc_id is not None and rtr_dict is not None:
         print('get_corr() proc {} start'.format(proc_id))
 
+    if type(list2) is not list:    # list2 no data, use the same list
+        flg_samepop = True
+    else:
+        flg_samepop = False
+
     coef_list = []
-    for i, hist1 in enumerate(list_1):
-        if list_2 is None:  # same population
-            list_2_tmp = list_1[i + 1:]
+    for i, hist1 in enumerate(list1):
+        if flg_samepop:
+            idxs = list(range(i + 1, len(list1)))
         else:
-            list_2_tmp = list_2
-        for j, hist2 in enumerate(list_2_tmp):
+            idxs = list(range(len(list2)))
+        for j in idxs:
+            if flg_samepop:
+                hist2 = list1[j]
+            else:
+                hist2 = list2[j]
             if np.sum(hist1) != 0 and np.sum(hist2) != 0:
                 coef = np.corrcoef(hist1, hist2)[0, 1]
                 coef_list.append(coef)
             else:
-                print('no data in one/both histograms')
+                print('oops, no data in one/both histograms')
 
     # multiprocessing
     if proc_id is not None and rtr_dict is not None:

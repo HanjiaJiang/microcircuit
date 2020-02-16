@@ -2,7 +2,7 @@
     "__default__":
     {
         "account": "hanjia",
-        "mem": "2G",
+        "mem": "10G",
         "time": "02:00:0"
     }
 }

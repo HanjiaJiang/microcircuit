@@ -42,6 +42,7 @@ def set_constant():
 
 def params_single(path):
     set_constant()
+    stim_dict['thalamic_input'] = True
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
