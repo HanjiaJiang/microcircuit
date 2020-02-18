@@ -10,8 +10,8 @@ from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak
 
 
 def set_constant():
-    net_dict['g'] = -6
-    net_dict['bg_rate'] = 3.0
+    net_dict['g'] = -4
+    net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
     stim_dict['thalamic_input'] = False
     # stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)

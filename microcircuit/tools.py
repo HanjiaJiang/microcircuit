@@ -356,17 +356,14 @@ def fr_boxplot(net_dict, path):
 Other analysis
 '''
 # Asynchronous irregular state calculation
-def ai_score_new(path, name, begin, end, bw=10, seg_len=5000.0):
+def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, mp=True, limit=None):
+    if layers is None:
+        layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
     data_all, gids = load_spike_times(path, name, begin, end)
     seg_list = np.arange(begin, end, seg_len)
 
     return_dict = Manager().dict()
     procs = []
-
-    # group number in each layer
-    layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    # layer_head = [0, 0, 0, 0, 4, 4, 4, 7, 7, 7, 10, 10, 10]
-    # layer_tail = [3, 3, 3, 3, 6, 6, 6, 9, 9, 9, 12, 12, 12]
 
     # calculation and save
     ai = open(os.path.join(path, 'ai.dat'), 'w')
@@ -385,8 +382,8 @@ def ai_score_new(path, name, begin, end, bw=10, seg_len=5000.0):
         # for layer
         cv_means_lyr = []
         cvs_lyr =  np.array([])
-        # corr_means_lyr = []
-        # corrs_lyr = np.array([])
+        corr_means_lyr = []
+        corrs_lyr = np.array([])
 
         # correlation and irregularity
         for j, seg_head in enumerate(seg_list):
@@ -409,32 +406,39 @@ def ai_score_new(path, name, begin, end, bw=10, seg_len=5000.0):
                             cnt_cv += 1
             print('layer {}, seg {}, n of (corr, cv) = ({}, {})'.format(i, seg_head, cnt_corr, cnt_cv))
 
-            proc = Process(target=get_corr, args=(hists, None, int(i*(len(seg_list)) + j), return_dict))
-            procs.append(proc)
-            proc.start()
-            # corrs = get_corr(hists)
-            # corrs_lyr = np.concatenate((corrs_lyr, corrs))
-            # corr_means_lyr.append(np.mean(corrs))
+            if limit is not None and len(hist) > limit:
+                hist = sample(hist, limit)
+
+            if mp:
+                proc = Process(target=get_corr, args=(hists, None, int(i*(len(seg_list)) + j), return_dict))
+                procs.append(proc)
+                proc.start()
+            else:
+                corrs = get_corr(hists)
+                corrs_lyr = np.concatenate((corrs_lyr, corrs))
+                corr_means_lyr.append(np.mean(corrs))
 
             cvs_lyr = np.concatenate((cvs_lyr, cvs))
             cv_means_lyr.append(np.mean(cvs))
 
-        # ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
-        # corrs_by_layer.append(corrs_lyr)
+        if not mp:
+            ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
+            corrs_by_layer.append(corrs_lyr)
         cvs_by_layer.append(cvs_lyr)
         cv_means_by_layer.append(np.mean(cv_means_lyr))
 
-    for proc in procs:
-        proc.join()
-    for i in range(len(layers)):
-        corr_means_lyr = []
-        corrs_lyr = np.array([])
-        for j in range(len(seg_list)):
-            corrs = return_dict[str(i*(len(seg_list)) + j)]
-            corrs_lyr = np.concatenate((corrs_lyr, corrs))
-            corr_means_lyr.append(np.mean(corrs))
-        ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(cv_means_by_layer[i]) + '\n')
-        corrs_by_layer.append(corrs_lyr)
+    if mp:
+        for proc in procs:
+            proc.join()
+        for i in range(len(layers)):
+            corr_means_lyr = []
+            corrs_lyr = np.array([])
+            for j in range(len(seg_list)):
+                corrs = return_dict[str(i*(len(seg_list)) + j)]
+                corrs_lyr = np.concatenate((corrs_lyr, corrs))
+                corr_means_lyr.append(np.mean(corrs))
+            ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(cv_means_by_layer[i]) + '\n')
+            corrs_by_layer.append(corrs_lyr)
 
     ai.close()
     do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
@@ -443,7 +447,7 @@ def ai_score_new(path, name, begin, end, bw=10, seg_len=5000.0):
                ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
 
 
-def ai_score(path, name, begin, end,
+def ai_score_200(path, name, begin, end,
              limit=200, bw=10, filter_1hz=False, seg_len = 5000.0):
     data_all, gids = load_spike_times(path, name, begin, end)
     seg_list = np.arange(begin, end, seg_len)
