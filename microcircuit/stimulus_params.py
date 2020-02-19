@@ -19,7 +19,7 @@ stim_dict = {
     # Duration of the thalamic input (in ms).
     'th_duration': 10.0,
     # Rate of the thalamic input (in Hz).
-    'th_rate': 120.0,
+    'th_rate': 150.0,
     # Start of the DC generator (in ms).
     'dc_start': 0.0,
     # Duration of the DC generator (in ms).
