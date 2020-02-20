@@ -9,14 +9,14 @@ from microcircuit.create_params import params_single
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     on_server = False
     run_analysis = True
 
     # timing, in ms
     plot_half_len = 100.0
-    analysis_start = 1000.0
-    analysis_segment = 1000.0
+    analysis_start = 2000.0
+    analysis_segment = 2000.0
     analysis_total_length = analysis_segment*1
     analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 

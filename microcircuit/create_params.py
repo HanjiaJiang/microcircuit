@@ -43,6 +43,7 @@ def set_constant():
 def params_single(path):
     set_constant()
     stim_dict['thalamic_input'] = True
+    stim_dict['th_start'] = np.array([1500.0])
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,

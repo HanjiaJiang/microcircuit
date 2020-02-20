@@ -355,11 +355,73 @@ def fr_boxplot(net_dict, path):
 '''
 Other analysis
 '''
+def filter_by_spike_n(data, ids, spk_n=4):
+    rdata = []
+    for i in range(len(data)):
+        d = data[i]
+        if type(d) == np.ndarray and d.ndim == 2:
+            cache = None
+            for id in range(ids[i][0], ids[i][1]+1):
+                tmp = d[d[:, 0] == id]
+                if len(tmp) >= spk_n:
+                    if cache is None:
+                        cache = tmp
+                    else:
+                        cache = np.concatenate((cache, tmp))
+            rdata.append(cache)
+        else:
+            rdata.append([])
+    return rdata
+
+def sample_by_layer(data, ids, layers, n_sample=140):
+    rdata = []  # return data
+    set_selected_by_lyr = []    # selected id sets by layer
+    set_leftover_by_lyr = []    # unselected id sets by layer
+    cnt_by_lyr = []             # count of selected sets by layer
+    for layer in layers:
+        len_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1
+        cnt_lyr = 0
+        selected = np.array([])
+        leftover = np.array([])
+        for g in layer:
+            len_grp = ids[g][1] - ids[g][0] + 1
+            sample_ratio = float(len_grp)/len_lyr
+            d = data[g]
+            if type(d) == np.ndarray and d.ndim == 2:
+                set_0 = set(d[:, 0])    # original
+                set_1 = sample(set_0, min(len(set_0), round(n_sample*sample_ratio))) # selected
+                rdata.append(d[np.in1d(d[:, 0], set_1)])
+                selected = np.concatenate((selected, set_1))
+                leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))
+                cnt_lyr += len(set_1)
+                print('group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
+            else:
+                rdata.append([])
+        set_selected_by_lyr.append(selected)
+        set_leftover_by_lyr.append(leftover)
+        cnt_by_lyr.append(cnt_lyr)
+
+    # makeup so that collected = desired (n_layer)
+    for i, layer in enumerate(layers):
+        n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
+        if n_diff > 0:
+            set_makeup = sample(list(set_leftover_by_lyr[i]), min(len(set_leftover_by_lyr[i]), n_diff))
+            for g in layer:
+                d = data[g]
+                rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
+        elif n_diff < 0:
+            set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
+            for g in layer:
+                rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
+    return rdata
+
 # Asynchronous irregular state calculation
 def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, mp=True, limit=None):
     if layers is None:
         layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
     data_all, gids = load_spike_times(path, name, begin, end)
+    data_all = filter_by_spike_n(data_all, gids, spk_n=4)
+    data_all = sample_by_layer(data_all, gids, layers, n_sample=140)
     seg_list = np.arange(begin, end, seg_len)
 
     return_dict = Manager().dict()
