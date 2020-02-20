@@ -25,7 +25,7 @@ subtype_label = ['Exc', 'PV', 'SOM', 'VIP']
 
 use_box_xlim = True
 box_xlim = 51.0
-
+cv_isi_min_n = 4
 
 '''
 Plots
@@ -355,7 +355,7 @@ def fr_boxplot(net_dict, path):
 '''
 Other analysis
 '''
-def filter_by_spike_n(data, ids, spk_n=4):
+def filter_by_spike_n(data, ids, n_spk=4):
     rdata = []
     for i in range(len(data)):
         d = data[i]
@@ -363,7 +363,7 @@ def filter_by_spike_n(data, ids, spk_n=4):
             cache = None
             for id in range(ids[i][0], ids[i][1]+1):
                 tmp = d[d[:, 0] == id]
-                if len(tmp) >= spk_n:
+                if len(tmp) >= n_spk:
                     if cache is None:
                         cache = tmp
                     else:
@@ -406,6 +406,7 @@ def sample_by_layer(data, ids, layers, n_sample=140):
         n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
         if n_diff > 0:
             set_makeup = sample(list(set_leftover_by_lyr[i]), min(len(set_leftover_by_lyr[i]), n_diff))
+            print('layer with idex {} added {} samples'.format(i, n_diff))
             for g in layer:
                 d = data[g]
                 rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
@@ -416,48 +417,46 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     return rdata
 
 # Asynchronous irregular state calculation
-def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, mp=True, limit=None):
+def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
     if layers is None:
         layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
     data_all, gids = load_spike_times(path, name, begin, end)
-    data_all = filter_by_spike_n(data_all, gids, spk_n=4)
-    data_all = sample_by_layer(data_all, gids, layers, n_sample=140)
     seg_list = np.arange(begin, end, seg_len)
 
+    # multiprocessing
     return_dict = Manager().dict()
     procs = []
 
     # calculation and save
     ai = open(os.path.join(path, 'ai.dat'), 'w')
-    corrs_by_layer = []
-    cvs_by_layer = []
-    cv_means_by_layer = []
+    cvs_by_seg_by_layer = []
+    for i, seg_head in enumerate(seg_list):
+        seg_end = seg_head + seg_len
+        data_seg = []
+        for j in range(len(data_all)):
+            data_group = data_all[j]
+            if type(data_group) == np.ndarray and data_group.ndim == 2:
+                data_seg.append(data_group[(data_group[:, 1] >= seg_head) & (data_group[:, 1] < seg_end)])
+            else:
+                data_seg.append([])
+        data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
+        data_seg = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
 
-    for i, layer in enumerate(layers):
-        layer_ids = np.array([])
-        layer_ts = np.array([])
-        for j in layer:
-            if len(data_all[j]) > 0:
-                layer_ids = np.concatenate((layer_ids, data_all[j][:, 0].astype(int)))
-                layer_ts = np.concatenate((layer_ts, data_all[j][:, 1]))
-
-        # for layer
-        cv_means_lyr = []
-        cvs_lyr =  np.array([])
-        corr_means_lyr = []
-        corrs_lyr = np.array([])
-
-        # correlation and irregularity
-        for j, seg_head in enumerate(seg_list):
-            seg_end = seg_head + seg_len
+        cvs_by_layer = []
+        for j, layer in enumerate(layers):
+            layer_ids = np.array([])
+            layer_ts = np.array([])
             hists = []
             cvs = []
             cnt_corr = cnt_cv = 0
-            seg_ts = layer_ts[(layer_ts >= seg_head) & (layer_ts < seg_end)]
-            seg_ids = layer_ids[(layer_ts >= seg_head) & (layer_ts < seg_end)]
+            for k in layer:
+                data = data_seg[k]
+                if type(data) == np.ndarray and data.ndim == 2:
+                    layer_ids = np.concatenate((layer_ids, data[:, 0]))
+                    layer_ts = np.concatenate((layer_ts, data[:, 1]))
             for k in layer:
                 for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
-                    ts = seg_ts[seg_ids == gid]
+                    ts = layer_ts[layer_ids == gid]
                     if len(ts) > 0:
                         hists.append(
                             np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
@@ -466,47 +465,31 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, mp=True
                             isi = np.diff(ts)
                             cvs.append(np.std(isi) / np.mean(isi))
                             cnt_cv += 1
-            print('layer {}, seg {}, n of (corr, cv) = ({}, {})'.format(i, seg_head, cnt_corr, cnt_cv))
+            print('seg {}, layer {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
+            proc = Process(target=get_corr,
+                           args=(hists, None, int(i * (len(layers)) + j), return_dict))
+            procs.append(proc)
+            proc.start()
+            cvs_by_layer.append(cvs)
+        cvs_by_seg_by_layer.append(cvs_by_layer)
 
-            if limit is not None and len(hist) > limit:
-                hist = sample(hist, limit)
-
-            if mp:
-                proc = Process(target=get_corr, args=(hists, None, int(i*(len(seg_list)) + j), return_dict))
-                procs.append(proc)
-                proc.start()
-            else:
-                corrs = get_corr(hists)
-                corrs_lyr = np.concatenate((corrs_lyr, corrs))
-                corr_means_lyr.append(np.mean(corrs))
-
-            cvs_lyr = np.concatenate((cvs_lyr, cvs))
-            cv_means_lyr.append(np.mean(cvs))
-
-        if not mp:
-            ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(np.mean(cv_means_lyr)) + '\n')
-            corrs_by_layer.append(corrs_lyr)
-        cvs_by_layer.append(cvs_lyr)
-        cv_means_by_layer.append(np.mean(cv_means_lyr))
-
-    if mp:
-        for proc in procs:
-            proc.join()
-        for i in range(len(layers)):
-            corr_means_lyr = []
-            corrs_lyr = np.array([])
-            for j in range(len(seg_list)):
-                corrs = return_dict[str(i*(len(seg_list)) + j)]
-                corrs_lyr = np.concatenate((corrs_lyr, corrs))
-                corr_means_lyr.append(np.mean(corrs))
-            ai.write(str(np.mean(corr_means_lyr)) + ', ' + str(cv_means_by_layer[i]) + '\n')
-            corrs_by_layer.append(corrs_lyr)
+    for proc in procs:
+        proc.join()
+    for j in range(len(layers)):
+        corr_means_by_seg = []
+        cv_means_by_seg = []
+        for i in range(len(seg_list)):
+            corrs = return_dict[str(int(i * (len(layers)) + j))]
+            corr_means_by_seg.append(np.mean(corrs))
+            cvs = cvs_by_seg_by_layer[i][j]
+            cv_means_by_seg.append(np.mean(cvs))
+        ai.write(str(np.mean(corr_means_by_seg)) + ', ' + str(np.mean(cv_means_by_seg)) + '\n')
 
     ai.close()
-    do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
-               ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-1.0, 1.0))
-    do_boxplot(cvs_by_layer, path, 'cv-isi', 'CV of ISI',
-               ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
+    # do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
+    #            ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-1.0, 1.0))
+    # do_boxplot(cvs_by_layer, path, 'cv-isi', 'CV of ISI',
+    #            ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
 
 
 def ai_score_200(path, name, begin, end,
