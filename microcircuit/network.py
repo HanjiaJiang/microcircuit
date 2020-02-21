@@ -106,7 +106,6 @@ class Network:
         self.synapses_scaled = self.synapses * self.K_scaling
         self.nr_neurons = self.N_full * self.N_scaling
         self.K_ext = self.net_dict['K_ext'] * self.K_scaling
-        # 090705
         self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
         self.weight_mat = get_psc(self.net_dict)
         self.weight_mat_std = get_psc_std(self.net_dict)
@@ -138,15 +137,6 @@ class Network:
                 % self.K_scaling
                 )
 
-        # Scaling of the synapses.
-        # if self.K_scaling != 1:
-        #     synapses_indegree = self.synapses / (
-        #         self.N_full.reshape(len(self.N_full), 1) * self.N_scaling)
-        #     self.weight_mat, self.w_ext, self.DC_amp_e = adj_w_ext_to_K(
-        #         synapses_indegree, self.K_scaling, self.weight_mat,
-        #         self.w_from_PSP, self.DC_amp_e, self.net_dict, self.stim_dict
-        #         )
-
         # Create cortical populations.
         self.pops = []
         # HJ 190718
@@ -159,23 +149,7 @@ class Network:
             population = nest.Create(
                 self.net_dict['neuron_model'], int(self.nr_neurons[i])
                 )
-            # 190701
-            E_L = self.net_dict['neuron_params']['E_L']['default']
-            V_th = self.net_dict['neuron_params']['V_th']['default']
-            C_m = nest.GetDefaults('iaf_psc_exp')['C_m']
-            tau_m = nest.GetDefaults('iaf_psc_exp')['tau_m']
-            try:
-                E_L, V_th, C_m, tau_m = ctsp_assign(pop,
-                                                    self.net_dict,
-                                                    E_L,
-                                                    V_th,
-                                                    C_m,
-                                                    tau_m,
-                                                    self.spe_dict)
-            except NameError:
-                print('\'ctsp_assign()\' does not exist')
-            else:
-                pass
+            E_L, V_th, C_m, tau_m = ctsp_assign(pop, self.net_dict, self.spe_dict)
             nest.SetStatus(
                 population, {
                     'tau_syn_ex': self.net_dict['neuron_params']['tau_syn_ex'],

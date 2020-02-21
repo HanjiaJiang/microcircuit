@@ -348,7 +348,11 @@ def connect_by_cluster(source_name,
         )
 
 
-def ctsp_assign(pop, net_dict, E_L, V_th, C_m, tau_m, spe_dict):
+def ctsp_assign(pop, net_dict, spe_dict):
+    E_L = net_dict['neuron_params']['E_L']['default']
+    V_th = net_dict['neuron_params']['V_th']['default']
+    C_m = net_dict['neuron_params']['C_m']['default']
+    tau_m = net_dict['neuron_params']['tau_m']['default']
     if spe_dict['ctsp'] is True:
         for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
             if celltype in pop:

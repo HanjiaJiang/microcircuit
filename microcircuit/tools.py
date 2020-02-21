@@ -409,11 +409,13 @@ def sample_by_layer(data, ids, layers, n_sample=140):
             print('layer with idex {} added {} samples'.format(i, n_diff))
             for g in layer:
                 d = data[g]
-                rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
+                if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
+                    rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
         elif n_diff < 0:
             set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
             for g in layer:
-                rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
+                if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
+                    rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
     return rdata
 
 # Asynchronous irregular state calculation

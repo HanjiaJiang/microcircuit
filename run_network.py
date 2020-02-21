@@ -9,7 +9,7 @@ from microcircuit.create_params import params_single
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = False
+    run_sim = True
     on_server = False
     run_analysis = True
 
