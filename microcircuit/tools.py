@@ -7,7 +7,8 @@ import numpy as np
 from random import sample
 from multiprocessing import Process
 from multiprocessing import Manager
-import copy
+import pickle
+import easygui
 
 '''
 Notes:
@@ -127,6 +128,14 @@ def end2txt():
 '''
 Files and folders, etc.
 '''
+# print pickle content
+def print_pickle():
+    pickle_path = easygui.fileopenbox()
+    with open(pickle_path, 'rb') as handle:
+        para_dict = pickle.load(handle)
+        print(para_dict)
+    handle.close()
+
 # find folders with a target string
 def folders_with(target_str):
     folder_list = next(os.walk('.'))[1]

@@ -1,14 +1,15 @@
-TEST_COUNT = 2
+F1_COUNT = 2
+F2_COUNT = 2
 G_START = 4
-G_COUNT = 5
-BG_START = 2
-BG_COUNT = 5
+G_COUNT = 2
+BG_START = 4
+BG_COUNT = 2
 
 localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}/ai.dat', a=range(TEST_COUNT), b=range(G_START, G_START + G_COUNT), c=range(BG_START, BG_START + BG_COUNT))
+        expand('scans/{f1}_{f2}_{g}_{bg}/ai.dat', f1=range(F1_COUNT), f2=range(F2_COUNT), g=range(G_START, G_START + G_COUNT), bg=range(BG_START, BG_START + BG_COUNT))
     shell:
         '''
         cp * scans/
@@ -16,7 +17,7 @@ rule all:
 
 rule create:
     output:
-        expand('scans/{a}_{b}_{c}.pickle', a=range(TEST_COUNT), b=range(G_START, G_START + G_COUNT), c=range(BG_START, BG_START + BG_COUNT))
+        expand('scans/{f1}_{f2}_{g}_{bg}.pickle', f1=range(F1_COUNT), f2=range(F2_COUNT), g=range(G_START, G_START + G_COUNT), bg=range(BG_START, BG_START + BG_COUNT))
     shell:
         '''
         python microcircuit/create_params.py {output}
@@ -29,8 +30,8 @@ rule create:
         '''
 
 rule simulate:
-    input: 'scans/{a}_{b}_{c}.pickle'
-    output: 'scans/{a}_{b}_{c}/ai.dat'
+    input: 'scans/{f1}_{f2}_{g}_{bg}.pickle'
+    output: 'scans/{f1}_{f2}_{g}_{bg}/ai.dat'
     shell:
         '''
         python run_network.py {input} {output}

@@ -71,7 +71,7 @@ def get_conn_probs(list_n=10):
 
 
 def read_levels(in_str):
-    out_str = os.path.basename(in_str).split('.')[0]
+    out_str = os.path.basename(in_str).split('.')[0]    # filename with .
     out_list = np.array(out_str.split('_')).astype(int)
     return out_str, out_list
 
@@ -123,48 +123,44 @@ def g_bg(out_list):
         handle.close()
 
 
-# def conn_stp_som_vip(out_list):
-#     # set constant parameters
-#     set_constant()
-#
-#     # get the size of each dimension from the largest (#_#_#_#)
-#     max_str, max_list = read_levels(out_list[-1])
-#     print(max_list)
-#
-#     # load conn_probs; default return the whole list
-#     conn_probs_list = get_conn_probs()
-#     for conn_probs in conn_probs_list:
-#         print(conn_probs)
-#
-#     # stp list
-#     stp_list = [allen_stp, doiron_stp, doiron_stp_weak]
-#
-#     for i, output in enumerate(out_list):
-#         # get levels
-#         levels_str = os.path.basename(output).split('.')[0]
-#         levels_list = np.array(levels_str.split('_')).astype(int)
-#
-#         # assign to dictionary
-#         net_dict['conn_probs'] = conn_probs_list[levels_list[0]]
-#         special_dict['stp_dict'] = stp_list[levels_list[1]]
-#         som = (float(levels_list[2] + 1) / (
-#                     max_list[2] + 1)) * 2000.0  # assign som and vip strengths
-#         vip = (float(levels_list[3] + 1) / (max_list[3] + 1)) * 2000.0  # according to levels
-#         sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
-#         net_dict['K_ext'] = np.array([2000, 2000, som, vip,
-#                                       2000, 2000, som,
-#                                       2000, 2000, som,
-#                                       2000, 2000, som])
-#         para_dict = {
-#             'net_dict': net_dict,
-#             'sim_dict': sim_dict,
-#             'stim_dict': stim_dict,
-#             'special_dict': special_dict
-#         }
-#
-#         with open(output, 'wb') as handle:
-#             pickle.dump(para_dict, handle)
-#         handle.close()
+def save_pickle(pickle_str, all_dict):
+    lvls_str = os.path.basename(pickle_str).split('.')[0]
+    all_dict['sim_dict']['data_path'] = os.path.join(os.path.dirname(pickle_str), lvls_str)
+    with open(pickle_str, 'wb') as handle:
+        pickle.dump(all_dict, handle)
+    handle.close()
+
+def set_g_bg(all_dict, lvls):
+    all_dict['net_dict']['g'] = -float(lvls[0])
+    all_dict['net_dict']['bg_rate'] = float(lvls[1])
+    return all_dict
+
+def set_stp(all_dict, lvl):
+    stp_list = [no_stp, doiron_stp_weak, allen_stp]
+    all_dict['special_dict']['stp_dict'] = stp_list[lvl]
+    return all_dict
+
+def set_ctsp(all_dict, lvl):
+    if lvl == 0:
+        all_dict['special_dict']['ctsp'] = False
+    else:
+        all_dict['special_dict']['ctsp'] = True
+    return all_dict
+
+def set_main(out_list, f1, f2):
+    set_constant()
+    all_dict = {
+        'net_dict': net_dict,
+        'sim_dict': sim_dict,
+        'stim_dict': stim_dict,
+        'special_dict': special_dict
+    }
+    for i, out in enumerate(out_list):
+        lvls_list = read_levels(out)[1]
+        all_dict = f1(all_dict, lvls_list[0])
+        all_dict = f2(all_dict, lvls_list[1])
+        all_dict = set_g_bg(all_dict, lvls_list[2:])
+        save_pickle(out, all_dict)
 
 
 if __name__ == "__main__":
@@ -173,5 +169,5 @@ if __name__ == "__main__":
     # get output names from system input
     output_list = sys.argv[1:]
 
-    g_bg(output_list)
-    # conn_stp_som_vip(out_list)
+    # g_bg(output_list)
+    set_main(output_list, set_ctsp, set_stp)

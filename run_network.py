@@ -15,9 +15,9 @@ if __name__ == "__main__":
 
     # timing, in ms
     plot_half_len = 100.0
-    analysis_start = 2000.0
-    analysis_segment = 2000.0
-    analysis_total_length = analysis_segment*2
+    analysis_start = 1000.0
+    analysis_segment = 1000.0
+    analysis_total_length = analysis_segment*1
     analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 
     # check for: parameter scan or single-run
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     # assign parameters
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
+    handle.close()
 
     # cpu number / cluster or not
     cpu_ratio = 0.5
