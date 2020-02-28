@@ -4,7 +4,7 @@ from microcircuit.helpers import *
 from microcircuit.tools import plot_raster
 from microcircuit.tools import fire_rate
 from microcircuit.network_params import net_update
-
+import copy
 
 class Network:
     """ Handles the setup of the network parameters and
@@ -291,7 +291,7 @@ class Network:
         if self.net_dict['poisson_input']:
             if nest.Rank() == 0:
                 print('Poisson background input created')
-            rate_ext = self.net_dict['bg_rate'] * self.K_ext    # HJ: K_ext = array of number of inputs
+            rate_ext = self.net_dict['bg_rate'] * self.K_ext
             self.poisson = []
             for i, target_pop in enumerate(self.pops):
                 poisson = nest.Create('poisson_generator')
@@ -410,18 +410,9 @@ class Network:
             print('Poisson background input is connected')
         for i, target_pop in enumerate(self.pops):
             conn_dict_poisson = {'rule': 'all_to_all'}
-            # HJ
-            try:
-                w_ext = get_weight_ctsp(self.net_dict['PSP_e'], self.net_dict, self.net_dict['populations'][i], self.spe_dict)
-            except NameError:
-                # print('\'get_weight_ctsp()\' does not exist')
-                w_ext = self.w_ext
-            else:
-                pass
             syn_dict_poisson = {
                 'model': 'static_synapse',
-                'weight': w_ext,
-                # 'weight': self.w_ext,
+                 'weight': self.w_ext,
                 'delay': self.net_dict['poisson_delay']
                 }
             nest.Connect(
