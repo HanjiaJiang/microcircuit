@@ -5,11 +5,11 @@ from stp.stp_dicts import cell_types, allen_stp, doiron_stp, doiron_stp_weak
 np.set_printoptions(precision=2, linewidth=500)
 
 '''
-Max firing rate: 
+Max firing rate:
     use refractory period t_ref to constrain firing rate.
 
 Short-term plasticity:
-    Tsodyks synapse, see 
+    Tsodyks synapse, see
     Ashok Litwin-Kumar, Robert Rosenbaum, Brent Doiron, 2016
     Tsodyks et al. 1997
 
@@ -401,3 +401,57 @@ def get_psc_std(net_dict, dim=13, lyr_gps=None):
             std_ratio = net_dict['w_dict']['psp_std_mtx'][j, i]
             std_ratios[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]:pre_lyr[-1]+1] = std_ratio
     return std_ratios
+
+
+def eq_inh_conn(n_full, conn, lyr_gps=None):
+    if lyr_gps is None:
+        lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+    conn_out = np.zeros(conn.shape)
+    for lyr_pre in lyr_gps:
+        for lyr_post in lyr_gps:
+            # connectivity to be calculated
+            e2e = e2i = i2e = i2i = 0.0
+            e2i_max = e2i_sum = 0.0
+            i2e_max = i2e_sum = 0.0
+            i2i_max = i2i_sum = 0.0
+
+            # index of pre and post excitatory
+            exc_pre = lyr_pre[0]
+            exc_post = lyr_post[0]
+
+            # re-calculate connectivity
+            # i to e
+            for inh_pre in lyr_pre[1:]:
+                i2e_max += n_full[exc_post]*n_full[inh_pre]
+                i2e_sum += n_full[exc_post]*n_full[inh_pre]*conn[exc_post, inh_pre]
+
+            # e to i
+            for inh_post in lyr_post[1:]:
+                e2i_max += n_full[exc_pre]*n_full[inh_post]
+                e2i_sum += n_full[exc_pre]*n_full[inh_post]*conn[inh_post, exc_pre]
+
+            # i to i
+            for inh_pre in lyr_pre[1:]:
+                for inh_post in lyr_post[1:]:
+                    i2i_max += n_full[inh_pre]*n_full[inh_post]
+                    i2i_sum += n_full[inh_pre]*n_full[inh_post]*conn[inh_post, inh_pre]
+
+            e2e = conn[exc_post, exc_pre]
+            if e2i_max != 0.0:
+                e2i = e2i_sum/e2i_max
+            if i2e_max != 0.0:
+                i2e = i2e_sum/i2e_max
+            if i2i_max != 0.0:
+                i2i = i2i_sum/i2i_max
+
+            # re-assign connectivity
+            conn_out[exc_post, exc_pre] = e2e
+            for inh_pre in lyr_pre[1:]:
+                conn_out[exc_post, inh_pre] = i2e
+            for inh_post in lyr_post[1:]:
+                conn_out[inh_post, exc_pre] = e2i
+            for inh_pre in lyr_pre[1:]:
+                for inh_post in lyr_post[1:]:
+                    conn_out[inh_post, inh_pre] = i2i
+
+    return conn_out

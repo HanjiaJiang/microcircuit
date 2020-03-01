@@ -8,7 +8,7 @@ from random import sample
 from multiprocessing import Process
 from multiprocessing import Manager
 import pickle
-import easygui
+# import easygui
 
 '''
 Notes:

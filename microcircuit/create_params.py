@@ -6,7 +6,9 @@ from microcircuit.network_params import net_dict
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
+import microcircuit.functions as funcs
 from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak
+np.set_printoptions(suppress=True, precision=4)
 
 
 def set_constant():
@@ -42,8 +44,16 @@ def set_constant():
 
 def params_single(path):
     set_constant()
+    # thalamic
     stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
+    stim_dict['th_rate'] = 250.0
+
+    # properties
+    # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
+    special_dict['stp_dict'] = no_stp
+    special_dict['ctsp'] = False
+
     para_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,

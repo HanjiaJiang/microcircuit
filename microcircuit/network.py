@@ -234,18 +234,9 @@ class Network:
             self.thalamic_population = nest.Create(
                 'parrot_neuron', self.stim_dict['n_thal']
                 )
-            # 190705
-            try:
-                self.thalamic_weight = get_weight_ctsp(
-                    self.stim_dict['PSP_th'], self.net_dict, 'PC', self.spe_dict
-                    )
-            except NameError:
-                self.thalamic_weight = get_weight(
-                    self.stim_dict['PSP_th'], self.net_dict
-                )
-                # print('\'get_weight_ctsp()\' does not exist')
-            else:
-                pass
+            self.thalamic_weight = get_weight(
+                self.stim_dict['PSP_th'], self.net_dict
+            )
             self.stop_th = (
                 self.stim_dict['th_start'] + self.stim_dict['th_duration']
                 )
@@ -344,16 +335,7 @@ class Network:
                 source_name = self.net_dict['populations'][j]
 
                 if synapse_nr >= 0.:
-                    # 190705
-                    try:
-                        weight = get_weight_ctsp(self.net_dict['PSP_mean_matrix'][i, j], self.net_dict, target_name, self.spe_dict)
-                    except NameError:
-                        weight = self.weight_mat[i][j]
-                        # print(weight)
-                        # print('\'get_weight_ctsp()\' does not exist')
-                    else:
-                        pass
-
+                    weight = self.weight_mat[i][j]
                     # HJ
                     try:
                         weight = inh_weight(source_name, weight, self.spe_dict)
@@ -380,7 +362,6 @@ class Network:
 
                     # HJ
                     try:
-                        # syn_dict = assign_syn_dict(source_name, target_name, weight_dict, delay_dict, self.net_dict, self.spe_dict)
                         syn_dict = assign_stp(source_name, target_name, weight_dict, delay_dict, self.stp_dict)
                     except NameError:
                         print('\'assign_syn_dict()\' does not exist')
@@ -457,6 +438,7 @@ class Network:
                     )
             else:
                 pass
+
 
     def connect_dc_generator(self):
         """ Connects the DC generator to the microcircuit."""
@@ -539,5 +521,3 @@ class Network:
                 raster_plot_time_idx[0], raster_plot_time_idx[1]
                 )
             # boxplot(self.net_dict, self.data_path)
-
-
