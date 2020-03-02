@@ -8,7 +8,8 @@ from random import sample
 from multiprocessing import Process
 from multiprocessing import Manager
 import pickle
-# import easygui
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
 '''
 Notes:
@@ -128,9 +129,14 @@ def end2txt():
 '''
 Files and folders, etc.
 '''
+def openfile():
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    filename = askopenfilename(initialdir = "~/Documents/") # show an "Open" dialog box and return the path to the selected file
+    return filename
+
 # print pickle content
 def print_pickle():
-    pickle_path = easygui.fileopenbox()
+    pickle_path = openfile()
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
         print(para_dict)
