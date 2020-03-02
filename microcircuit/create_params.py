@@ -12,8 +12,8 @@ np.set_printoptions(suppress=True, precision=4)
 
 
 def set_constant():
-    net_dict['g'] = -4
-    net_dict['bg_rate'] = 4.0
+    net_dict['g'] = -6
+    net_dict['bg_rate'] = 3.0
     net_dict['animal'] = 'mouse'
     stim_dict['thalamic_input'] = False
     # stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
@@ -45,7 +45,7 @@ def set_constant():
 def params_single(path):
     set_constant()
     # thalamic
-    stim_dict['thalamic_input'] = True
+    # stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
     stim_dict['th_rate'] = 250.0
 

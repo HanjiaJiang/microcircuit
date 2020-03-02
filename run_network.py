@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import pickle
 import multiprocessing as mp
 import time
@@ -91,4 +92,8 @@ if __name__ == "__main__":
 
     if not on_server:
         exec(tools.end2txt())
+        out_filename = os.path.join(para_dict['sim_dict']['data_path'], 'out.txt')
+        if os.path.isfile(out_filename):
+            os.remove(out_filename)
+        shutil.move('out.txt', para_dict['sim_dict']['data_path'])
         pass

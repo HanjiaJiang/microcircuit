@@ -393,7 +393,7 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     set_selected_by_lyr = []    # selected id sets by layer
     set_leftover_by_lyr = []    # unselected id sets by layer
     cnt_by_lyr = []             # count of selected sets by layer
-    for layer in layers:
+    for i, layer in enumerate(layers):
         len_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1
         cnt_lyr = 0
         selected = np.array([])
@@ -404,12 +404,12 @@ def sample_by_layer(data, ids, layers, n_sample=140):
             d = data[g]
             if type(d) == np.ndarray and d.ndim == 2:
                 set_0 = set(d[:, 0])    # original
-                set_1 = sample(set_0, min(len(set_0), round(n_sample*sample_ratio))) # selected
-                rdata.append(d[np.in1d(d[:, 0], set_1)])
-                selected = np.concatenate((selected, set_1))
-                leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))
+                set_1 = sample(set_0, min(len(set_0), round(n_sample*sample_ratio))) # the set of this group that is selected
+                rdata.append(d[np.in1d(d[:, 0], set_1)])    # the part of data that is in set_1
+                selected = np.concatenate((selected, set_1))    # for this layer concatenate the sets that is selected
+                leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
                 cnt_lyr += len(set_1)
-                print('group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
+                print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
             else:
                 rdata.append([])
         set_selected_by_lyr.append(selected)
@@ -420,8 +420,10 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     for i, layer in enumerate(layers):
         n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
         if n_diff > 0:
-            set_makeup = sample(list(set_leftover_by_lyr[i]), min(len(set_leftover_by_lyr[i]), n_diff))
-            print('layer with idex {} added {} samples'.format(i, n_diff))
+            print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
+            n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
+            set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
+            print('sample_by_layer(): layer of {} added {} samples'.format(i, n_leftover))
             for g in layer:
                 d = data[g]
                 if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
@@ -482,7 +484,7 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
                             isi = np.diff(ts)
                             cvs.append(np.std(isi) / np.mean(isi))
                             cnt_cv += 1
-            print('seg {}, layer {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
+            print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
             proc = Process(target=get_corr,
                            args=(hists, None, int(i * (len(layers)) + j), return_dict))
             procs.append(proc)
