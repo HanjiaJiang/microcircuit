@@ -609,32 +609,29 @@ def ai_score_200(path, name, begin, end,
 
 # response spread and amplitude
 def response(path, name, begin, window, n_stim=20, interval=1000.0):
-    # end = begin + window
     data_all, gids = load_spike_times(path, name, begin, begin+n_stim*interval)
     data_save = np.full((13, n_stim, 2), np.nan)
-    f = open(os.path.join(path, 'sf-chain.txt'), 'w')
-    f.write('window = {:.2f} ms\n'.format(window))
+    f = open(os.path.join(path, 'sf.dat'), 'w')
     for i in range(len(data_all)):
-        data = data_all[i]
         if 'Exc' in populations[i]:
-            # print(populations[i]+'\n')
-            f.write(populations[i]+'\n')
-        if len(data) > 0:
-            for j in range(n_stim):
-                times_sf = data[(data[:, 1] > begin + j*interval) &
-                                (data[:, 1] <= begin + j*interval+window), 1]
-                if len(times_sf) > 0:
-                    std_sf = np.std(times_sf)
-                else:
-                    std_sf = np.nan
-                if 'Exc' in populations[i]:
-                    tmp_str = '{:.2f},{:d}\n'.format(std_sf, len(times_sf))
-                    # print(tmp_str)
-                    f.write(tmp_str)
-                data_save[i, j, 0] = std_sf
-                data_save[i, j, 1] = len(times_sf)
+            data = data_all[i]
+            t_stds = []
+            n_spikes_list = []
+            if len(data) > 0:
+                ts = data[:, 1]
+                for j in range(n_stim):
+                    ts_sf = ts[(ts > begin + j*interval) & (ts <= begin + j*interval+window)]
+                    n_spikes_list.append(len(ts_sf))
+                    if len(ts_sf) >= 3:
+                        std = np.std(ts_sf)
+                        t_stds.append(std)
+                    else:
+                        std = np.nan
+                    data_save[i, j, 0] = std
+                    data_save[i, j, 1] = len(ts_sf)
+            f.write('{:.2f}, {:d}\n'.format(np.mean(t_stds), int(np.mean(n_spikes_list))))
     f.close()
-    np.save(os.path.join(path, 'sf-chain.npy'), data_save)
+    np.save(os.path.join(path, 'sf.npy'), data_save)
 
 
 # to be improved ..

@@ -1,9 +1,9 @@
 F1_COUNT = 2
 F2_COUNT = 2
 G_START = 4
-G_COUNT = 2
-BG_START = 4
-BG_COUNT = 2
+G_COUNT = 7
+BG_START = 2
+BG_COUNT = 7
 
 localrules: all, create
 

@@ -13,12 +13,15 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
+    run_ai = True
+    run_response = True
 
     # timing, in ms
     plot_half_len = 100.0
-    analysis_start = 1000.0
-    analysis_segment = 1000.0
-    analysis_total_length = analysis_segment*1
+    analysis_start = 2000.0
+    analysis_segment = 2000.0
+    n_segment = 2
+    analysis_total_length = analysis_segment*n_segment
     analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 
     # check for: parameter scan or single-run
@@ -79,10 +82,13 @@ if __name__ == "__main__":
             tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
                             analysis_interval[0], analysis_interval[1])
         tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
-        t0 = time.time()
-        tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-                       analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
-        print('ai analysis time = {}'.format(time.time() - t0))
+        if run_ai:
+            t0 = time.time()
+            tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
+                           analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
+            print('ai analysis time = {}'.format(time.time() - t0))
+        if run_response:
+            tools.response(para_dict['sim_dict']['data_path'], 'spike_detector', para_dict['stim_dict']['th_start'][0], window=20.0, n_stim=n_segment)
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(para_dict['sim_dict']['data_path']):

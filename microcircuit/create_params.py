@@ -12,11 +12,10 @@ np.set_printoptions(suppress=True, precision=4)
 
 
 def set_constant():
-    net_dict['g'] = -6
+    net_dict['g'] = -7
     net_dict['bg_rate'] = 3.0
     net_dict['animal'] = 'mouse'
     stim_dict['thalamic_input'] = False
-    # stim_dict['th_start'] = np.arange(1500.0, sim_dict['t_sim'], 500.0)
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
@@ -45,14 +44,14 @@ def set_constant():
 def params_single(path):
     set_constant()
     # thalamic
-    # stim_dict['thalamic_input'] = True
+    stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
-    stim_dict['th_rate'] = 250.0
+    stim_dict['th_rate'] = 240.0
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
-    special_dict['stp_dict'] = no_stp
-    special_dict['ctsp'] = False
+    # special_dict['stp_dict'] = no_stp
+    # special_dict['ctsp'] = False
 
     para_dict = {
         'net_dict': net_dict,
@@ -159,6 +158,10 @@ def set_ctsp(all_dict, lvl):
 
 def set_main(out_list, f1, f2):
     set_constant()
+    # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
+    stim_dict['thalamic_input'] = True
+    stim_dict['th_start'] = np.arange(2500.0, 2500.0 + 2000.0*5, 2000.0)
+    stim_dict['th_rate'] = 240.0
     all_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
