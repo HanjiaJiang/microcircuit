@@ -629,7 +629,7 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
                         std = np.nan
                     data_save[i, j, 0] = std
                     data_save[i, j, 1] = len(ts_sf)
-            f.write('{:.2f}, {:d}\n'.format(np.mean(t_stds), int(np.mean(n_spikes_list))))
+            f.write('{:.2f}, {:.2f}\n'.format(np.mean(t_stds), np.mean(n_spikes_list)))
     f.close()
     np.save(os.path.join(path, 'sf.npy'), data_save)
 
