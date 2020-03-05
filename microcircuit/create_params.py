@@ -46,7 +46,7 @@ def params_single(path):
     # thalamic
     stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
-    stim_dict['th_rate'] = 240.0
+    stim_dict['th_rate'] = 120.0
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
@@ -139,11 +139,19 @@ def save_pickle(pickle_str, all_dict):
         pickle.dump(all_dict, handle)
     handle.close()
 
+# double-parameter
 def set_g_bg(all_dict, lvls):
     all_dict['net_dict']['g'] = -float(lvls[0])
     all_dict['net_dict']['bg_rate'] = float(lvls[1])
     return all_dict
 
+def set_pv_som(all_dict, lvls):
+    all_dict['net_dict']['K_ext'] = np.array([2000, lvls[0], lvls[1], 600,
+                                              2000, lvls[0], lvls[1],
+                                              2000, lvls[0], lvls[1],
+                                              2000, lvls[0], lvls[1]])
+
+# single-parameter
 def set_stp(all_dict, lvl):
     stp_list = [no_stp, doiron_stp_weak, allen_stp]
     all_dict['special_dict']['stp_dict'] = stp_list[lvl]
@@ -159,9 +167,9 @@ def set_ctsp(all_dict, lvl):
 def set_main(out_list, f1, f2):
     set_constant()
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
-    stim_dict['thalamic_input'] = True
-    stim_dict['th_start'] = np.arange(2500.0, 2500.0 + 2000.0*5, 2000.0)
-    stim_dict['th_rate'] = 240.0
+    # stim_dict['thalamic_input'] = True
+    # stim_dict['th_start'] = np.arange(2500.0, 2500.0 + 2000.0*5, 2000.0)
+    # stim_dict['th_rate'] = 240.0
     all_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
@@ -177,10 +185,8 @@ def set_main(out_list, f1, f2):
 
 
 if __name__ == "__main__":
-    np.set_printoptions(precision=4, suppress=True)
-
     # get output names from system input
     output_list = sys.argv[1:]
 
-    # g_bg(output_list)
+    # set the network with parameters
     set_main(output_list, set_ctsp, set_stp)

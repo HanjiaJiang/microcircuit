@@ -18,9 +18,9 @@ if __name__ == "__main__":
 
     # timing, in ms
     plot_half_len = 100.0
-    analysis_start = 2000.0
-    analysis_segment = 2000.0
-    n_segment = 2
+    analysis_start = 1000.0
+    analysis_segment = 1000.0
+    n_segment = 1
     analysis_total_length = analysis_segment*n_segment
     analysis_interval = [analysis_start, analysis_start + analysis_total_length]
 

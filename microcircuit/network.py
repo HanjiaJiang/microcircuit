@@ -5,6 +5,7 @@ from microcircuit.tools import plot_raster
 from microcircuit.tools import fire_rate
 from microcircuit.network_params import net_update
 import copy
+np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
 class Network:
     """ Handles the setup of the network parameters and
@@ -326,17 +327,14 @@ class Network:
             print('Recurrent connections are established')
         mean_delays = self.net_dict['mean_delay_matrix']
         std_delays = self.net_dict['std_delay_matrix']
+        # syn_nr_bernoulli = np.zeros((len(self.pops), len(self.pops)))
         for i, target_pop in enumerate(self.pops):
             for j, source_pop in enumerate(self.pops):
                 synapse_nr = int(self.synapses_scaled[i][j])
-
-                # HJ
                 target_name = self.net_dict['populations'][i]
                 source_name = self.net_dict['populations'][j]
-
                 if synapse_nr >= 0.:
                     weight = self.weight_mat[i][j]
-                    # HJ
                     try:
                         weight = inh_weight(source_name, weight, self.spe_dict)
                     except NameError:
@@ -373,8 +371,9 @@ class Network:
                     else:
                         pass
                     try:
-                        connect_by_cluster(source_name, target_name, synapse_nr, syn_dict,
-                                           source_pop, target_pop, self.spe_dict)
+                        nr = connect_by_cluster(source_name, target_name, synapse_nr, syn_dict,
+                                           source_pop, target_pop, self.spe_dict, conn_prob=self.net_dict['conn_probs'][i, j])
+                        # syn_nr_bernoulli[i, j] = nr
                     except NameError:
                         print('\'connect_by_cluster()\' does not exist')
                         nest.Connect(
@@ -384,6 +383,8 @@ class Network:
                             )
                     else:
                         pass
+        # print('synapse numbers:')
+        # print(syn_nr_bernoulli)
 
     def connect_poisson(self):
         """ Connects the Poisson generators to the microcircuit."""

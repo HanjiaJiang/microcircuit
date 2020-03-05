@@ -1,6 +1,7 @@
 import numpy as np
 from microcircuit.conn import conn_barrel_integrate
 from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia, allen, dia_allen
+np.set_printoptions(precision=4, linewidth=100, suppress=True)
 
 def compute_DC(net_dict, w_ext):
     """ Computes DC input if no Poisson input is provided to the microcircuit.
@@ -75,6 +76,8 @@ def get_total_number_of_synapses(net_dict):
     # written in sli.
     K = (((n_syn_temp * (
         N_full_matrix * scaling).astype(int)) / N_full_matrix).astype(int))
+    print('synapse numbers with multiple connections:')
+    # print(K)
     return K
 
 

@@ -271,8 +271,10 @@ def connect_by_cluster(source_name,
                        syn_dict,
                        source_pop,
                        target_pop,
-                       spe_dict):
+                       spe_dict,
+                       conn_prob=None):
     nr_cluster = 8
+    # k: modulation constant
     k = 0.0
     if 'Exc' in source_name and 'Exc' in target_name:
         k = spe_dict['k_e2e']
@@ -282,6 +284,7 @@ def connect_by_cluster(source_name,
     for inh_source in spe_dict['sel_inh_src']:
         if inh_source in source_name and 'Exc' in target_name:
             k = spe_dict['k_i2e']
+
     if spe_dict['orient_tuning'] is True and k != 0.0:
         # do it only if connection is not 0
         if synapse_nr > 0:
@@ -338,14 +341,21 @@ def connect_by_cluster(source_name,
             print(source_name + ' to ' + target_name + ' verify synapse_nr: {0}, {1}'.format(
                 synapse_nr, conn_nr_sum))
     else:
-        conn_dict_rec = {
-            'rule': 'fixed_total_number', 'N': synapse_nr
-        }
+        if isinstance(conn_prob, float):
+            conn_dict_rec = {
+                'rule': 'pairwise_bernoulli', 'p': conn_prob
+            }
+            synapse_nr = len(source_pop)*len(target_pop)*conn_prob
+        else:
+            conn_dict_rec = {
+                'rule': 'fixed_total_number', 'N': synapse_nr
+            }
         nest.Connect(
             source_pop, target_pop,
             conn_spec=conn_dict_rec,
             syn_spec=syn_dict
         )
+    return synapse_nr
 
 
 def ctsp_assign(pop, net_dict, spe_dict):
