@@ -11,7 +11,7 @@ localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}_{d}/ai.dat', a=range(F1_COUNT), b=range(F2_COUNT), c=range(G_START, G_END, G_STEP), d=range(BG_START, BG_END, BG_STEP))
+        expand('scans/{a}_{b}_{c}_{d}/ai.dat', a=range(F1_COUNT), b=range(F2_COUNT), c=range(G_START, G_END + G_STEP, G_STEP), d=range(BG_START, BG_END + BG_STEP, BG_STEP))
     shell:
         '''
         cp * scans/
@@ -19,7 +19,7 @@ rule all:
 
 rule create:
     output:
-        expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(F1_COUNT), b=range(F2_COUNT), c=range(G_START, G_START + G_COUNT), d=range(BG_START, BG_START + BG_COUNT))
+        expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(F1_COUNT), b=range(F2_COUNT), c=range(G_START, G_END + G_STEP, G_STEP), d=range(BG_START, BG_END + BG_STEP, BG_STEP))
     shell:
         '''
         python microcircuit/create_params.py {output}
