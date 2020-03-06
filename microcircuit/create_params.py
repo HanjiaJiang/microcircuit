@@ -108,30 +108,6 @@ def test_list_psp():
 def test_list_stps():
     return [no_stp, doiron_stp_weak, allen_stp]
 
-
-def g_bg(out_list):
-    set_constant()
-    stp_list = test_list_stps()
-    w_list = test_list_psp()
-    for i, output in enumerate(out_list):
-        levels_str, levels_list = read_levels(output)
-        special_dict['stp_dict'] = stp_list[1]
-        net_dict['w_dict'] = w_list[levels_list[0]]  # specific psps
-        net_dict['g'] = -float(levels_list[1])
-        net_dict['bg_rate'] = float(levels_list[2])
-        sim_dict['data_path'] = os.path.join(os.path.dirname(output), levels_str)
-        sim_dict['master_seed'] = sim_dict['master_seed'] + 1
-        para_dict = {
-            'net_dict': net_dict,
-            'sim_dict': sim_dict,
-            'stim_dict': stim_dict,
-            'special_dict': special_dict
-        }
-        with open(output, 'wb') as handle:
-            pickle.dump(para_dict, handle)
-        handle.close()
-
-
 def save_pickle(pickle_str, all_dict):
     lvls_str = os.path.basename(pickle_str).split('.')[0]
     all_dict['sim_dict']['data_path'] = os.path.join(os.path.dirname(pickle_str), lvls_str)
@@ -146,10 +122,10 @@ def set_g_bg(all_dict, lvls):
     return all_dict
 
 def set_pv_som(all_dict, lvls):
-    all_dict['net_dict']['K_ext'] = np.array([2000, lvls[0], lvls[1], 600,
-                                              2000, lvls[0], lvls[1],
-                                              2000, lvls[0], lvls[1],
-                                              2000, lvls[0], lvls[1]])
+    all_dict['net_dict']['K_ext'] = np.array([2000, 2000, lvls[0], lvls[1],
+                                              2000, 2000, lvls[0],
+                                              2000, 2000, lvls[0],
+                                              2000, 2000, lvls[0]])
 
 # single-parameter
 def set_stp(all_dict, lvl):
@@ -164,7 +140,7 @@ def set_ctsp(all_dict, lvl):
         all_dict['special_dict']['ctsp'] = True
     return all_dict
 
-def set_main(out_list, f1, f2):
+def set_main(out_list, f1, f2, f_double):
     set_constant()
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
     # stim_dict['thalamic_input'] = True
@@ -180,7 +156,7 @@ def set_main(out_list, f1, f2):
         lvls_list = read_levels(out)[1]
         all_dict = f1(all_dict, lvls_list[0])
         all_dict = f2(all_dict, lvls_list[1])
-        all_dict = set_g_bg(all_dict, lvls_list[2:])
+        all_dict = f_double(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
 
 
@@ -189,4 +165,4 @@ if __name__ == "__main__":
     output_list = sys.argv[1:]
 
     # set the network with parameters
-    set_main(output_list, set_ctsp, set_stp)
+    set_main(output_list, set_ctsp, set_stp, set_pv_som)

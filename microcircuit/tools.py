@@ -113,7 +113,7 @@ System
 '''
 # let print() function print to file (use: exec(set2txt))
 def set2txt(path):
-    re_str = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}out.txt\', \'w\')\nsys.stdout = f'.format(path)
+    re_str = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}\', \'w\')\nsys.stdout = f'.format(os.path.join(path, 'out.txt'))
     return re_str
 
 
@@ -390,12 +390,17 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     set_selected_by_lyr = []    # selected id sets by layer
     set_leftover_by_lyr = []    # unselected id sets by layer
     cnt_by_lyr = []             # count of selected sets by layer
-    validity = np.ones(len(layers))
+
+    # sample n criteria: must >= 90% of desired number
+    sample_cri = 0.9
+    validity = np.ones(len(layers))     # validity with this criteria
+
     for i, layer in enumerate(layers):
         len_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1
         cnt_lyr = 0
         selected = np.array([])
         leftover = np.array([])
+        flg_exc = False
         for j, g in enumerate(layer):
             len_grp = ids[g][1] - ids[g][0] + 1
             sample_ratio = float(len_grp)/len_lyr
@@ -408,19 +413,21 @@ def sample_by_layer(data, ids, layers, n_sample=140):
                 leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
                 cnt_lyr += len(set_1)
                 print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
-                # Demand: Exc sample n must > 90% desired
-                if j == 0 and len(set_1) < n_sample*sample_ratio*0.9:
-                    validity[i] = 0
-                    print('layer {} Exc cell n < 90% desired'.format(i))
+                if j == 0 and len(set_1) < n_sample*sample_ratio*sample_cri:
+                    flg_exc = True
             else:
                 rdata.append([])
+        # layer sample n must > 90% desired
+        if len(selected) < n_sample * sample_cri and flg_exc is True:
+            validity[i] = 0
+            print('layer of {} n < 90% desired; abandon this layer'.format(i))
         set_selected_by_lyr.append(selected)
         set_leftover_by_lyr.append(leftover)
         cnt_by_lyr.append(cnt_lyr)
 
     # makeup so that collected = desired (n_layer)
     for i, layer in enumerate(layers):
-        if validity[i] == 1:
+        if validity[i] == 1:    # do it only if the layer is valid
             n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
             if n_diff > 0:
                 print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
@@ -449,36 +456,48 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
     return_dict = Manager().dict()
     procs = []
 
-    # calculation and save
+    # ai calculation
     ai = open(os.path.join(path, 'ai.dat'), 'w')
     cvs_by_seg_by_layer = []
+    validity_by_seg = []
+    # by segment
     for i, seg_head in enumerate(seg_list):
         seg_end = seg_head + seg_len
         data_seg = []
-        validity_by_seg = []
+
+        # filter and sample data:
+        # get segment data
         for j in range(len(data_all)):
             data_group = data_all[j]
             if type(data_group) == np.ndarray and data_group.ndim == 2:
                 data_seg.append(data_group[(data_group[:, 1] >= seg_head) & (data_group[:, 1] < seg_end)])
             else:
                 data_seg.append([])
+        # filter
         data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
+        # sample
         data_seg, valids = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        # cache for layer data validity
         validity_by_seg.append(valids)
 
+        # calculation:
         cvs_by_layer = []
+        # by layer
         for j, layer in enumerate(layers):
             layer_ids = np.array([])
             layer_ts = np.array([])
             hists = []
             cvs = []
             cnt_corr = cnt_cv = 0
-            if validity_by_seg[i][j] == 1:
+            # do it only if layer data is valid
+            if valids[j] == 1:
+                # get data
                 for k in layer:
                     data = data_seg[k]
                     if type(data) == np.ndarray and data.ndim == 2:
                         layer_ids = np.concatenate((layer_ids, data[:, 0]))
                         layer_ts = np.concatenate((layer_ts, data[:, 1]))
+                # obtain histogram and calculate pair-corr and cv-isi
                 for k in layer:
                     for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
                         ts = layer_ts[layer_ids == gid]
@@ -491,6 +510,7 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
                                 cvs.append(np.std(isi) / np.mean(isi))
                                 cnt_cv += 1
                 print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
+                # set multiprocessing
                 proc = Process(target=get_corr,
                                args=(hists, None, int(i * (len(layers)) + j), return_dict))
                 procs.append(proc)
@@ -498,8 +518,11 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
             cvs_by_layer.append(cvs)
         cvs_by_seg_by_layer.append(cvs_by_layer)
 
+    # join multiprocessing for correlation
     for proc in procs:
         proc.join()
+
+    # collect data and save
     for j in range(len(layers)):
         corr_means_by_seg = []
         cv_means_by_seg = []
