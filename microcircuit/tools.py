@@ -112,11 +112,8 @@ def get_corr(list1, list2=None, proc_id=None, rtr_dict=None):
 System
 '''
 # let print() function print to file (use: exec(set2txt))
-def set2txt():
-    re_str = 'import sys\n' \
-             'orig_stdout = sys.stdout\n' \
-             'f = open(\'out.txt\', \'w\')\n' \
-             'sys.stdout = f'
+def set2txt(path):
+    re_str = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}out.txt\', \'w\')\nsys.stdout = f'.format(path)
     return re_str
 
 
@@ -393,12 +390,13 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     set_selected_by_lyr = []    # selected id sets by layer
     set_leftover_by_lyr = []    # unselected id sets by layer
     cnt_by_lyr = []             # count of selected sets by layer
+    validity = np.ones(len(layers))
     for i, layer in enumerate(layers):
         len_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1
         cnt_lyr = 0
         selected = np.array([])
         leftover = np.array([])
-        for g in layer:
+        for j, g in enumerate(layer):
             len_grp = ids[g][1] - ids[g][0] + 1
             sample_ratio = float(len_grp)/len_lyr
             d = data[g]
@@ -410,6 +408,10 @@ def sample_by_layer(data, ids, layers, n_sample=140):
                 leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
                 cnt_lyr += len(set_1)
                 print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
+                # Demand: Exc sample n must > 90% desired
+                if j == 0 and len(set_1) < n_sample*sample_ratio*0.9:
+                    validity[i] = 0
+                    print('layer {} Exc cell n < 90% desired'.format(i))
             else:
                 rdata.append([])
         set_selected_by_lyr.append(selected)
@@ -418,22 +420,23 @@ def sample_by_layer(data, ids, layers, n_sample=140):
 
     # makeup so that collected = desired (n_layer)
     for i, layer in enumerate(layers):
-        n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
-        if n_diff > 0:
-            print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
-            n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
-            set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
-            print('sample_by_layer(): layer of {} added {} samples'.format(i, n_leftover))
-            for g in layer:
-                d = data[g]
-                if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
-                    rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
-        elif n_diff < 0:
-            set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
-            for g in layer:
-                if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
-                    rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
-    return rdata
+        if validity[i] == 1:
+            n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
+            if n_diff > 0:
+                print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
+                n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
+                set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
+                print('sample_by_layer(): layer of {} added {} samples'.format(i, n_leftover))
+                for g in layer:
+                    d = data[g]
+                    if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
+                        rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
+            elif n_diff < 0:
+                set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
+                for g in layer:
+                    if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
+                        rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
+    return rdata, validity
 
 # Asynchronous irregular state calculation
 def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
@@ -452,6 +455,7 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
     for i, seg_head in enumerate(seg_list):
         seg_end = seg_head + seg_len
         data_seg = []
+        validity_by_seg = []
         for j in range(len(data_all)):
             data_group = data_all[j]
             if type(data_group) == np.ndarray and data_group.ndim == 2:
@@ -459,7 +463,8 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
             else:
                 data_seg.append([])
         data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
-        data_seg = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        data_seg, valids = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        validity_by_seg.append(valids)
 
         cvs_by_layer = []
         for j, layer in enumerate(layers):
@@ -468,27 +473,28 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
             hists = []
             cvs = []
             cnt_corr = cnt_cv = 0
-            for k in layer:
-                data = data_seg[k]
-                if type(data) == np.ndarray and data.ndim == 2:
-                    layer_ids = np.concatenate((layer_ids, data[:, 0]))
-                    layer_ts = np.concatenate((layer_ts, data[:, 1]))
-            for k in layer:
-                for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
-                    ts = layer_ts[layer_ids == gid]
-                    if len(ts) > 0:
-                        hists.append(
-                            np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
-                        cnt_corr += 1
-                        if len(ts) > 3:
-                            isi = np.diff(ts)
-                            cvs.append(np.std(isi) / np.mean(isi))
-                            cnt_cv += 1
-            print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
-            proc = Process(target=get_corr,
-                           args=(hists, None, int(i * (len(layers)) + j), return_dict))
-            procs.append(proc)
-            proc.start()
+            if validity_by_seg[i][j] == 1:
+                for k in layer:
+                    data = data_seg[k]
+                    if type(data) == np.ndarray and data.ndim == 2:
+                        layer_ids = np.concatenate((layer_ids, data[:, 0]))
+                        layer_ts = np.concatenate((layer_ts, data[:, 1]))
+                for k in layer:
+                    for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
+                        ts = layer_ts[layer_ids == gid]
+                        if len(ts) > 0:
+                            hists.append(
+                                np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
+                            cnt_corr += 1
+                            if len(ts) > 3:
+                                isi = np.diff(ts)
+                                cvs.append(np.std(isi) / np.mean(isi))
+                                cnt_cv += 1
+                print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
+                proc = Process(target=get_corr,
+                               args=(hists, None, int(i * (len(layers)) + j), return_dict))
+                procs.append(proc)
+                proc.start()
             cvs_by_layer.append(cvs)
         cvs_by_seg_by_layer.append(cvs_by_layer)
 
@@ -498,17 +504,14 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
         corr_means_by_seg = []
         cv_means_by_seg = []
         for i in range(len(seg_list)):
-            corrs = return_dict[str(int(i * (len(layers)) + j))]
-            corr_means_by_seg.append(np.mean(corrs))
-            cvs = cvs_by_seg_by_layer[i][j]
-            cv_means_by_seg.append(np.mean(cvs))
+            if validity_by_seg[i][j] == 1:
+                corrs = return_dict[str(int(i * (len(layers)) + j))]
+                corr_means_by_seg.append(np.mean(corrs))
+                cvs = cvs_by_seg_by_layer[i][j]
+                cv_means_by_seg.append(np.mean(cvs))
         ai.write(str(np.mean(corr_means_by_seg)) + ', ' + str(np.mean(cv_means_by_seg)) + '\n')
 
     ai.close()
-    # do_boxplot(corrs_by_layer, path, 'pair-corr', 'pairwise correlation',
-    #            ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-1.0, 1.0))
-    # do_boxplot(cvs_by_layer, path, 'cv-isi', 'CV of ISI',
-    #            ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
 
 
 def ai_score_200(path, name, begin, end,

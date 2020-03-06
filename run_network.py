@@ -57,9 +57,10 @@ if __name__ == "__main__":
     if mp.cpu_count() > 10:
         cpu_ratio = 1
         on_server = True
-    else:
-        exec(tools.set2txt())
-        pass
+    # else:
+    #     exec(tools.set2txt(para_dict['sim_dict']['data_path']))
+    #     pass
+    exec(tools.set2txt(para_dict['sim_dict']['data_path']))
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
 
@@ -96,10 +97,7 @@ if __name__ == "__main__":
             if item.endswith('.gdf'):
                 os.remove(os.path.join(para_dict['sim_dict']['data_path'], item))
 
-    if not on_server:
-        exec(tools.end2txt())
-        out_filename = os.path.join(para_dict['sim_dict']['data_path'], 'out.txt')
-        if os.path.isfile(out_filename):
-            os.remove(out_filename)
-        shutil.move('out.txt', para_dict['sim_dict']['data_path'])
-        pass
+    exec(tools.end2txt())
+    # if not on_server:
+    #     exec(tools.end2txt())
+    #     pass
