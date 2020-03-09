@@ -6,14 +6,46 @@ from microcircuit.network_params import net_dict
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
-import microcircuit.functions as funcs
 from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak
 np.set_printoptions(suppress=True, precision=4)
 
 
+# print summary of parameters
+def print_summary(all_dict):
+    if not os.path.isdir(all_dict['sim_dict']['data_path']):
+        os.mkdir(all_dict['sim_dict']['data_path'])
+    with open(os.path.join(all_dict['sim_dict']['data_path'], 'params_summary.txt'), 'w') as f:
+        f.write('ctsp = {}\n\n'.format(all_dict['special_dict']['ctsp']))
+        f.write('stp = \n{}\n\n'.format(all_dict['special_dict']['stp_dict']))
+        f.write('thalamic input = {}\n\n'.format(all_dict['stim_dict']['thalamic_input']))
+        f.write('orient_tuning = {}\n\n'.format(all_dict['special_dict']['orient_tuning']))
+        f.write('g = {}\n\n'.format(all_dict['net_dict']['g']))
+        f.write('bg_rate = {}\n\n'.format(all_dict['net_dict']['bg_rate']))
+        f.write('K_ext = \n{}\n\n'.format(all_dict['net_dict']['K_ext']))
+        f.write('w_dict = \n{}\n\n'.format(all_dict['net_dict']['w_dict']))
+        f.write('conn_probs = \n{}\n\n'.format(all_dict['net_dict']['conn_probs']))
+
+
+# save assigned parameters to pickle
+def save_pickle(pickle_str, all_dict):
+    lvls_str = os.path.basename(pickle_str).split('.')[0]
+    all_dict['sim_dict']['data_path'] = os.path.join(os.path.dirname(pickle_str), lvls_str)
+    with open(pickle_str, 'wb') as handle:
+        pickle.dump(all_dict, handle)
+    handle.close()
+
+
+# read parameters from given input string
+def read_levels(in_str):
+    out_str = os.path.basename(in_str).split('.')[0]    # filename with .
+    out_list = np.array(out_str.split('_')).astype(int)
+    return out_str, out_list
+
+
+# set constant parameters
 def set_constant():
     net_dict['g'] = -7
-    net_dict['bg_rate'] = 3.0
+    net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
     stim_dict['thalamic_input'] = False
     special_dict['orient_tuning'] = False
@@ -41,12 +73,13 @@ def set_constant():
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
 
 
+# set parameters for single-run
 def params_single(path):
     set_constant()
     # thalamic
     stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
-    stim_dict['th_rate'] = 120.0
+    stim_dict['th_rate'] = 200.0
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
@@ -62,7 +95,10 @@ def params_single(path):
     with open(path, 'wb') as h:
         pickle.dump(para_dict, h)
 
+    print_summary(para_dict)
 
+
+# get different connection probability map
 def get_conn_probs(list_n=10):
     cwd = os.getcwd()
     conn_probs_list = []
@@ -79,12 +115,7 @@ def get_conn_probs(list_n=10):
     return return_list
 
 
-def read_levels(in_str):
-    out_str = os.path.basename(in_str).split('.')[0]    # filename with .
-    out_list = np.array(out_str.split('_')).astype(int)
-    return out_str, out_list
-
-
+# set psps
 def test_list_psp():
     w_dict_normal = {
         'psp_mtx':
@@ -105,41 +136,32 @@ def test_list_psp():
     return [w_dict_normal, w_dict_specific]
 
 
-def test_list_stps():
-    return [no_stp, doiron_stp_weak, allen_stp]
-
-def save_pickle(pickle_str, all_dict):
-    lvls_str = os.path.basename(pickle_str).split('.')[0]
-    all_dict['sim_dict']['data_path'] = os.path.join(os.path.dirname(pickle_str), lvls_str)
-    with open(pickle_str, 'wb') as handle:
-        pickle.dump(all_dict, handle)
-    handle.close()
-
 # double-parameter
 def set_g_bg(all_dict, lvls):
     all_dict['net_dict']['g'] = -float(lvls[0])
     all_dict['net_dict']['bg_rate'] = float(lvls[1])
     return all_dict
 
-def set_pv_som(all_dict, lvls):
+def set_ins(all_dict, lvls):
     all_dict['net_dict']['K_ext'] = np.array([2000, 2000, lvls[0], lvls[1],
                                               2000, 2000, lvls[0],
                                               2000, 2000, lvls[0],
                                               2000, 2000, lvls[0]])
 
+
 # single-parameter
 def set_stp(all_dict, lvl):
     stp_list = [no_stp, doiron_stp_weak, allen_stp]
     all_dict['special_dict']['stp_dict'] = stp_list[lvl]
-    return all_dict
 
 def set_ctsp(all_dict, lvl):
     if lvl == 0:
         all_dict['special_dict']['ctsp'] = False
     else:
         all_dict['special_dict']['ctsp'] = True
-    return all_dict
 
+
+# main loop
 def set_main(out_list, f1, f2, f_double):
     set_constant()
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
@@ -154,10 +176,12 @@ def set_main(out_list, f1, f2, f_double):
     }
     for i, out in enumerate(out_list):
         lvls_list = read_levels(out)[1]
-        all_dict = f1(all_dict, lvls_list[0])
-        all_dict = f2(all_dict, lvls_list[1])
-        all_dict = f_double(all_dict, lvls_list[2:])
+        f1(all_dict, lvls_list[0])
+        f2(all_dict, lvls_list[1])
+        f_double(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
+        print_summary(all_dict)
+    return all_dict
 
 
 if __name__ == "__main__":
@@ -165,4 +189,5 @@ if __name__ == "__main__":
     output_list = sys.argv[1:]
 
     # set the network with parameters
-    set_main(output_list, set_ctsp, set_stp, set_pv_som)
+    all_params_dict = set_main(output_list, set_ctsp, set_stp, set_ins)
+

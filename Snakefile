@@ -25,7 +25,7 @@ rule all:
 
 rule create:
     output:
-        expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(F1_COUNT), b=range(F2_COUNT), c=range(G_START, G_END + G_STEP, G_STEP), d=range(BG_START, BG_END + BG_STEP, BG_STEP))
+        expand('scans/{a}_{b}_{c}_{d}.pickle', a=range(F1_COUNT), b=range(F2_COUNT), c=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP), d=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP))
     shell:
         '''
         python microcircuit/create_params.py {output}
