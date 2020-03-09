@@ -636,28 +636,32 @@ def ai_score_200(path, name, begin, end,
 # response spread and amplitude
 def response(path, name, begin, window, n_stim=20, interval=1000.0):
     data_all, gids = load_spike_times(path, name, begin, begin+n_stim*interval)
-    data_save = np.full((13, n_stim, 2), np.nan)
+    # data_save = np.full((13, n_stim, 2), np.nan)
     f = open(os.path.join(path, 'sf.dat'), 'w')
+    # loop group
     for i in range(len(data_all)):
         if 'Exc' in populations[i]:
             data = data_all[i]
+            if if type(data) != np.ndarray or data.ndim != 2:
+                f.write('{}, {}\n'.format(np.nan, np.nan))
+                continue
             t_stds = []
             n_spikes_list = []
-            if len(data) > 0:
-                ts = data[:, 1]
-                for j in range(n_stim):
-                    ts_sf = ts[(ts > begin + j*interval) & (ts <= begin + j*interval+window)]
-                    n_spikes_list.append(len(ts_sf))
-                    if len(ts_sf) >= 3:
-                        std = np.std(ts_sf)
-                        t_stds.append(std)
-                    else:
-                        std = np.nan
-                    data_save[i, j, 0] = std
-                    data_save[i, j, 1] = len(ts_sf)
+            ts = data[:, 1]
+            # loop stimulation
+            for j in range(n_stim):
+                ts_sf = ts[(ts > begin + j*interval) & (ts <= begin + j*interval+window)]
+                n_spikes_list.append(len(ts_sf))
+                if len(ts_sf) >= 3:
+                    std = np.std(ts_sf)
+                    t_stds.append(std)
+                else:
+                    std = np.nan
+                # data_save[i, j, 0] = std
+                # data_save[i, j, 1] = len(ts_sf)
             f.write('{:.2f}, {:.2f}\n'.format(np.mean(t_stds), np.mean(n_spikes_list)))
     f.close()
-    np.save(os.path.join(path, 'sf.npy'), data_save)
+    # np.save(os.path.join(path, 'sf.npy'), data_save)
 
 
 # to be improved ..

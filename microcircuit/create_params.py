@@ -79,7 +79,7 @@ def params_single(path):
     # thalamic
     stim_dict['thalamic_input'] = True
     stim_dict['th_start'] = np.array([1500.0])
-    stim_dict['th_rate'] = 200.0
+    stim_dict['th_rate'] = 240.0
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
@@ -190,4 +190,3 @@ if __name__ == "__main__":
 
     # set the network with parameters
     all_params_dict = set_main(output_list, set_ctsp, set_stp, set_ins)
-
