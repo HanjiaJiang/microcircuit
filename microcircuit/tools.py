@@ -29,6 +29,8 @@ use_box_xlim = True
 box_xlim = 51.0
 cv_isi_min_n = 4
 
+response_ts_by_layer = np.zeros(4)
+
 '''
 Plots
 '''
@@ -290,6 +292,15 @@ def plot_raster(path, name, begin, end):
                          label=subtype_label[i])
             else:
                 plt.plot(times, neurons, '.', color=color_list[i])
+
+    #
+    vline_ys = [[gids_numpy_changed[3][1], gids_numpy_changed[0][0]],
+                [gids_numpy_changed[6][1], gids_numpy_changed[4][0]],
+                [gids_numpy_changed[9][1], gids_numpy_changed[7][0]],
+                [gids_numpy_changed[12][1], gids_numpy_changed[10][0]]]
+    for i, t in enumerate(response_ts_by_layer):
+        if begin < t < end:
+            ax.vlines(t, vline_ys[i][0], vline_ys[i][1], colors='r', linestyles='dashed', linewidth=3, zorder=10)
 
     # legend handling
     legend = plt.legend(loc='upper center', ncol=4)
@@ -633,35 +644,71 @@ def ai_score_200(path, name, begin, end,
                ['L2/3', 'L4', 'L5', 'L6'], ['gray', 'gray', 'gray', 'gray'], (-0.1, 2.0))
 
 
-# response spread and amplitude
+# responses to transient/thalamic input
 def response(path, name, begin, window, n_stim=20, interval=1000.0):
     data_all, gids = load_spike_times(path, name, begin, begin+n_stim*interval)
-    # data_save = np.full((13, n_stim, 2), np.nan)
     f = open(os.path.join(path, 'sf.dat'), 'w')
-    # loop group
+    rt_by_group = []
+    # calculate synfire spread and amplitude
     for i in range(len(data_all)):
         if 'Exc' in populations[i]:
             data = data_all[i]
-            if if type(data) != np.ndarray or data.ndim != 2:
+            if type(data) != np.ndarray or data.ndim != 2:
                 f.write('{}, {}\n'.format(np.nan, np.nan))
+                rt_by_group.append([])
                 continue
             t_stds = []
             n_spikes_list = []
             ts = data[:, 1]
+            ids = data[:, 0]
+            rt_by_stim = []
             # loop stimulation
             for j in range(n_stim):
-                ts_sf = ts[(ts > begin + j*interval) & (ts <= begin + j*interval+window)]
+                win_start = begin + j*interval
+                win_end = begin + j*interval+window
+                ts_sf = ts[(ts > win_start) & (ts <= win_end)]
                 n_spikes_list.append(len(ts_sf))
                 if len(ts_sf) >= 3:
                     std = np.std(ts_sf)
                     t_stds.append(std)
                 else:
                     std = np.nan
-                # data_save[i, j, 0] = std
-                # data_save[i, j, 1] = len(ts_sf)
+                # for response time
+                rts = []
+                ids_sf = ids[(ts > begin + j*interval) & (ts <= begin + j*interval+window)].tolist()
+                for id in range(gids[i][0], gids[i][1]+1):
+                    if id not in ids_sf:
+                        continue    # continue if this neuron not spiking
+                    rts.append(ts_sf[ids_sf.index(id)] - win_start)
+                rt_by_stim.append(rts)
             f.write('{:.2f}, {:.2f}\n'.format(np.mean(t_stds), np.mean(n_spikes_list)))
+            rt_by_group.append(rt_by_stim)
     f.close()
-    # np.save(os.path.join(path, 'sf.npy'), data_save)
+
+    # calculate RT differences
+    g = open(os.path.join(path, 'rt_diff.dat'), 'w')
+    for i in range(len(rt_by_group)):
+        nomi_sum = 0
+        # nomi_sum_real = 0
+        denomi_sum = 0
+        for j in range(n_stim):
+            rts = rt_by_group[i][j]
+            rts_baseline = rt_by_group[1][j]    # layer 4
+            if len(rts) < 10 or len(rts_baseline) < 10:
+                continue
+            nomi_sum += len(rts)*len(rts_baseline)*(np.mean(rts) - np.mean(rts_baseline))
+            # nomi_sum_real += np.sum(np.subtract.outer(rts, rts_baseline))
+            # print(nomi_sum, nomi_sum_real)
+            denomi_sum += len(rts)*len(rts_baseline)
+            if j == 0:
+                response_ts_by_layer[i] = begin + np.mean(rts)
+                print(response_ts_by_layer[i])
+        if denomi_sum > 0:
+            rt_diff = nomi_sum/denomi_sum
+        else:
+            rt_diff = np.nan
+        g.write('{:.2f}\n'.format(rt_diff))
+    g.close()
 
 
 # to be improved ..
