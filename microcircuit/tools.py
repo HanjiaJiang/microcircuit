@@ -650,7 +650,9 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
     f = open(os.path.join(path, 'sf.dat'), 'w')
     rt_by_group = []
     # calculate synfire spread and amplitude
+    print('len of data_all=', len(data_all))
     for i in range(len(data_all)):
+        print('pop:', populations[i])
         if 'Exc' in populations[i]:
             data = data_all[i]
             if type(data) != np.ndarray or data.ndim != 2:

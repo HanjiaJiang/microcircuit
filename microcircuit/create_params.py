@@ -12,8 +12,8 @@ np.set_printoptions(suppress=True, precision=4)
 
 # set constant parameters
 def set_constant(th_starts=None, th_rate=None):
-    net_dict['g'] = -7
-    net_dict['bg_rate'] = 4.0
+    net_dict['g'] = -4
+    net_dict['bg_rate'] = 8.0
     net_dict['animal'] = 'mouse'
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
     special_dict['orient_tuning'] = False
@@ -83,7 +83,7 @@ def read_levels(in_str):
 
 # set parameters for single-run
 def params_single(path):
-    set_constant(th_starts=np.array([1500.0, 2500]), th_rate=240.0)
+    set_constant(th_starts=np.arange(3000.0, 8000.0, 2000.0), th_rate=240.0)
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     output_list = sys.argv[1:]
 
     # set constant parameters
-    set_constant(th_starts=np.arange(3000.0, 22000.0, 2000.0), th_rate=240.0)
+    set_constant()
 
     # set the network with parameters
     set_main(output_list, set_ctsp, set_stp, set_ins)
