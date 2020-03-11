@@ -12,8 +12,8 @@ np.set_printoptions(suppress=True, precision=4)
 
 # set constant parameters
 def set_constant(th_starts=None, th_rate=None):
-    net_dict['g'] = -4
-    net_dict['bg_rate'] = 8.0
+    net_dict['g'] = -7
+    net_dict['bg_rate'] = 4.0
     net_dict['animal'] = 'mouse'
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
     special_dict['orient_tuning'] = False
@@ -46,6 +46,10 @@ def set_constant(th_starts=None, th_rate=None):
         stim_dict['thalamic_input'] = True
         stim_dict['th_rate'] = th_rate
         stim_dict['th_start'] = th_starts
+        #
+        stim_dict['n_thal'] = 288
+        stim_dict['conn_probs_th'] = \
+            np.array([0.0058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
 
 
 # print summary of parameters
@@ -83,7 +87,7 @@ def read_levels(in_str):
 
 # set parameters for single-run
 def params_single(path):
-    set_constant(th_starts=np.arange(3000.0, 8000.0, 2000.0), th_rate=240.0)
+    set_constant(th_starts=np.arange(3000.0, 8000.0, 2000.0), th_rate=120.0)
 
     # properties
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
