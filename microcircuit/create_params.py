@@ -13,7 +13,7 @@ np.set_printoptions(suppress=True, precision=4)
 # set constant parameters
 def set_constant(th_starts=None, th_rate=None):
     net_dict['g'] = -7
-    net_dict['bg_rate'] = 5.0
+    net_dict['bg_rate'] = 3.0
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,

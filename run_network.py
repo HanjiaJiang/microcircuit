@@ -76,6 +76,8 @@ if __name__ == "__main__":
 
     # analysis
     if run_analysis:
+        spikes = tools.Spikes(para_dict['sim_dict']['data_path'], 'spike_detector')
+        spikes.load_data_all()
         mean_fr, std_fr = \
             tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
                             interval[0], interval[1])
@@ -86,7 +88,7 @@ if __name__ == "__main__":
             print('ai analysis time = {}'.format(time.time() - t0))
         if run_response:
             t1 = time.time()
-            tools.response(para_dict['sim_dict']['data_path'], 'spike_detector',
+            tools.response(spikes, para_dict['sim_dict']['data_path'],
                            para_dict['stim_dict']['th_start'][0],
                            window=20.0,
                            n_stim=n_segment,
