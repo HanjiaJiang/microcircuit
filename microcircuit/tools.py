@@ -108,13 +108,14 @@ System
 '''
 # let print() function print to file (use: exec(set2txt))
 def set2txt(path):
-    re_str = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}\', \'w\')\nsys.stdout = f'.format(os.path.join(path, 'out.txt'))
-    return re_str
+    str_out = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}\', \'w\')\nsys.stdout = f\n'.format(os.path.join(path, 'out_log.txt'))
+    str_error = 'orig_stderr = sys.stderr\ng = open(\'{}\', \'w\')\nsys.stderr = g\n'.format(os.path.join(path, 'out_err.txt'))
+    return str_out + str_error
 
 
 def end2txt():
-    re_str = 'sys.stdout = orig_stdout\n' \
-             'f.close()'
+    re_str = 'sys.stdout = orig_stdout\nsys.stderr = orig_stderr\n' \
+             'f.close()\ng.close()\n'
     return re_str
 
 

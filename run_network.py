@@ -19,13 +19,13 @@ if __name__ == "__main__":
     plot_half_len = 100.0
     start = 2000.0
     segment = 2000.0
-    n_segment = 3
+    n_segment = 2
     total_length = segment*n_segment
     interval = [start, start + total_length]
 
     # thalamic input
     th_starts = list(range(int(start), int(start + total_length), int(segment)))
-    th_rate = 120.0
+    th_rate = 300.0
 
     # check for: parameter scan or single-run
     try:
