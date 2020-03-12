@@ -2,7 +2,9 @@ import nest
 import numpy as np
 import copy
 from stp.stp_dicts import cell_types, allen_stp, doiron_stp, doiron_stp_weak
-np.set_printoptions(precision=2, linewidth=500)
+from microcircuit.conn import conn_barrel_integrate
+from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia, allen, dia_allen
+np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 '''
 Max firing rate:
@@ -25,13 +27,10 @@ Cell-type specific parameters:
 
 special_dict = {
     'fmax': False,
+    # cell-type specific parameters
+    'ctsp': True,
     # STP
     'stp_dict': doiron_stp_weak,
-    # 'stp': True,
-    # 'som_fac': True,
-    # 'pv_dep': True,
-    # 'pv2all_dep': True,
-    # 'weak_dep': False,
     # relative inhibitory strengths
     'adjust_inh': True,
     'som_power': 1.0,
@@ -43,9 +42,7 @@ special_dict = {
     'k_th': 0.8,
     'k_e2e': 0.8,
     'k_e2i': 0.8,
-    'k_i2e': 0.2,
-    # cell-type specific parameters
-    'ctsp': True
+    'k_i2e': 0.2
 }
 
 
@@ -64,64 +61,6 @@ def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
     # print(source_name, target_name)
     # print(syn_dict)
     return syn_dict
-
-
-# def assign_syn_dict(source_name,
-#                     target_name,
-#                     weight_dict,
-#                     delay_dict,
-#                     net_dict,
-#                     spe_dict):
-#     syn_dict = {
-#         'model': 'static_synapse',
-#         'weight': weight_dict,
-#         'delay': delay_dict
-#     }
-#     if spe_dict['weak_dep'] is True:
-#         depress = {
-#             'model': 'tsodyks_synapse',
-#             'U': 1.0,
-#             'tau_fac': 0.01,
-#             'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-#             'tau_rec': 100.0,
-#             'weight': weight_dict,
-#             'delay': delay_dict
-#         }
-#     else:
-#         depress = {
-#             'model': 'tsodyks_synapse',
-#             'U': 0.75,  # but U = 0.9 for PV-to-all
-#             'tau_fac': 0.01,
-#             'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-#             'tau_rec': 800.0,
-#             'weight': weight_dict,
-#             'delay': delay_dict
-#         }
-#     facilitate = {
-#         'model': 'tsodyks_synapse',
-#         'U': 0.5,
-#         'tau_fac': 200.0,
-#         'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-#         'tau_rec': 0.01,
-#         'weight': weight_dict,
-#         'delay': delay_dict
-#     }
-#
-#     if 'Exc' in source_name:
-#         if 'Exc' in target_name:
-#             syn_dict = depress
-#         elif 'PV' in target_name:
-#             if spe_dict['pv_dep'] is True:
-#                 syn_dict = depress
-#         elif 'SOM' in target_name:
-#             if spe_dict['som_fac'] is True:
-#                 syn_dict = facilitate
-#     elif 'PV' in source_name:
-#         if spe_dict['pv2all_dep'] is True:
-#             depress['U'] = 0.9
-#             depress['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
-#             syn_dict = depress
-#     return syn_dict
 
 
 def set_fmax(names, population, spe_dict):
@@ -273,9 +212,9 @@ def connect_by_cluster(source_name,
                        target_pop,
                        spe_dict,
                        conn_prob=None):
-    nr_cluster = 8
-    # k: modulation constant
-    k = 0.0
+    # For orientation clustering
+    nr_cluster = 8  # number of clusters
+    k = 0.0     # modulation constant
     if 'Exc' in source_name and 'Exc' in target_name:
         k = spe_dict['k_e2e']
     for inh_target in spe_dict['sel_inh_trg']:
@@ -284,7 +223,6 @@ def connect_by_cluster(source_name,
     for inh_source in spe_dict['sel_inh_src']:
         if inh_source in source_name and 'Exc' in target_name:
             k = spe_dict['k_i2e']
-
     if spe_dict['orient_tuning'] is True and k != 0.0:
         # do it only if connection is not 0
         if synapse_nr > 0:
@@ -465,3 +403,43 @@ def eq_inh_conn(n_full, conn, lyr_gps=None):
                     conn_out[inh_post, inh_pre] = i2i
 
     return conn_out
+
+
+# original helpers.py functions
+def compute_DC(net_dict, w_ext):
+    DC = (
+        net_dict['bg_rate'] * net_dict['K_ext'] *
+        w_ext * net_dict['neuron_params']['tau_syn_E'] * 0.001
+        )
+    return DC
+
+
+def get_total_number_of_synapses(net_dict):
+    N_full = net_dict['N_full']
+    number_N = len(N_full)
+    conn_probs = net_dict['conn_probs']
+    prod = np.outer(N_full, N_full)
+
+    #
+    if net_dict['renew_conn'] is True:
+        if net_dict['animal'] == 'mouse':
+            animal_dict = mouse_dict
+        else:
+            animal_dict = rat_dict
+        conn_probs = conn_barrel_integrate(animal_dict, bbp, exp, allen, dia_allen)
+
+    n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
+    N_full_matrix = np.column_stack((N_full for i in list(range(number_N))))
+    K = (((n_syn_temp * (N_full_matrix).astype(int)) / N_full_matrix).astype(int))
+    return K
+
+
+def synapses_th_matrix(net_dict, stim_dict):
+    N_full = net_dict['N_full']
+    conn_probs = stim_dict['conn_probs_th']
+    T_full = stim_dict['n_thal']
+    prod = (T_full * N_full).astype(float)
+    n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.)/prod)
+    K = (((n_syn_temp * (N_full).astype(int))/N_full).astype(int))
+    return K
+

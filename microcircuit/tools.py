@@ -11,13 +11,6 @@ import pickle
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 
-'''
-Notes:
-way to get file path by GUI:
-import easygui
-path = easygui.fileopenbox()
-'''
-
 populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                'L4 Exc', 'L4 PV', 'L4 SOM',
                'L5 Exc', 'L5 PV', 'L5 SOM',
@@ -652,7 +645,6 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
     # calculate synfire spread and amplitude
     print('len of data_all=', len(data_all))
     for i in range(len(data_all)):
-        print('pop:', populations[i])
         if 'Exc' in populations[i]:
             data = data_all[i]
             if type(data) != np.ndarray or data.ndim != 2:
@@ -702,9 +694,9 @@ def response(path, name, begin, window, n_stim=20, interval=1000.0):
             # nomi_sum_real += np.sum(np.subtract.outer(rts, rts_baseline))
             # print(nomi_sum, nomi_sum_real)
             denomi_sum += len(rts)*len(rts_baseline)
-            if j == 0:
-                response_ts_by_layer[i] = begin + np.mean(rts)
-                print(response_ts_by_layer[i])
+            if j == n_stim - 1:
+                response_ts_by_layer[i] = begin + j*interval + np.mean(rts)
+                # print(response_ts_by_layer[i])
         if denomi_sum > 0:
             rt_diff = nomi_sum/denomi_sum
         else:

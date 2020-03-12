@@ -122,19 +122,13 @@ net_dict = {
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
     'N_full': np.array(
-        [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column
-        # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column
-    # 190616 model of c2 barrel column totally 18976 cells
+        [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column (rounded)
+        # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column (rounded)
+    # rat C2 barrel column totally 18976 cells
     # 'N_full': np.array([5099, 521, 67, 88, 4089, 287, 61, 3267, 540, 140, 4425, 290, 102]),
-    # Mean rates of the different populations in the non-scaled version
-    # of the microcircuit. Necessary for the scaling of the network.
-    # The order corresponds to the order in 'populations'.
-    'full_mean_rates':
-        np.array([0.971, 2.868, 2.868, 2.868, 4.746, 5.396, 5.396, 8.142, 9.078, 9.078, 0.991, 7.523, 7.523]),
     # Connection probabilities. The first index corresponds to the targets
     # and the second to the sources.
-    'conn_probs':
-    # 190707
+    'conn_probs': # 190707
         np.array([
                [0.0872, 0.3173, 0.4612, 0.0448, 0.1056, 0.4011, 0.0374, 0.0234, 0.09  , 0.1864, 0.    , 0.    , 0.    ],
                [0.3763, 0.3453, 0.2142, 0.0683, 0.0802, 0.012 , 0.0257, 0.0257, 0.1937, 0.2237, 0.0001, 0.0001, 0.0062],
@@ -152,23 +146,9 @@ net_dict = {
                [0.    , 0.0018, 0.0028, 0.0068, 0.0297, 0.0125, 0.0084, 0.0381, 0.017 , 0.0128, 0.021 , 0.3249, 0.3014],
                [0.0025, 0.0001, 0.0003, 0.002 , 0.0045, 0.0016, 0.0004, 0.0149, 0.    , 0.0031, 0.1865, 0.3535, 0.2968],
                [0.0021, 0.    , 0.0002, 0.2618, 0.0004, 0.0014, 0.0003, 0.0141, 0.    , 0.0019, 0.1062, 0.3321, 0.0379]]),
-        # np.array(
-        #     [[0.1009, 0.1689, 0.0437, 0.0818, 0.0323, 0.,     0.0076, 0.],
-        #      [0.1346, 0.1371, 0.0316, 0.0515, 0.0755, 0.,     0.0042, 0.],
-        #      [0.0077, 0.0059, 0.0497, 0.135,  0.0067, 0.0003, 0.0453, 0.],
-        #      [0.0691, 0.0029, 0.0794, 0.1597, 0.0033, 0.,     0.1057, 0.],
-        #      [0.1004, 0.0622, 0.0505, 0.0057, 0.0831, 0.3726, 0.0204, 0.],
-        #      [0.0548, 0.0269, 0.0257, 0.0022, 0.06,   0.3158, 0.0086, 0.],
-        #      [0.0156, 0.0066, 0.0211, 0.0166, 0.0572, 0.0197, 0.0396, 0.2252],
-        #      [0.0364, 0.001,  0.0034, 0.0005, 0.0277, 0.008,  0.0658, 0.1443]]
-        #     ),
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
-    'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),  # test
-    # Factor to scale the indegrees.
-    'K_scaling': 1.0,
-    # Factor to scale the number of neurons.
-    'N_scaling': 1.0,
+    'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),
     # Mean amplitude of excitatory postsynaptic potential (in mV).
     'PSP_e': 0.5,
     # Relative standard deviation of the postsynaptic potential.

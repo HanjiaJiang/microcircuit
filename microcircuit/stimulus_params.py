@@ -27,9 +27,7 @@ stim_dict = {
     # Connection probabilities of the thalamus to the different populations.
     # Order as in 'populations' in 'network_params.py'
     'conn_probs_th':
-        # np.array([0.02457, 0.01547, 0.0, 0.0, 0.07372, 0.04642, 0.0, 0.0384, 0.0147, 0.0, 0.0128, 0.0049, 0.0]),
         np.array([0.0, 0.0, 0.0, 0.0, 0.0983, 0.0619, 0.0, 0.0, 0.0, 0.0, 0.0512, 0.0196, 0.0]),
-        #np.array([0.0, 0.0, 0.0983, 0.0619, 0.0, 0.0, 0.0512, 0.0196]),
     # Mean delay of the thalamic input (in ms).
     'delay_th':
         np.asarray([1.5 for i in list(range(len(net_dict['populations'])))]),

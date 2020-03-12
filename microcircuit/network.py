@@ -1,10 +1,6 @@
 import os
 from microcircuit.functions import *
-from microcircuit.helpers import *
-from microcircuit.tools import plot_raster
-from microcircuit.tools import fire_rate
 from microcircuit.network_params import net_update
-import copy
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
 class Network:
@@ -100,13 +96,9 @@ class Network:
         to the neuronal populations.
 
         """
-        self.N_full = self.net_dict['N_full']
-        self.N_scaling = self.net_dict['N_scaling']
-        self.K_scaling = self.net_dict['K_scaling']
+        self.nr_neurons = self.net_dict['N_full']
         self.synapses = get_total_number_of_synapses(self.net_dict)
-        self.synapses_scaled = self.synapses * self.K_scaling
-        self.nr_neurons = self.N_full * self.N_scaling
-        self.K_ext = self.net_dict['K_ext'] * self.K_scaling
+        self.K_ext = self.net_dict['K_ext']
         self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
         self.weight_mat = get_psc(self.net_dict)
         self.weight_mat_std = get_psc_std(self.net_dict)
@@ -128,15 +120,15 @@ class Network:
                     )
             self.DC_amp_e = compute_DC(self.net_dict, self.w_ext)
 
-        if nest.Rank() == 0:
-            print(
-                'The number of neurons is scaled by a factor of: %.2f'
-                % self.N_scaling
-                )
-            print(
-                'The number of synapses is scaled by a factor of: %.2f'
-                % self.K_scaling
-                )
+        # if nest.Rank() == 0:
+        #     print(
+        #         'The number of neurons is scaled by a factor of: %.2f'
+        #         % self.N_scaling
+        #         )
+        #     print(
+        #         'The number of synapses is scaled by a factor of: %.2f'
+        #         % self.K_scaling
+        #         )
 
         # Create cortical populations.
         self.pops = []
@@ -327,10 +319,9 @@ class Network:
             print('Recurrent connections are established')
         mean_delays = self.net_dict['mean_delay_matrix']
         std_delays = self.net_dict['std_delay_matrix']
-        # syn_nr_bernoulli = np.zeros((len(self.pops), len(self.pops)))
         for i, target_pop in enumerate(self.pops):
             for j, source_pop in enumerate(self.pops):
-                synapse_nr = int(self.synapses_scaled[i][j])
+                synapse_nr = int(self.synapses[i][j])
                 target_name = self.net_dict['populations'][i]
                 source_name = self.net_dict['populations'][j]
                 if synapse_nr >= 0.:
@@ -358,11 +349,10 @@ class Network:
                         'low': self.sim_resolution
                         }
 
-                    # HJ
                     try:
                         syn_dict = assign_stp(source_name, target_name, weight_dict, delay_dict, self.stp_dict)
                     except NameError:
-                        print('\'assign_syn_dict()\' does not exist')
+                        print('\'assign_stp()\' does not exist')
                         syn_dict = {
                             'model': 'static_synapse',
                             'weight': weight_dict,
@@ -373,7 +363,6 @@ class Network:
                     try:
                         nr = connect_by_cluster(source_name, target_name, synapse_nr, syn_dict,
                                            source_pop, target_pop, self.spe_dict, conn_prob=self.net_dict['conn_probs'][i, j])
-                        # syn_nr_bernoulli[i, j] = nr
                     except NameError:
                         print('\'connect_by_cluster()\' does not exist')
                         nest.Connect(
@@ -495,30 +484,3 @@ class Network:
     def simulate(self):
         """ Simulates the microcircuit."""
         nest.Simulate(self.sim_dict['t_sim'])
-
-    def evaluate(self, raster_plot_time_idx, fire_rate_time_idx):
-        """ Displays output of the simulation.
-
-        Calculates the firing rate of each population,
-        creates a spike raster plot and a box plot of the
-        firing rates.
-
-        """
-        if nest.Rank() == 0:
-            print(
-                'Interval to compute firing rates: %s ms'
-                % np.array2string(fire_rate_time_idx)
-                )
-            fire_rate(
-                self.data_path, 'spike_detector',
-                fire_rate_time_idx[0], fire_rate_time_idx[1]
-                )
-            print(
-                'Interval to plot spikes: %s ms'
-                % np.array2string(raster_plot_time_idx)
-                )
-            plot_raster(
-                self.data_path, 'spike_detector',
-                raster_plot_time_idx[0], raster_plot_time_idx[1]
-                )
-            # boxplot(self.net_dict, self.data_path)

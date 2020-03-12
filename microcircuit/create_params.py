@@ -13,9 +13,7 @@ np.set_printoptions(suppress=True, precision=4)
 # set constant parameters
 def set_constant(th_starts=None, th_rate=None):
     net_dict['g'] = -7
-    net_dict['bg_rate'] = 4.0
-    net_dict['animal'] = 'mouse'
-    # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
+    net_dict['bg_rate'] = 5.0
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
@@ -46,8 +44,10 @@ def set_constant(th_starts=None, th_rate=None):
         stim_dict['thalamic_input'] = True
         stim_dict['th_rate'] = th_rate
         stim_dict['th_start'] = th_starts
-        #
-        stim_dict['n_thal'] = 288
+        # VPM cell number from Oberlaender et al., 2011
+        stim_dict['n_thal'] = 288   # 285 rounded by 8
+        # VPM-to-barrel connection probability from Bruno & Simons, 2002
+        # (estimation for L2/3, L5, L6 with synapse numbers from Oberlaender et al., 2011)
         stim_dict['conn_probs_th'] = \
             np.array([0.0058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
 
@@ -61,6 +61,8 @@ def print_summary(all_dict):
         f.write('ctsp = {}\n\n'.format(all_dict['special_dict']['ctsp']))
         f.write('stp = \n{}\n\n'.format(all_dict['special_dict']['stp_dict']))
         f.write('thalamic input = {}\n\n'.format(all_dict['stim_dict']['thalamic_input']))
+        if all_dict['stim_dict']['thalamic_input'] is True:
+            f.write('    th_rate = {}, th_start = {}\n\n'.format(all_dict['stim_dict']['th_rate'], all_dict['stim_dict']['th_start']))
         f.write('orient_tuning = {}\n\n'.format(all_dict['special_dict']['orient_tuning']))
         f.write('g = {}\n\n'.format(all_dict['net_dict']['g']))
         f.write('bg_rate = {}\n\n'.format(all_dict['net_dict']['bg_rate']))
@@ -85,27 +87,6 @@ def read_levels(in_str):
     return out_str, out_list
 
 
-# set parameters for single-run
-def params_single(path):
-    set_constant(th_starts=np.arange(3000.0, 8000.0, 2000.0), th_rate=120.0)
-
-    # properties
-    # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
-    # special_dict['stp_dict'] = no_stp
-    # special_dict['ctsp'] = False
-
-    para_dict = {
-        'net_dict': net_dict,
-        'sim_dict': sim_dict,
-        'stim_dict': stim_dict,
-        'special_dict': special_dict
-    }
-    with open(path, 'wb') as h:
-        pickle.dump(para_dict, h)
-
-    print_summary(para_dict)
-
-
 # get different connection probability map
 def get_conn_probs(list_n=10):
     cwd = os.getcwd()
@@ -124,7 +105,7 @@ def get_conn_probs(list_n=10):
 
 
 # set psps
-def test_list_psp():
+def list_psp():
     w_dict_normal = {
         'psp_mtx':
             np.full((4, 4), 0.5),
@@ -186,6 +167,25 @@ def set_main(out_list, f1, f2, f_double):
         f_double(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
         print_summary(all_dict)
+
+
+# set parameters for single-run
+def params_single(path, th_starts=None, th_rate=None):
+    set_constant(th_starts=np.array(th_starts).astype(float), th_rate=th_rate)
+    # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
+    # special_dict['stp_dict'] = no_stp
+    # special_dict['ctsp'] = False
+
+    all_dict = {
+        'net_dict': net_dict,
+        'sim_dict': sim_dict,
+        'stim_dict': stim_dict,
+        'special_dict': special_dict
+    }
+    with open(path, 'wb') as h:
+        pickle.dump(all_dict, h)
+
+    print_summary(all_dict)
 
 
 if __name__ == "__main__":

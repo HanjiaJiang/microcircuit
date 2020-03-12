@@ -1,6 +1,5 @@
 import os
 import sys
-import shutil
 import pickle
 import multiprocessing as mp
 import time
@@ -18,11 +17,15 @@ if __name__ == "__main__":
 
     # timing, in ms
     plot_half_len = 100.0
-    analysis_start = 2000.0
-    analysis_segment = 2000.0
-    n_segment = 3
-    analysis_total_length = analysis_segment*n_segment
-    analysis_interval = [analysis_start, analysis_start + analysis_total_length]
+    start = 2000.0
+    segment = 2000.0
+    n_segment = 2
+    total_length = segment*n_segment
+    interval = [start, start + total_length]
+
+    # thalamic input
+    th_starts = list(range(int(start), int(start + total_length), int(segment)))
+    th_rate = 120.0
 
     # check for: parameter scan or single-run
     try:
@@ -33,7 +36,7 @@ if __name__ == "__main__":
 
         # create pickle file
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
-        params_single(pickle_path)
+        params_single(pickle_path, th_starts=th_starts, th_rate=th_rate)
 
         # handle data path
         data_path = os.path.join(cwd, 'data')
@@ -52,19 +55,17 @@ if __name__ == "__main__":
         para_dict = pickle.load(handle)
     handle.close()
 
-    # cpu number / cluster or not
+    # cpu number / on server or not
     cpu_ratio = 0.5
     if mp.cpu_count() > 10:
         cpu_ratio = 1
         on_server = True
-    # else:
-    #     exec(tools.set2txt(para_dict['sim_dict']['data_path']))
-    #     pass
     exec(tools.set2txt(para_dict['sim_dict']['data_path']))
+
+    # set dictionary
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
-
-    para_dict['sim_dict']['t_sim'] = analysis_start + analysis_total_length
+    para_dict['sim_dict']['t_sim'] = start + total_length
 
     # run simulation
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
@@ -77,11 +78,11 @@ if __name__ == "__main__":
     if run_analysis:
         mean_fr, std_fr = \
             tools.fire_rate(para_dict['sim_dict']['data_path'], 'spike_detector',
-                            analysis_interval[0], analysis_interval[1])
+                            interval[0], interval[1])
         if run_ai:
             t0 = time.time()
             tools.ai_score(para_dict['sim_dict']['data_path'], 'spike_detector',
-                           analysis_interval[0], analysis_interval[1], seg_len=analysis_segment)
+                           interval[0], interval[1], seg_len=segment)
             print('ai analysis time = {}'.format(time.time() - t0))
         if run_response:
             t1 = time.time()
@@ -89,12 +90,12 @@ if __name__ == "__main__":
                            para_dict['stim_dict']['th_start'][0],
                            window=20.0,
                            n_stim=n_segment,
-                           interval=analysis_segment)
+                           interval=segment)
             print('response analysis time = {}'.format(time.time() - t1))
         tools.plot_raster(
             para_dict['sim_dict']['data_path'], 'spike_detector',
-            para_dict['stim_dict']['th_start'][0] - plot_half_len,
-            para_dict['stim_dict']['th_start'][0] + plot_half_len)
+            para_dict['stim_dict']['th_start'][-1] - plot_half_len,
+            para_dict['stim_dict']['th_start'][-1] + plot_half_len)
         tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
     # delete .gdf files to save space
@@ -104,6 +105,3 @@ if __name__ == "__main__":
                 os.remove(os.path.join(para_dict['sim_dict']['data_path'], item))
 
     exec(tools.end2txt())
-    # if not on_server:
-    #     exec(tools.end2txt())
-    #     pass
