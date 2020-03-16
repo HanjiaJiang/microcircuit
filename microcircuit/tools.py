@@ -32,6 +32,7 @@ class Spikes:
         else:
             os.mkdir(self.path)
             print('Spikes.__init__(): data directory created')
+        self.load()
 
     def read_name(self):
         # Import filenames
@@ -47,7 +48,7 @@ class Spikes:
             self.gids.append([int(a[0]), int(a[1])])
         self.detectors = sorted(self.detectors)
 
-    def load_data_all(self):
+    def load(self):
         self.read_name()
         if len(self.detectors) > 0 and len(self.gids) > 0:
             for i in list(range(len(self.detectors))):
@@ -288,14 +289,14 @@ def load_spike_times(path, name, begin, end):
     return data, gids   # an extra return: gids
 
 
-def fire_rate(path, name, begin, end):
-    files, gids = read_name(path, name)
-    data_all, gids = load_spike_times(path, name, begin, end)
+def fire_rate(spikes, begin, end):
+    data = spikes.get_data(begin, end)
+    gids = spikes.gids
     rates_averaged_all = []
     rates_std_all = []
-    for h in list(range(len(files))):
-        if len(data_all[h]) > 0:
-            n_fil = data_all[h][:, 0]
+    for h in list(range(len(data))):
+        if len(data[h]) > 0:
+            n_fil = data[h][:, 0]
             n_fil = n_fil.astype(int)
             count_of_n = np.bincount(n_fil)
             count_of_n_fil = count_of_n[gids[h][0]-1:gids[h][1]]
@@ -304,26 +305,25 @@ def fire_rate(path, name, begin, end):
             rate_std = np.std(rate_each_n)
             rates_averaged_all.append(float('%.3f' % rate_averaged))
             rates_std_all.append(float('%.3f' % rate_std))
-            np.save(os.path.join(path, ('rate' + str(h) + '.npy')),
+            np.save(os.path.join(spikes.path, ('rate' + str(h) + '.npy')),
                     rate_each_n)
         else:
-            #190606
             rates_averaged_all.append(0.0)
             rates_std_all.append(0.0)
-            np.save(os.path.join(path, ('rate' + str(h) + '.npy')), [])
+            np.save(os.path.join(spikes.path, ('rate' + str(h) + '.npy')), [])
     print('Mean rates: %r Hz' % rates_averaged_all)
     print('Standard deviation of rates: %r Hz' % rates_std_all)
 
-    f_rates = open(os.path.join(path, 'fr.dat'), 'w')
+    f_rates = open(os.path.join(spikes.path, 'fr.dat'), 'w')
     for rate_mean, rate_std in zip(rates_averaged_all, rates_std_all):
         f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
     return rates_averaged_all, rates_std_all
 
 
-def plot_raster(path, name, begin, end):
-    files, gids = read_name(path, name)
-    data_all, gids = load_spike_times(path, name, begin, end)
+def plot_raster(spikes, begin, end):
+    data = spikes.get_data(begin, end)
+    gids = spikes.gids
     highest_gid = gids[-1][-1]
     gids_numpy = np.asarray(gids)
     gids_numpy_changed = abs(gids_numpy - highest_gid) + 1
@@ -341,11 +341,10 @@ def plot_raster(path, name, begin, end):
     ]
 
     fig, ax = plt.subplots(figsize=(16, 12))
-    for i in list(range(len(files))):
-        if len(data_all[i]) > 0:
-            times = data_all[i][:, 1]
-            neurons = np.abs(data_all[i][:, 0] - highest_gid) + 1
-            # 190819
+    for i in list(range(len(data))):
+        if len(data[i]) > 0:
+            times = data[i][:, 1]
+            neurons = np.abs(data[i][:, 0] - highest_gid) + 1
             if i < 4:
                 plt.plot(times, neurons, '.', color=color_list[i],
                          label=subtype_label[i])
@@ -382,7 +381,7 @@ def plot_raster(path, name, begin, end):
         ylabels, rotation=10
         )
     fig.tight_layout()
-    plt.savefig(os.path.join(path, 'raster_plot.png'), dpi=300)
+    plt.savefig(os.path.join(spikes.path, 'raster_plot.png'), dpi=300)
     plt.close()
 
 
@@ -516,10 +515,11 @@ def sample_by_layer(data, ids, layers, n_sample=140):
     return rdata, validity
 
 # Asynchronous irregular state calculation
-def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
+def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
     if layers is None:
         layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    data_all, gids = load_spike_times(path, name, begin, end)
+    data_all = spikes.get_data(begin, end)
+    gids = spikes.gids
     seg_list = np.arange(begin, end, seg_len)
 
     # multiprocessing
@@ -527,7 +527,7 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
     procs = []
 
     # ai calculation
-    ai = open(os.path.join(path, 'ai.dat'), 'w')
+    ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
     cvs_by_seg_by_layer = []
     validity_by_seg = []
     # by segment
@@ -608,10 +608,10 @@ def ai_score(path, name, begin, end, bw=10, seg_len=5000.0, layers=None, n_sampl
 
 
 # responses to transient/thalamic input
-def response(spikes, path, begin, window, n_stim=20, interval=1000.0):
+def response(spikes, begin, window, n_stim=20, interval=1000.0):
     data_all = spikes.get_data(begin, begin+n_stim*interval)
     gids = spikes.gids
-    f = open(os.path.join(path, 'sf.dat'), 'w')
+    f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
     rt_by_group = []
     # calculate synfire spread and amplitude
     print('len of data_all=', len(data_all))
@@ -636,8 +636,6 @@ def response(spikes, path, begin, window, n_stim=20, interval=1000.0):
                 if len(ts_sf) >= 3:
                     std = np.std(ts_sf)
                     t_stds.append(std)
-                else:
-                    std = np.nan
                 # for response time
                 rts = []
                 ids_sf = ids[(ts > begin + j*interval) & (ts <= begin + j*interval+window)].tolist()
@@ -651,7 +649,7 @@ def response(spikes, path, begin, window, n_stim=20, interval=1000.0):
     f.close()
 
     # calculate RT differences
-    g = open(os.path.join(path, 'rt_diff.dat'), 'w')
+    g = open(os.path.join(spikes.path, 'rt_diff.dat'), 'w')
     for i in range(len(rt_by_group)):
         nomi_sum = 0
         # nomi_sum_real = 0

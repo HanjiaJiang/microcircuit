@@ -37,10 +37,9 @@ def set_constant(th_starts=None, th_rate=None):
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
-
     # thalamic input
-    if th_starts is not None and isinstance(th_starts, np.ndarray) \
-            and th_rate is not None:
+    if th_starts is not None and len(th_starts) > 0 and \
+            isinstance(th_starts, np.ndarray) and th_rate is not None:
         stim_dict['thalamic_input'] = True
         stim_dict['th_rate'] = th_rate
         stim_dict['th_start'] = th_starts
@@ -57,7 +56,7 @@ def print_summary(all_dict):
     if not os.path.isdir(all_dict['sim_dict']['data_path']):
         os.mkdir(all_dict['sim_dict']['data_path'])
     with open(os.path.join(all_dict['sim_dict']['data_path'], 'params_summary.txt'), 'w') as f:
-        f.write('master seed = {}'.format(all_dict['sim_dict']['master_seed']))
+        f.write('master seed = {}\n'.format(all_dict['sim_dict']['master_seed']))
         f.write('ctsp = {}\n\n'.format(all_dict['special_dict']['ctsp']))
         f.write('stp = \n{}\n\n'.format(all_dict['special_dict']['stp_dict']))
         f.write('thalamic input = {}\n\n'.format(all_dict['stim_dict']['thalamic_input']))
