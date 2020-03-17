@@ -87,7 +87,6 @@ def set_fmax(names, population, spe_dict):
 def inh_weight(source_name, weight, spe_dict):
     # HJ: Short-Term Plasticity of Unitary Inhibitory-to-Inhibitory
     # Synapses Depends on the Presynaptic Interneuron Subtype
-    # 190629
     if spe_dict['adjust_inh'] is True:
         if 'SOM' in source_name:
             weight *= spe_dict['som_power']
@@ -137,7 +136,8 @@ def connect_thalamus_orientation(th_pop,
                                  target_name,
                                  nr_synapses,
                                  syn_dict_th,
-                                 spe_dict):
+                                 spe_dict,
+                                 bernoulli_prob=None):
     # do it only if connection is not 0
     if nr_synapses > 0:
         if spe_dict['orient_tuning'] and 'Exc' in target_name:
@@ -173,11 +173,6 @@ def connect_thalamus_orientation(th_pop,
                 else:
                     target_cluster_list.append(target_pop[head_idx:])
 
-            # print('pop len = {0}, cluster len = {1}, p_0={2}'
-            #       .format(len_target, len_target_cluster, p_0))
-            # for cluster in target_cluster_list:
-            #     print('cluster len = {0}'.format(len(cluster)))
-
             for i, th_cluster in enumerate(th_cluster_list):
                 for j, target_cluster in enumerate(target_cluster_list):
                     theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
@@ -194,14 +189,21 @@ def connect_thalamus_orientation(th_pop,
                                  syn_spec=syn_dict_th
                                  )
         else:
-            nest.Connect(
-                th_pop, target_pop,
-                conn_spec={
-                    'rule': 'fixed_total_number',
-                    'N': nr_synapses,
-                },
-                syn_spec=syn_dict_th
-            )
+            if bernoulli_prob is not None:
+                nest.Connect(th_pop, target_pop,
+                conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
+                syn_spec=syn_dict_th)
+                print('p={}'.format(bernoulli_prob))
+            else:
+                nest.Connect(
+                    th_pop, target_pop,
+                    conn_spec={
+                        'rule': 'fixed_total_number',
+                        'N': nr_synapses,
+                    },
+                    syn_spec=syn_dict_th
+                )
+                print('n={}'.format(nr_synapses))
 
 
 def connect_by_cluster(source_name,
@@ -325,21 +327,43 @@ def get_weight(psp_val, net_dict):
     return PSC_e
 
 
-def get_psc(net_dict, dim=13, lyr_gps=None):
+def calc_psc(psp_val, C_m, tau_m, tau_syn):
+    PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn / (
+        tau_syn - tau_m) * ((tau_m / tau_syn) ** (
+            - tau_m / (tau_m - tau_syn)) - (tau_m / tau_syn) ** (
+                - tau_syn / (tau_m - tau_syn)))) ** (-1))
+    PSC_e = (PSC_e_over_PSP_e * psp_val)
+    return PSC_e
+
+
+def get_weights(net_dict, dim=13, lyr_gps=None):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    psps = np.zeros((dim, dim))
-    # print(net_dict['psp_mtx'])
-    for i, pre_lyr in enumerate(lyr_gps):
-        for j, post_lyr in enumerate(lyr_gps):
-            psp = net_dict['w_dict']['psp_mtx'][j, i]
-            psps[post_lyr[0]:post_lyr[-1]+1, pre_lyr[1]:pre_lyr[-1]+1] = psp*net_dict['g']
-            psps[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]] = psp
-    pscs = get_weight(psps, net_dict)
+    pscs = np.zeros((dim, dim))
+    for i in range(dim):    # post
+        for j in range(dim):    # pre
+            a = 0
+            b = 0
+            for idx, gps in enumerate(lyr_gps):
+                if i in gps:
+                    a = idx
+                if j in gps:
+                    b = idx
+            psp = net_dict['w_dict']['psp_mtx'][a, b]
+            for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
+                if celltype in net_dict['populations'][i]:
+                    psc = calc_psc(psp,
+                    net_dict['neuron_params']['C_m']['default'],
+                    net_dict['neuron_params']['tau_m']['default'],
+                    net_dict['neuron_params']['tau_syn_ex'])
+                    if j in [0, 4, 7, 10]:
+                        pscs[i, j] = psc
+                    else:
+                        pscs[i, j] = psc*net_dict['g']
     return pscs
 
 
-def get_psc_std(net_dict, dim=13, lyr_gps=None):
+def get_weight_stds(net_dict, dim=13, lyr_gps=None):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
     std_ratios = np.zeros((dim, dim))
@@ -442,4 +466,3 @@ def synapses_th_matrix(net_dict, stim_dict):
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.)/prod)
     K = (((n_syn_temp * (N_full).astype(int))/N_full).astype(int))
     return K
-

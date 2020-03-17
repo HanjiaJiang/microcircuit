@@ -100,8 +100,8 @@ class Network:
         self.synapses = get_total_number_of_synapses(self.net_dict)
         self.K_ext = self.net_dict['K_ext']
         self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
-        self.weight_mat = get_psc(self.net_dict)
-        self.weight_mat_std = get_psc_std(self.net_dict)
+        self.weight_mat = get_weights(self.net_dict)
+        self.weight_mat_std = get_weight_stds(self.net_dict)
         # self.weight_mat = get_weight(
         #     self.net_dict['PSP_mean_matrix'], self.net_dict
         #     )
@@ -120,15 +120,6 @@ class Network:
                     )
             self.DC_amp_e = compute_DC(self.net_dict, self.w_ext)
 
-        # if nest.Rank() == 0:
-        #     print(
-        #         'The number of neurons is scaled by a factor of: %.2f'
-        #         % self.N_scaling
-        #         )
-        #     print(
-        #         'The number of synapses is scaled by a factor of: %.2f'
-        #         % self.K_scaling
-        #         )
 
         # Create cortical populations.
         self.pops = []
@@ -233,7 +224,6 @@ class Network:
             self.stop_th = (
                 self.stim_dict['th_start'] + self.stim_dict['th_duration']
                 )
-            # 190614
             try:
                 self.poisson_th = [nest.Create('poisson_generator', len(self.thalamic_population)) for x in range(len(self.stim_dict['th_start']))]
                 set_thalamus_input(self.thalamic_population, self.poisson_th,
@@ -254,13 +244,10 @@ class Network:
                 nest.Connect(self.poisson_th, self.thalamic_population)
             else:
                 pass
+            #
             self.nr_synapses_th = synapses_th_matrix(
                 self.net_dict, self.stim_dict
             )
-            # if self.K_scaling != 1:
-            #     self.thalamic_weight = self.thalamic_weight / (
-            #             self.K_scaling ** 0.5)
-            #     self.nr_synapses_th = (self.nr_synapses_th * self.K_scaling)
         else:
             if nest.Rank() == 0:
                 print('Thalamic input not provided')
@@ -393,10 +380,21 @@ class Network:
                 )
 
     def connect_thalamus(self):
+        cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+        psp = self.stim_dict['PSP_th']
         """ Connects the thalamic population to the microcircuit."""
         if nest.Rank() == 0:
             print('Thalamus connection established')
         for i, target_pop in enumerate(self.pops):
+            C_m = self.net_dict['neuron_params']['C_m']['default']
+            tau_m = self.net_dict['neuron_params']['tau_m']['default']
+            tau_syn = self.net_dict['neuron_params']['tau_syn_ex']
+            if isinstance(psp, np.ndarray):
+                mu = calc_psc(psp[i], C_m, tau_m, tau_syn)
+            else:
+                mu = calc_psc(psp, C_m, tau_m, tau_syn)
+            # print('psp={}'.format(psp))
+            # print('mu={}'.format(mu))
             conn_dict_th = {
                 'rule': 'fixed_total_number',
                 'N': int(self.nr_synapses_th[i])
@@ -404,9 +402,9 @@ class Network:
             syn_dict_th = {
                 'weight': {
                     'distribution': 'normal_clipped',
-                    'mu': self.thalamic_weight,
+                    'mu': mu,
                     'sigma': (
-                        self.thalamic_weight * self.net_dict['PSP_sd']
+                        mu * self.net_dict['PSP_sd']
                         ),
                     'low': 0.0
                     },
@@ -419,7 +417,7 @@ class Network:
                 }
             try:
                 connect_thalamus_orientation(self.thalamic_population, target_pop, self.net_dict['populations'][i],
-                                             self.nr_synapses_th[i], syn_dict_th, self.spe_dict)
+                                             self.nr_synapses_th[i], syn_dict_th, self.spe_dict, self.stim_dict['conn_probs_th'][i])
             except NameError:
                 print('\'connect_thalamus_with_selectivity()\' does not exist')
                 nest.Connect(

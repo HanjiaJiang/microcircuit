@@ -5,7 +5,7 @@ import multiprocessing as mp
 import time
 import microcircuit.network as network
 import microcircuit.tools as tools
-from microcircuit.create_params import params_single
+from microcircuit.create_params import params_single, set_thalamic
 
 if __name__ == "__main__":
     # simulation settings
@@ -15,18 +15,19 @@ if __name__ == "__main__":
     print_to_file = True
 
     # set ai segments
-    n_seg_ai = 5
+    n_seg_ai = 0
     start_ai = 2000.0
-    seg_ai = 20000.0
+    seg_ai = 2000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 5
+    n_stim = 2
     th_rate = 240.0
     interval_stim = 2000.0
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim), int(start_stim + len_stim), int(interval_stim)))
+    set_thalamic(stims, th_rate)
 
     # set others
     plot_half_len = 100.0
@@ -61,7 +62,6 @@ if __name__ == "__main__":
     # assign parameters
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
-    handle.close()
 
     # cpu number / on server or not
     cpu_ratio = 0.5
