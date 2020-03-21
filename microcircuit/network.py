@@ -404,7 +404,7 @@ class Network:
                     'distribution': 'normal_clipped',
                     'mu': mu,
                     'sigma': (
-                        mu * self.net_dict['PSP_sd']
+                        mu * self.stim_dict['PSP_sd']
                         ),
                     'low': 0.0
                     },

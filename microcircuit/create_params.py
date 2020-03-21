@@ -19,11 +19,13 @@ def set_thalamic(th_starts=None, th_rate=None):
         th_dict['thalamic_input'] = True
         th_dict['th_rate'] = th_rate
         th_dict['th_start'] = np.array(th_starts).astype(float)
-        # VPM cell number from Oberlaender et al., 2011
-        th_dict['n_thal'] = 288   # 285 rounded by 8
-        # VPM-to-barrel connection probability from Bruno & Simons, 2002
-        # (estimation for L2/3, L5, L6 with synapse numbers from Oberlaender et al., 2011)
-        # th_dict['conn_probs_th'] = np.array([0.0058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
+        th_dict['th_duration'] = 20.0
+        th_dict['n_thal'] = 200 # Constantinople, Bruno, 2013; Oberlaender et al., 2011
+        # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
+        th_dict['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
+        # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.4, 0.632, 0.0, 0.259, 0.433, 0.0, 0.09, 0.320, 0.0])
+        th_dict['PSP_th'] = np.array([1.128, 1.128, 0.0, 0.0, 0.490, 0.490, 0.0, 0.571, 0.571, 0.0, 0.571, 0.571, 0.0])
+        # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
         # th_dict['PSP_th'] = np.array([1.128, 0.746, 0.0, 0.0, 0.490, 0.490, 0.0, 0.111, 0.040, 0.0, 0.377, 0.143, 0.0])
         with open('th_dict.pickle', 'wb') as handle:
             pickle.dump(th_dict, handle)
@@ -35,7 +37,7 @@ def set_thalamic(th_starts=None, th_rate=None):
 def set_constant():
     net_dict['g'] = -7
     net_dict['bg_rate'] = 3.0
-    special_dict['orient_tuning'] = False
+    # special_dict['orient_tuning'] = True
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
@@ -63,16 +65,12 @@ def set_constant():
     if os.path.isfile('th_dict.pickle'):
         with open('th_dict.pickle', 'rb') as handle:
             th_dict = pickle.load(handle)
-        stim_dict['thalamic_input'] = th_dict['thalamic_input']
-        stim_dict['th_rate'] = th_dict['th_rate']
-        stim_dict['th_start'] = th_dict['th_start']
-        stim_dict['n_thal'] = th_dict['n_thal']
-        try:
-            stim_dict['conn_probs_th'] = th_dict['conn_probs_th']
-            stim_dict['PSP_th'] = th_dict['PSP_th']
-        except:
-            print('thalamus using default connectivity and PSPs')
-            pass
+        for key in th_dict.keys():
+            try:
+                stim_dict[key] = th_dict[key]
+            except:
+                print('stim_dict[{}] use default'.format(key))
+                pass
 
 
 # print summary of parameters
@@ -192,7 +190,7 @@ def set_main(out_list, f1, f2, f_double):
 
 
 # set parameters for single-run
-def params_single(path, th_starts=None, th_rate=None):
+def params_single(path):
     set_constant()
     # net_dict['conn_probs'] = funcs.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
     # special_dict['stp_dict'] = no_stp

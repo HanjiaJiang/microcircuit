@@ -189,11 +189,13 @@ def connect_thalamus_orientation(th_pop,
                                  syn_spec=syn_dict_th
                                  )
         else:
+            # connect by probability (Bernoulli)
             if bernoulli_prob is not None:
                 nest.Connect(th_pop, target_pop,
                 conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
                 syn_spec=syn_dict_th)
-                print('p={}'.format(bernoulli_prob))
+                # print('p={}'.format(bernoulli_prob))
+            # connect by synapse number
             else:
                 nest.Connect(
                     th_pop, target_pop,
@@ -203,7 +205,7 @@ def connect_thalamus_orientation(th_pop,
                     },
                     syn_spec=syn_dict_th
                 )
-                print('n={}'.format(nr_synapses))
+                # print('n={}'.format(nr_synapses))
 
 
 def connect_by_cluster(source_name,
@@ -327,6 +329,7 @@ def get_weight(psp_val, net_dict):
     return PSC_e
 
 
+# calculate celltype-specific psc
 def calc_psc(psp_val, C_m, tau_m, tau_syn):
     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn / (
         tau_syn - tau_m) * ((tau_m / tau_syn) ** (
@@ -336,6 +339,7 @@ def calc_psc(psp_val, C_m, tau_m, tau_syn):
     return PSC_e
 
 
+# get the psc matrix
 def get_weights(net_dict, dim=13, lyr_gps=None):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
@@ -363,6 +367,7 @@ def get_weights(net_dict, dim=13, lyr_gps=None):
     return pscs
 
 
+# get the psc std matrix
 def get_weight_stds(net_dict, dim=13, lyr_gps=None):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]

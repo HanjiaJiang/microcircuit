@@ -10,6 +10,7 @@ from multiprocessing import Manager
 import pickle
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+import scipy.stats as stats
 
 populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                'L4 Exc', 'L4 PV', 'L4 SOM',
@@ -18,8 +19,6 @@ populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
 
 subtype_label = ['Exc', 'PV', 'SOM', 'VIP']
 
-response_ts_by_layer = np.zeros(4)
-
 class Spikes:
     def __init__(self, path, name):
         self.path = path
@@ -27,6 +26,7 @@ class Spikes:
         self.gids = []
         self.detectors = []
         self.data = []
+        self.react_lines = []
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
@@ -356,7 +356,8 @@ def plot_raster(spikes, begin, end):
                 [gids_numpy_changed[6][1], gids_numpy_changed[4][0]],
                 [gids_numpy_changed[9][1], gids_numpy_changed[7][0]],
                 [gids_numpy_changed[12][1], gids_numpy_changed[10][0]]]
-    for i, t in enumerate(response_ts_by_layer):
+    # print('ltc={}'.format(spikes.react_lines))
+    for i, t in enumerate(spikes.react_lines):
         if begin < t < end:
             ax.vlines(t, vline_ys[i][0], vline_ys[i][1], colors='r', linestyles='dashed', linewidth=3, zorder=10)
 
@@ -608,70 +609,63 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, window, n_stim=20, interval=1000.0):
+def response(spikes, begin, stims, window, interval=1000.0, bw=0.1):
+    n_stim = len(stims)
+    if len(stims) > 1:
+        interval = stims[1] - stims[0]
     data_all = spikes.get_data(begin, begin+n_stim*interval)
     gids = spikes.gids
     f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
-    rt_by_group = []
-    # calculate synfire spread and amplitude
-    print('len of data_all=', len(data_all))
+    # calculate response spread and amplitude
     for i in range(len(data_all)):
         if 'Exc' in populations[i]:
             data = data_all[i]
+            # skip if no data
             if type(data) != np.ndarray or data.ndim != 2:
                 f.write('{}, {}\n'.format(np.nan, np.nan))
-                rt_by_group.append([])
+                rts_by_group.append([])
                 continue
-            t_stds = []
-            n_spikes_list = []
+            stds = []         # response spread
+            n_spikes_list = []  # response amplitude
             ts = data[:, 1]
             ids = data[:, 0]
-            rt_by_stim = []
+            ltcs_by_stim = []
             # loop stimulation
             for j in range(n_stim):
-                win_start = begin + j*interval
-                win_end = begin + j*interval+window
-                ts_sf = ts[(ts > win_start) & (ts <= win_end)]
-                n_spikes_list.append(len(ts_sf))
-                if len(ts_sf) >= 3:
-                    std = np.std(ts_sf)
-                    t_stds.append(std)
-                # for response time
-                rts = []
-                ids_sf = ids[(ts > begin + j*interval) & (ts <= begin + j*interval+window)].tolist()
-                for id in range(gids[i][0], gids[i][1]+1):
-                    if id not in ids_sf:
-                        continue    # continue if this neuron not spiking
-                    rts.append(ts_sf[ids_sf.index(id)] - win_start)
-                rt_by_stim.append(rts)
-            f.write('{:.2f}, {:.2f}\n'.format(np.mean(t_stds), np.mean(n_spikes_list)))
-            rt_by_group.append(rt_by_stim)
-    f.close()
+                # define start and end of window
+                win_begin = stims[j]
+                win_end = stims[j] + window
+                # spread and amplitude
+                ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
+                n_spikes_list.append(len(ts_stim))
+                if len(ts_stim) >= 3:
+                    std = np.std(ts_stim)
+                    stds.append(std)
 
-    # calculate RT differences
-    g = open(os.path.join(spikes.path, 'rt_diff.dat'), 'w')
-    for i in range(len(rt_by_group)):
-        nomi_sum = 0
-        # nomi_sum_real = 0
-        denomi_sum = 0
-        for j in range(n_stim):
-            rts = rt_by_group[i][j]
-            rts_baseline = rt_by_group[1][j]    # layer 4
-            if len(rts) < 10 or len(rts_baseline) < 10:
-                continue
-            nomi_sum += len(rts)*len(rts_baseline)*(np.mean(rts) - np.mean(rts_baseline))
-            # nomi_sum_real += np.sum(np.subtract.outer(rts, rts_baseline))
-            # print(nomi_sum, nomi_sum_real)
-            denomi_sum += len(rts)*len(rts_baseline)
-            if j == n_stim - 1:
-                response_ts_by_layer[i] = begin + j*interval + np.mean(rts)
-                # print(response_ts_by_layer[i])
-        if denomi_sum > 0:
-            rt_diff = nomi_sum/denomi_sum
-        else:
-            rt_diff = np.nan
-        g.write('{:.2f}\n'.format(rt_diff))
-    g.close()
+                # draw histogram and determine latency
+                hist, bin_edges = np.histogram(ts, bins=np.arange(win_begin - interval/2, win_begin + interval/2, bw))
+                bins = bin_edges[:len(bin_edges)-1]
+                # threshold is the max value of baseline (0.5*interval before the stimulus)
+                thr = np.max(hist[(bins > bin_edges[0]) & (bins <= win_begin)])
+                # latency
+                ts_supra = bins[hist > thr] # supra-threshold times
+                # print('ts_supra={}'.format(ts_supra))
+                if len(ts_supra) > 0:
+                    ltc = ts_supra[0] - win_begin
+                    ltcs_by_stim.append(ltc)
+                else:
+                    ltc = -np.inf
+
+                # plotting
+                plt.hist(ts, bins=bin_edges)
+                plt.savefig(os.path.join(spikes.path, 'layer{}-stim{}.png'.format(i, j)))
+                plt.close()
+
+                # for raster plot vline marking
+                if j == n_stim - 1:
+                    spikes.react_lines.append(ltc + win_begin)
+            f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes_list), np.mean(ltcs_by_stim)))
+    f.close()
 
 
 # to be improved ..

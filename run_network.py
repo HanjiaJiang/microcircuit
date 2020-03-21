@@ -9,24 +9,25 @@ from microcircuit.create_params import params_single, set_thalamic
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     on_server = False
     run_analysis = True
-    print_to_file = True
+    print_to_file = False
 
     # set ai segments
-    n_seg_ai = 0
-    start_ai = 2000.0
+    n_seg_ai = 1
+    start_ai = 1000.0
     seg_ai = 2000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
     n_stim = 2
-    th_rate = 240.0
-    interval_stim = 2000.0
+    th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
+    interval_stim = 1000.0
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
-    stims = list(range(int(start_stim), int(start_stim + len_stim), int(interval_stim)))
+    stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
+    print('stims = {}'.format(stims))
     set_thalamic(stims, th_rate)
 
     # set others
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 
         # create pickle file
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
-        params_single(pickle_path, th_starts=stims, th_rate=th_rate)
+        params_single(pickle_path)
 
         # handle data path
         data_path = os.path.join(cwd, 'data')
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     if print_to_file:
         exec(tools.set2txt(para_dict['sim_dict']['data_path']))
 
-    # set dictionary
+    # set simulation condition
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
     para_dict['sim_dict']['t_sim'] = start_ai + len_ai + len_stim
@@ -96,11 +97,9 @@ if __name__ == "__main__":
             print('ai analysis time = {}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
-            tools.response(spikes,
-                           para_dict['stim_dict']['th_start'][0],
-                           window=20.0,
-                           n_stim=n_stim,
-                           interval=interval_stim)
+            tools.response(spikes, start_stim,
+                           para_dict['stim_dict']['th_start'],
+                           window=20.0)
             print('response analysis time = {}'.format(time.time() - t1))
         tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
