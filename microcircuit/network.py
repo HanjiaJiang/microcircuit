@@ -386,15 +386,15 @@ class Network:
         if nest.Rank() == 0:
             print('Thalamus connection established')
         for i, target_pop in enumerate(self.pops):
+            if self.stim_dict['conn_probs_th'][i] == 0.0:
+                continue
             C_m = self.net_dict['neuron_params']['C_m']['default']
             tau_m = self.net_dict['neuron_params']['tau_m']['default']
             tau_syn = self.net_dict['neuron_params']['tau_syn_ex']
             if isinstance(psp, np.ndarray):
                 mu = calc_psc(psp[i], C_m, tau_m, tau_syn)
             else:
-                mu = calc_psc(psp, C_m, tau_m, tau_syn)
-            # print('psp={}'.format(psp))
-            # print('mu={}'.format(mu))
+                mu = calc_psc(psp, C_m, tau_m, tau_syn)            
             conn_dict_th = {
                 'rule': 'fixed_total_number',
                 'N': int(self.nr_synapses_th[i])
@@ -416,8 +416,14 @@ class Network:
                     }
                 }
             try:
-                connect_thalamus_orientation(self.thalamic_population, target_pop, self.net_dict['populations'][i],
-                                             self.nr_synapses_th[i], syn_dict_th, self.spe_dict, self.stim_dict['conn_probs_th'][i])
+                connect_thalamus_orientation(
+                    self.thalamic_population,
+                    target_pop,
+                    self.net_dict['populations'][i],
+                    self.nr_synapses_th[i],
+                    syn_dict_th,
+                    self.spe_dict,
+                    self.stim_dict['conn_probs_th'][i])
             except NameError:
                 print('\'connect_thalamus_with_selectivity()\' does not exist')
                 nest.Connect(

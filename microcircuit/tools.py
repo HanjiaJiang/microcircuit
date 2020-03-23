@@ -609,27 +609,35 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, interval=1000.0, bw=0.1):
+def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=False):
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
     data_all = spikes.get_data(begin, begin+n_stim*interval)
-    gids = spikes.gids
     f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111)
+    colors = ['skyblue', 'dodgerblue', 'blue', 'darkblue']
+    exc_cnt = 0
     # calculate response spread and amplitude
-    for i in range(len(data_all)):
+    for i, data in enumerate(data_all):
         if 'Exc' in populations[i]:
-            data = data_all[i]
+            data = data[np.argsort(data[:, 1])] # sort by time
             # skip if no data
             if type(data) != np.ndarray or data.ndim != 2:
                 f.write('{}, {}\n'.format(np.nan, np.nan))
                 rts_by_group.append([])
                 continue
             stds = []         # response spread
-            n_spikes_list = []  # response amplitude
+            n_spikes = []  # response amplitude
             ts = data[:, 1]
             ids = data[:, 0]
             ltcs_by_stim = []
+
+            # cache for latency by neuron: [(id, sum, n), ...]
+            id_set = np.arange(spikes.gids[i][0], spikes.gids[i][1]+1)
+            neuron_ltc_cache = np.array([id_set, np.zeros(id_set.shape), np.zeros(id_set.shape)]).T
+
             # loop stimulation
             for j in range(n_stim):
                 # define start and end of window
@@ -637,35 +645,38 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1):
                 win_end = stims[j] + window
                 # spread and amplitude
                 ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
-                n_spikes_list.append(len(ts_stim))
+                n_spikes.append(len(ts_stim))
                 if len(ts_stim) >= 3:
                     std = np.std(ts_stim)
                     stds.append(std)
 
-                # draw histogram and determine latency
-                hist, bin_edges = np.histogram(ts, bins=np.arange(win_begin - interval/2, win_begin + interval/2, bw))
-                bins = bin_edges[:len(bin_edges)-1]
-                # threshold is the max value of baseline (0.5*interval before the stimulus)
-                thr = np.max(hist[(bins > bin_edges[0]) & (bins <= win_begin)])
-                # latency
-                ts_supra = bins[hist > thr] # supra-threshold times
-                # print('ts_supra={}'.format(ts_supra))
-                if len(ts_supra) > 0:
-                    ltc = ts_supra[0] - win_begin
-                    ltcs_by_stim.append(ltc)
-                else:
-                    ltc = -np.inf
+                # latency by neurons
+                ids_stim = ids[(ts > win_begin) & (ts <= win_end)]
+                neuron_ltcs = []
+                for k, id in enumerate(id_set):
+                    if id not in ids_stim:
+                        continue
+                    idx = ids_stim.tolist().index(id)
+                    neuron_ltc_cache[k, 1] += ts_stim[idx] - win_begin   # latency
+                    neuron_ltc_cache[k, 2] += 1  # sample n
 
-                # plotting
-                plt.hist(ts, bins=bin_edges)
-                plt.savefig(os.path.join(spikes.path, 'layer{}-stim{}.png'.format(i, j)))
-                plt.close()
+            # calculate average latency
+            ltc_sample_ratio = 1.0  # ratio of the sampled neurons
+            neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]==n_stim)]
+            # mean latency of each neuron
+            mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
+            hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
+            ax.plot(bins[:-1], hist, linestyle='solid', label=populations[i], color=colors[exc_cnt])
+            exc_cnt += 1
+            sampled_avg_ltc = np.mean(mean_ltcs[:int(len(mean_ltcs)*ltc_sample_ratio)])
 
-                # for raster plot vline marking
-                if j == n_stim - 1:
-                    spikes.react_lines.append(ltc + win_begin)
-            f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes_list), np.mean(ltcs_by_stim)))
+            # for raster plot vline marking
+            spikes.react_lines.append(sampled_avg_ltc + win_begin)
+
+            f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes), sampled_avg_ltc))
     f.close()
+    plt.legend()
+    plt.savefig(os.path.join(spikes.path, 'hist_ltc.png'))
 
 
 # to be improved ..

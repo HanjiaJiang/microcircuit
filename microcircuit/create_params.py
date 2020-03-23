@@ -19,12 +19,12 @@ def set_thalamic(th_starts=None, th_rate=None):
         th_dict['thalamic_input'] = True
         th_dict['th_rate'] = th_rate
         th_dict['th_start'] = np.array(th_starts).astype(float)
-        th_dict['th_duration'] = 20.0
+        th_dict['th_duration'] = 10.0
         th_dict['n_thal'] = 200 # Constantinople, Bruno, 2013; Oberlaender et al., 2011
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
         th_dict['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
         # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.4, 0.632, 0.0, 0.259, 0.433, 0.0, 0.09, 0.320, 0.0])
-        th_dict['PSP_th'] = np.array([1.128, 1.128, 0.0, 0.0, 0.490, 0.490, 0.0, 0.571, 0.571, 0.0, 0.571, 0.571, 0.0])
+        # th_dict['PSP_th'] = np.array([1.128, 1.128, 0.0, 0.0, 0.490, 0.490, 0.0, 0.571, 0.571, 0.0, 0.571, 0.571, 0.0])
         # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
         # th_dict['PSP_th'] = np.array([1.128, 0.746, 0.0, 0.0, 0.490, 0.490, 0.0, 0.111, 0.040, 0.0, 0.377, 0.143, 0.0])
         with open('th_dict.pickle', 'wb') as handle:
