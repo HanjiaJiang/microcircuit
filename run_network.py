@@ -15,13 +15,13 @@ if __name__ == "__main__":
     print_to_file = False
 
     # set ai segments
-    n_seg_ai = 0
-    start_ai = 2000.0
-    seg_ai = 2000.0
+    n_seg_ai = 1
+    start_ai = 1000.0
+    seg_ai = 1000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 5
+    n_stim = 10
     th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     interval_stim = 1000.0
     start_stim = start_ai + len_ai

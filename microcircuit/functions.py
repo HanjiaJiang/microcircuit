@@ -137,75 +137,82 @@ def connect_thalamus_orientation(th_pop,
                                  nr_synapses,
                                  syn_dict_th,
                                  spe_dict,
-                                 bernoulli_prob=None):
-    # do it only if connection is not 0
-    if nr_synapses > 0:
-        if spe_dict['orient_tuning'] and 'Exc' in target_name:
-            nr_cluster = 8
-            len_th = len(th_pop)
-            len_target = len(target_pop)
+                                 bernoulli_prob=None,
+                                 nr_cluster=8):
+    if spe_dict['orient_tuning'] and 'Exc' in target_name:
+        # assign dictionary by rules
+        if bernoulli_prob is None:
             p_0 = nr_synapses / float(len_th * len_target)
-
-            # thalamus clustering
-            len_th_cluster = int(len_th / nr_cluster)
-            if len_target % nr_cluster != 0:
-                len_th_cluster += 1
-            th_cluster_list = []
-            for x in range(nr_cluster):
-                head_idx = x * len_th_cluster
-                tail_idx = (x + 1) * len_th_cluster
-                if tail_idx <= len(th_pop):
-                    th_cluster_list.append(th_pop[head_idx:tail_idx])
-                else:
-                    th_cluster_list.append(th_pop[head_idx:])
-
-            # target clustering
-            len_target_cluster = int(len_target / nr_cluster)
-            if len_target % nr_cluster != 0:
-                len_target_cluster += 1
-            target_cluster_list = []
-            for y in range(nr_cluster):
-                head_idx = y * len_target_cluster
-                tail_idx = (y + 1) * len_target_cluster
-                # print('head,tail={0},{1}'.format(head_idx,tail_idx))
-                if tail_idx <= len(target_pop):
-                    target_cluster_list.append(target_pop[head_idx:tail_idx])
-                else:
-                    target_cluster_list.append(target_pop[head_idx:])
-
-            for i, th_cluster in enumerate(th_cluster_list):
-                for j, target_cluster in enumerate(target_cluster_list):
-                    theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
-                    theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
-                    p = p_0 * (1.0 + spe_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
-                    conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
-                    # print('theta_th={0}, theta_target={1}, conn_nr={2}'
-                    #       .format(theta_th, theta_target, conn_nr))
-                    nest.Connect(th_cluster, target_cluster,
-                                 conn_spec={
-                                     'rule': 'fixed_total_number',
-                                     'N': conn_nr,
-                                 },
-                                 syn_spec=syn_dict_th
-                                 )
         else:
-            # connect by probability (Bernoulli)
-            if bernoulli_prob is not None:
-                nest.Connect(th_pop, target_pop,
-                conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
-                syn_spec=syn_dict_th)
-                # print('p={}'.format(bernoulli_prob))
-            # connect by synapse number
+            p_0 = bernoulli_prob
+
+        # length of population
+        len_th = len(th_pop)
+        len_target = len(target_pop)
+
+        # thalamus clustering
+        len_th_cluster = int(len_th / nr_cluster)
+        if len_target % nr_cluster != 0:
+            len_th_cluster += 1
+        th_cluster_list = []
+        for x in range(nr_cluster):
+            head_idx = x * len_th_cluster
+            tail_idx = (x + 1) * len_th_cluster
+            if tail_idx <= len(th_pop):
+                th_cluster_list.append(th_pop[head_idx:tail_idx])
             else:
-                nest.Connect(
-                    th_pop, target_pop,
-                    conn_spec={
-                        'rule': 'fixed_total_number',
-                        'N': nr_synapses,
-                    },
-                    syn_spec=syn_dict_th
-                )
-                # print('n={}'.format(nr_synapses))
+                th_cluster_list.append(th_pop[head_idx:])
+
+        # target clustering
+        len_target_cluster = int(len_target / nr_cluster)
+        if len_target % nr_cluster != 0:
+            len_target_cluster += 1
+        target_cluster_list = []
+        for y in range(nr_cluster):
+            head_idx = y * len_target_cluster
+            tail_idx = (y + 1) * len_target_cluster
+            # print('head,tail={0},{1}'.format(head_idx,tail_idx))
+            if tail_idx <= len(target_pop):
+                target_cluster_list.append(target_pop[head_idx:tail_idx])
+            else:
+                target_cluster_list.append(target_pop[head_idx:])
+
+        # connection
+        syn_sum = 0
+        for i, th_cluster in enumerate(th_cluster_list):
+            for j, target_cluster in enumerate(target_cluster_list):
+                theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
+                theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
+                p = p_0 * (1.0 + spe_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
+                if bernoulli_prob is None:
+                    conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
+                    conn_dict={'rule': 'fixed_total_number', 'N': conn_nr}
+                else:
+                    conn_dict = {'rule': 'pairwise_bernoulli', 'p': p}
+                    syn_sum += int(round(len(th_cluster) * len(target_cluster) * p))
+                # print('theta_th={}, theta_target={}, p_0={}, p={}'
+                #       .format(theta_th, theta_target, p_0, p))
+                nest.Connect(th_cluster, target_cluster,
+                             conn_spec=conn_dict,
+                             syn_spec=syn_dict_th
+                             )
+        print('unclustered vs. clustered syn. n: {} vs., {}'.format(p_0*len_th*len_target, syn_sum))
+    else:
+        # connect by probability (Bernoulli)
+        if bernoulli_prob is not None:
+            nest.Connect(th_pop, target_pop,
+            conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
+            syn_spec=syn_dict_th)
+        # connect by synapse number
+        else:
+            nest.Connect(
+                th_pop, target_pop,
+                conn_spec={
+                    'rule': 'fixed_total_number',
+                    'N': nr_synapses,
+                },
+                syn_spec=syn_dict_th
+            )
 
 
 def connect_by_cluster(source_name,

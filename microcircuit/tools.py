@@ -662,7 +662,7 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
 
             # calculate average latency
             ltc_sample_ratio = 1.0  # ratio of the sampled neurons
-            neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]==n_stim)]
+            neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]>=n_stim/2)]
             # mean latency of each neuron
             mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
             hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))

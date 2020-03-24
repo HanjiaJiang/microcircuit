@@ -37,7 +37,7 @@ def set_thalamic(th_starts=None, th_rate=None):
 def set_constant():
     net_dict['g'] = -7
     net_dict['bg_rate'] = 3.0
-    # special_dict['orient_tuning'] = True
+    special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
