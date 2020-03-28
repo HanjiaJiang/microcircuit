@@ -12,18 +12,19 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = False
+    print_to_file = True
 
     # set ai segments
-    n_seg_ai = 1
-    start_ai = 1000.0
-    seg_ai = 1000.0
+    n_seg_ai = 5
+    start_ai = 2000.0
+    seg_ai = 10000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 10
+    n_stim = 0
     th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
-    interval_stim = 1000.0
+    interval_stim = 2000.0
+    ana_win = 40.0
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
@@ -99,7 +100,7 @@ if __name__ == "__main__":
             t1 = time.time()
             tools.response(spikes, start_stim,
                            para_dict['stim_dict']['th_start'],
-                           window=20.0)
+                           window=ana_win)
             print('response analysis time = {}'.format(time.time() - t1))
         tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])

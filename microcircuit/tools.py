@@ -615,19 +615,19 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
         interval = stims[1] - stims[0]
     data_all = spikes.get_data(begin, begin+n_stim*interval)
     f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(8, 4), constrained_layout=True)
     ax = fig.add_subplot(111)
-    colors = ['skyblue', 'dodgerblue', 'blue', 'darkblue']
+    colors = ['hotpink', 'dodgerblue', 'black', 'black']
+    linestyles = ['solid', 'solid', 'solid', 'dashed']
     exc_cnt = 0
     # calculate response spread and amplitude
     for i, data in enumerate(data_all):
         if 'Exc' in populations[i]:
-            data = data[np.argsort(data[:, 1])] # sort by time
             # skip if no data
             if type(data) != np.ndarray or data.ndim != 2:
                 f.write('{}, {}\n'.format(np.nan, np.nan))
-                rts_by_group.append([])
                 continue
+            data = data[np.argsort(data[:, 1])] # sort by time
             stds = []         # response spread
             n_spikes = []  # response amplitude
             ts = data[:, 1]
@@ -666,7 +666,13 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
             # mean latency of each neuron
             mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
             hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
-            ax.plot(bins[:-1], hist, linestyle='solid', label=populations[i], color=colors[exc_cnt])
+            ax.plot(bins[:-1], hist/np.sum(hist),
+                linestyle=linestyles[exc_cnt],
+                linewidth=3,
+                label=populations[i],
+                color=colors[exc_cnt])
+            ax.set_xlabel('mean spike latency (ms)')
+            ax.set_ylabel('fraction')
             exc_cnt += 1
             sampled_avg_ltc = np.mean(mean_ltcs[:int(len(mean_ltcs)*ltc_sample_ratio)])
 

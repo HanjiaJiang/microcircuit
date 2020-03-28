@@ -8,6 +8,7 @@ from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 import microcircuit.functions as func
 from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak
+import copy
 np.set_printoptions(suppress=True, precision=4)
 
 
@@ -35,8 +36,8 @@ def set_thalamic(th_starts=None, th_rate=None):
 
 # set constant parameters
 def set_constant():
-    net_dict['g'] = -7
-    net_dict['bg_rate'] = 3.0
+    net_dict['g'] = -6
+    net_dict['bg_rate'] = 4.0
     special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
@@ -107,7 +108,8 @@ def read_levels(in_str):
     return out_str, out_list
 
 
-# get different connection probability map
+# list generation
+# connection probability map
 def get_conn_probs(list_n=10):
     cwd = os.getcwd()
     conn_probs_list = []
@@ -124,7 +126,7 @@ def get_conn_probs(list_n=10):
     return return_list
 
 
-# set psps
+# psp list
 def list_psp():
     w_dict_normal = {
         'psp_mtx':
@@ -149,7 +151,6 @@ def list_psp():
 def set_g_bg(all_dict, lvls):
     all_dict['net_dict']['g'] = -float(lvls[0])
     all_dict['net_dict']['bg_rate'] = float(lvls[1])
-    return all_dict
 
 def set_ins(all_dict, lvls):
     all_dict['net_dict']['K_ext'] = np.array([2000, 2000, lvls[0], lvls[1],
@@ -159,6 +160,16 @@ def set_ins(all_dict, lvls):
 
 
 # single-parameter
+def set_stp_config(all_dict, lvl):
+    stp_list = [copy.deepcopy(doiron_stp_weak)]
+    for key_a in doiron_stp_weak.keys():
+        for key_b in doiron_stp_weak[key_a].keys():
+            tmp_stp = copy.deepcopy(doiron_stp_weak)
+            tmp_stp[key_a][key_b] = {'model': 'static_synapse'}
+            stp_list.append(tmp_stp)
+    if lvl < len(stp_list):
+        all_dict['special_dict']['stp_dict'] = stp_list[lvl]
+
 def set_stp(all_dict, lvl):
     stp_list = [no_stp, doiron_stp_weak, allen_stp]
     all_dict['special_dict']['stp_dict'] = stp_list[lvl]
@@ -171,7 +182,7 @@ def set_ctsp(all_dict, lvl):
 
 
 # main loop
-def set_main(out_list, f1, f2, f_double):
+def set_main(out_list, f1, f2, f3=None, f4=None):
     origin_seed = sim_dict['master_seed']
     all_dict = {
         'net_dict': net_dict,
@@ -182,9 +193,8 @@ def set_main(out_list, f1, f2, f_double):
     for i, out in enumerate(out_list):
         all_dict['sim_dict']['master_seed'] = origin_seed + i
         lvls_list = read_levels(out)[1]
-        f1(all_dict, lvls_list[0])
-        f2(all_dict, lvls_list[1])
-        f_double(all_dict, lvls_list[2:])
+        f1(all_dict, lvls_list[0:2])
+        f2(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
         print_summary(all_dict)
 
@@ -216,4 +226,4 @@ if __name__ == "__main__":
     set_constant()
 
     # set the network with parameters
-    set_main(output_list, set_ctsp, set_stp, set_ins)
+    set_main(output_list, set_ins, set_g_bg)
