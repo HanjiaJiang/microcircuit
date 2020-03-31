@@ -11,6 +11,7 @@ import pickle
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import scipy.stats as stats
+from scipy import interpolate
 
 populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                'L4 Exc', 'L4 PV', 'L4 SOM',
@@ -609,7 +610,7 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=False):
+def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=False, exportplot=False):
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
@@ -666,7 +667,12 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
             # mean latency of each neuron
             mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
             hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
-            ax.plot(bins[:-1], hist/np.sum(hist),
+            xs = bins[:-1]
+            ys = hist/np.sum(hist)
+            f_cubic = interpolate.interp1d(xs, ys, kind='cubic')
+            xs = np.linspace(min(xs), max(xs), len(xs)*5)
+            ys = f_cubic(xs)
+            ax.plot(xs, ys,
                 linestyle=linestyles[exc_cnt],
                 linewidth=3,
                 label=populations[i],
@@ -682,7 +688,10 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
             f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes), sampled_avg_ltc))
     f.close()
     plt.legend()
-    plt.savefig(os.path.join(spikes.path, 'hist_ltc.png'))
+    if exportplot:
+        plt.savefig(spikes.path.split('/')[-1] + '_hist-ltc.png')
+    else:
+        plt.savefig(os.path.join(spikes.path, 'hist-ltc.png'))
 
 
 # to be improved ..

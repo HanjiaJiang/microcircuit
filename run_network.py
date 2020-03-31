@@ -15,13 +15,13 @@ if __name__ == "__main__":
     print_to_file = True
 
     # set ai segments
-    n_seg_ai = 5
+    n_seg_ai = 0
     start_ai = 2000.0
     seg_ai = 10000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 0
+    n_stim = 20
     th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     interval_stim = 2000.0
     ana_win = 40.0
@@ -100,7 +100,8 @@ if __name__ == "__main__":
             t1 = time.time()
             tools.response(spikes, start_stim,
                            para_dict['stim_dict']['th_start'],
-                           window=ana_win)
+                           window=ana_win,
+                           exportplot=True)
             print('response analysis time = {}'.format(time.time() - t1))
         tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])

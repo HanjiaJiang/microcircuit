@@ -180,10 +180,13 @@ def set_ctsp(all_dict, lvl):
     else:
         all_dict['special_dict']['ctsp'] = True
 
+def set_seed(all_dict, lvl):
+    all_dict['sim_dict']['master_seed'] = 55 + lvl
+
 
 # main loop
 def set_main(out_list, f1, f2, f3=None, f4=None):
-    origin_seed = sim_dict['master_seed']
+    # origin_seed = sim_dict['master_seed']
     all_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
@@ -191,10 +194,12 @@ def set_main(out_list, f1, f2, f3=None, f4=None):
         'special_dict': special_dict
     }
     for i, out in enumerate(out_list):
-        all_dict['sim_dict']['master_seed'] = origin_seed + i
+        # all_dict['sim_dict']['master_seed'] = origin_seed + i
         lvls_list = read_levels(out)[1]
-        f1(all_dict, lvls_list[0:2])
-        f2(all_dict, lvls_list[2:])
+        f1(all_dict, lvls_list[0])
+        f2(all_dict, lvls_list[1])
+        if f3 is not None:
+            f3(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
         print_summary(all_dict)
 
@@ -226,4 +231,4 @@ if __name__ == "__main__":
     set_constant()
 
     # set the network with parameters
-    set_main(output_list, set_ins, set_g_bg)
+    set_main(output_list, set_stp_config, set_seed, set_g_bg)
