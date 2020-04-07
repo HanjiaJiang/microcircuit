@@ -105,14 +105,30 @@ def set_thalamus_input(th_pop,
                        spe_dict):
     # tuning
     if spe_dict['orient_tuning'] is True:
+        # limits are +- pi/2
+        base_theta = min(stim_theta, np.pi/2)
+        base_theta = max(base_theta, -np.pi/2)
+        # set conjugating theta to switch in between
+        if stim_theta > 0:
+            conj_theta = base_theta - np.pi/2
+        else:
+            conj_theta = base_theta + np.pi/2
+        do_conj = False
         # each poisson population is for 1 stimulus (in e.g. 20 repetitions)
         for i, pop in enumerate(poisson_pops):
+            # switching
+            if do_conj:
+                current_theta = conj_theta
+                do_conj = False
+            else:
+                current_theta = base_theta
+                do_conj = True
             # within each population,
             # rates are distributed according to stimulus angle
             for j, node in enumerate(pop):
                 theta = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(len(pop)))
                 rate = rate_0 * (1.0 + spe_dict['k_th']
-                                 * np.cos(2.0 * (theta - stim_theta)))
+                                 * np.cos(2.0 * (theta - current_theta)))
                 nest.SetStatus([node], {
                     'rate': rate,
                     'start': start_times[i],
@@ -196,7 +212,7 @@ def connect_thalamus_orientation(th_pop,
                              conn_spec=conn_dict,
                              syn_spec=syn_dict_th
                              )
-        print('unclustered vs. clustered syn. n: {} vs., {}'.format(p_0*len_th*len_target, syn_sum))
+        print('unclustered vs. clustered syn. n: {} vs., {}'.format(int(p_0*len_th*len_target), syn_sum))
     else:
         # connect by probability (Bernoulli)
         if bernoulli_prob is not None:

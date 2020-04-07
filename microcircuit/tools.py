@@ -18,7 +18,14 @@ populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                'L5 Exc', 'L5 PV', 'L5 SOM',
                'L6 Exc', 'L6 PV', 'L6 SOM']
 
-subtype_label = ['Exc', 'PV', 'SOM', 'VIP']
+subtype_label = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+
+plotlayers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+plotcolors = ['b', 'r', 'orange', 'g', 'b', 'r', 'orange',
+             'b', 'r', 'orange', 'b', 'r', 'orange']
+
+layerlabels = ['L2/3', 'L4', 'L5', 'L6']
 
 class Spikes:
     def __init__(self, path, name):
@@ -89,6 +96,14 @@ class Spikes:
             else:
                 data_ret.append([])
         return data_ret
+
+    def get_ts_by_id(data, id):
+        return_data = []
+        if isinstance(data, np.ndarray) and data.ndim == 2:
+            ids = data[:, 0]
+            ts = data[:, 1]
+            return_data = ts[ids == id]
+        return return_data
 
 
 '''
@@ -608,9 +623,62 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
 
     ai.close()
 
+def get_ts_by_id(data, id):
+    return_data = []
+    if isinstance(data, np.ndarray) and data.ndim == 2:
+        ids = data[:, 0]
+        ts = data[:, 1]
+        return_data = ts[ids == id]
+    return return_data
+
+
+def selectivity(spikes, stims, bin_w=10.0, n_bin=10):
+    n_stim = len(stims)
+    if len(stims) > 1:
+        interval = stims[1] - stims[0]
+    data_all = spikes.get_data(stims[0], stims[-1] + interval/2)
+    SI_by_popbin = []
+    fig, axs = plt.subplots(4, 1, figsize=(6, 12), sharex=True, sharey=True, constrained_layout=True)
+    plt.ylim(0.0, 1.2)
+    plt.xlabel('time (ms)')
+    plt.ylabel('selectivity')
+    axs = axs.ravel()
+    safe_flg = True
+    for i in range(len(data_all)):
+        data_pop = data_all[i]
+        if type(data_pop) == np.ndarray and data_pop.ndim == 2:
+            pop_len = spikes.gids[i][1] - spikes.gids[i][0] + 1
+            SI_by_neuronbin = np.full((pop_len, n_bin), np.nan)
+            for j, gid in enumerate(range(spikes.gids[i][0], spikes.gids[i][1]+1)):
+                # get ts by id
+                ts = get_ts_by_id(data=data_pop, id=gid)
+                for b in range(n_bin):
+                    # split by stims
+                    cnts_by_stim = np.array([len(np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]) for stim in stims])
+                    pooled_std = np.sqrt((np.var(cnts_by_stim[0::2], ddof=1) + np.var(cnts_by_stim[1::2], ddof=1))/2)
+                    # if j < 3 and b < 3:
+                    #     print('pop = {}, id = {}, ts = \n{}'.format(i, gid, [ts[np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]] for stim in stims]))
+                    #     print('cnts_by_stim =\n{}'.format(cnts_by_stim))
+                    if pooled_std != 0: # set some more criteria, e.g. spike number must > 0 ...?
+                        SI_by_neuronbin[j, b] = (np.abs(np.mean(cnts_by_stim[0::2]) - np.mean(cnts_by_stim[1::2])))/pooled_std
+                    # else:
+                    #     SI_by_neuronbin[j, b] = 0
+            # print('pop {} SI by neuron:\n{}\n'.format(i, SI_by_neuronbin))
+            SI_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
+            # plot the last population
+            idx_lyr = plotlayers[i]
+            if i < 4:
+                axs[idx_lyr].plot(np.arange(0.0, bin_w*n_bin, bin_w), SI_by_popbin[-1], color=plotcolors[i], linewidth=4, label=subtype_label[i])
+                axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
+            else:
+                axs[idx_lyr].plot(np.arange(0.0, bin_w*n_bin, bin_w), SI_by_popbin[-1], color=plotcolors[i], linewidth=4)
+            axs[idx_lyr].text(-30.0, 0.5, layerlabels[idx_lyr])
+    plt.savefig(os.path.join(spikes.path, 'selectivity.png'))
+    plt.close()
+
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=False, exportplot=False):
+def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=False):
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
@@ -620,78 +688,87 @@ def response(spikes, begin, stims, window, interval=1000.0, bw=0.1, pop_ltc=Fals
     ax = fig.add_subplot(111)
     colors = ['hotpink', 'dodgerblue', 'black', 'black']
     linestyles = ['solid', 'solid', 'solid', 'dashed']
-    exc_cnt = 0
+    xy_by_layer = []
+    empty_flg = False
     # calculate response spread and amplitude
-    for i, data in enumerate(data_all):
-        if 'Exc' in populations[i]:
-            # skip if no data
-            if type(data) != np.ndarray or data.ndim != 2:
-                f.write('{}, {}\n'.format(np.nan, np.nan))
-                continue
-            data = data[np.argsort(data[:, 1])] # sort by time
-            stds = []         # response spread
-            n_spikes = []  # response amplitude
-            ts = data[:, 1]
-            ids = data[:, 0]
-            ltcs_by_stim = []
+    exc_idx = [0, 4, 7, 10]
+    for a, i in enumerate(exc_idx):
+        data = data_all[i]
+        # skip if no data
+        if type(data) != np.ndarray or data.ndim != 2:
+            f.write('{}, {}\n'.format(np.nan, np.nan))
+            empty_flg = True
+            continue
+        data = data[np.argsort(data[:, 1])] # sort by time
+        stds = []         # response spread
+        n_spikes = []  # response amplitude
+        ts = data[:, 1]
+        ids = data[:, 0]
+        ltcs_by_stim = []
 
-            # cache for latency by neuron: [(id, sum, n), ...]
-            id_set = np.arange(spikes.gids[i][0], spikes.gids[i][1]+1)
-            neuron_ltc_cache = np.array([id_set, np.zeros(id_set.shape), np.zeros(id_set.shape)]).T
+        # cache for latency by neuron: [(id, sum, n), ...]
+        id_set = np.arange(spikes.gids[i][0], spikes.gids[i][1]+1)
+        neuron_ltc_cache = np.array([id_set, np.zeros(id_set.shape), np.zeros(id_set.shape)]).T
 
-            # loop stimulation
-            for j in range(n_stim):
-                # define start and end of window
-                win_begin = stims[j]
-                win_end = stims[j] + window
-                # spread and amplitude
-                ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
-                n_spikes.append(len(ts_stim))
-                if len(ts_stim) >= 3:
-                    std = np.std(ts_stim)
-                    stds.append(std)
+        # loop stimulation
+        for j in range(n_stim):
+            # define start and end of window
+            win_begin = stims[j]
+            win_end = stims[j] + window
+            # spread and amplitude
+            ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
+            n_spikes.append(len(ts_stim))
+            if len(ts_stim) >= 3:
+                std = np.std(ts_stim)
+                stds.append(std)
 
-                # latency by neurons
-                ids_stim = ids[(ts > win_begin) & (ts <= win_end)]
-                neuron_ltcs = []
-                for k, id in enumerate(id_set):
-                    if id not in ids_stim:
-                        continue
-                    idx = ids_stim.tolist().index(id)
-                    neuron_ltc_cache[k, 1] += ts_stim[idx] - win_begin   # latency
-                    neuron_ltc_cache[k, 2] += 1  # sample n
+            # latency by neurons
+            ids_stim = ids[(ts > win_begin) & (ts <= win_end)]
+            neuron_ltcs = []
+            for k, id in enumerate(id_set):
+                if id not in ids_stim:
+                    continue
+                idx = ids_stim.tolist().index(id)
+                neuron_ltc_cache[k, 1] += ts_stim[idx] - win_begin   # latency
+                neuron_ltc_cache[k, 2] += 1  # sample n
 
-            # calculate average latency
-            ltc_sample_ratio = 1.0  # ratio of the sampled neurons
-            neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]>=n_stim/2)]
-            # mean latency of each neuron
-            mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
-            hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
-            xs = bins[:-1]
-            ys = hist/np.sum(hist)
-            f_cubic = interpolate.interp1d(xs, ys, kind='cubic')
-            xs = np.linspace(min(xs), max(xs), len(xs)*5)
-            ys = f_cubic(xs)
-            ax.plot(xs, ys,
-                linestyle=linestyles[exc_cnt],
-                linewidth=3,
-                label=populations[i],
-                color=colors[exc_cnt])
-            ax.set_xlabel('mean spike latency (ms)')
-            ax.set_ylabel('fraction')
-            exc_cnt += 1
-            sampled_avg_ltc = np.mean(mean_ltcs[:int(len(mean_ltcs)*ltc_sample_ratio)])
+        # calculate average latency
+        ltc_sample_ratio = 1.0  # ratio of the sampled neurons
+        neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]>=n_stim/2)]
+        # mean latency of each neuron
+        mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
+        hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
+        xs = bins[:-1]
+        ys = hist/np.sum(hist)
+        xy_by_layer.append([xs, ys])
+        f_cubic = interpolate.interp1d(xs, ys, kind='cubic')
+        xs = np.linspace(min(xs), max(xs), len(xs)*5)
+        ys = f_cubic(xs)
+        ax.plot(xs, ys,
+            linestyle=linestyles[a],
+            linewidth=3,
+            label=populations[i],
+            color=colors[a])
+        ax.set_xlabel('mean spike latency (ms)')
+        ax.set_ylabel('fraction')
+        avg_ltc = np.mean(mean_ltcs[:int(len(mean_ltcs)*ltc_sample_ratio)])
 
-            # for raster plot vline marking
-            spikes.react_lines.append(sampled_avg_ltc + win_begin)
+        # for raster plot vline marking
+        spikes.react_lines.append(avg_ltc + win_begin)
 
-            f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes), sampled_avg_ltc))
+        # save synfire spread, amplitude, average latency (across neurons)
+        f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes), avg_ltc))
     f.close()
     plt.legend()
+    # export latency plot
     if exportplot:
         plt.savefig(spikes.path.split('/')[-1] + '_hist-ltc.png')
     else:
         plt.savefig(os.path.join(spikes.path, 'hist-ltc.png'))
+    # save latency data
+    if empty_flg:
+        xy_by_layer = []
+    np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
 
 
 # to be improved ..

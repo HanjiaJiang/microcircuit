@@ -37,5 +37,5 @@ stim_dict = {
     # Amplitude of the DC generator (in pA).
     'dc_amp': np.ones(len(net_dict['populations'])) * 0.3,
     # stimulus orientation 190614
-    'orientation': np.pi/2,  # from -pi/2 to pi/2
+    'orientation': 0.0,  # from -pi/2 to pi/2
     }

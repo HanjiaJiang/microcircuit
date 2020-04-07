@@ -1,5 +1,5 @@
-F1_COUNT = 1
-F2_COUNT = 4
+F1_COUNT = 2
+F2_COUNT = 2
 
 G_START = 6
 G_END = 6
@@ -21,14 +21,16 @@ localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}_{d}/raster_plot.png',
+        expand('scans/{a}_{b}_{c}_{d}/lts_distr.npy',
             a=range(F1_COUNT),
             b=range(F2_COUNT),
             c=range(G_START, G_END + G_STEP, G_STEP),
             d=range(BG_START, BG_END + BG_STEP, BG_STEP))
+    output:
+        expand('{a}_ltc-distr.png', a=range(F1_COUNT))
     shell:
         '''
-        cp * scans/
+        python ltc_distr.py {input}
         '''
 
 rule create:
@@ -51,8 +53,8 @@ rule create:
 
 rule simulate:
     input: 'scans/{a}_{b}_{c}_{d}.pickle'
-    output: 'scans/{a}_{b}_{c}_{d}/raster_plot.png'
+    output: 'scans/{a}_{b}_{c}_{d}/lts_distr.npy'
     shell:
         '''
-        python run_network.py {input} {output}
+        python -W ignore run_network.py {input} {output}
         '''

@@ -13,32 +13,23 @@ np.set_printoptions(suppress=True, precision=4)
 
 
 # set layer-specific thalamic input
-def set_thalamic(th_starts=None, th_rate=None):
+def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):
     th_dict = {}
     if type(th_starts) is list and len(th_starts) > 0 and type(th_rate) is float:
-        print('thalamus input = True')
-        th_dict['thalamic_input'] = True
-        th_dict['th_rate'] = th_rate
-        th_dict['th_start'] = np.array(th_starts).astype(float)
-        th_dict['th_duration'] = 10.0
-        th_dict['n_thal'] = 200 # Constantinople, Bruno, 2013; Oberlaender et al., 2011
+        para_dict['stim_dict']['thalamic_input'] = True
+        para_dict['stim_dict']['th_rate'] = th_rate
+        para_dict['stim_dict']['th_start'] = np.array(th_starts).astype(float)
+        para_dict['stim_dict']['th_duration'] = duration
+        para_dict['stim_dict']['n_thal'] = 200 # Constantinople, Bruno, 2013; Oberlaender et al., 2011
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
-        th_dict['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
-        # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.4, 0.632, 0.0, 0.259, 0.433, 0.0, 0.09, 0.320, 0.0])
-        # th_dict['PSP_th'] = np.array([1.128, 1.128, 0.0, 0.0, 0.490, 0.490, 0.0, 0.571, 0.571, 0.0, 0.571, 0.571, 0.0])
-        # th_dict['conn_probs_th'] = np.array([0.058, 0.098, 0.0, 0.0, 0.371, 0.632, 0.0, 0.254, 0.433, 0.0, 0.188, 0.320, 0.0])
-        # th_dict['PSP_th'] = np.array([1.128, 0.746, 0.0, 0.0, 0.490, 0.490, 0.0, 0.111, 0.040, 0.0, 0.377, 0.143, 0.0])
-        with open('th_dict.pickle', 'wb') as handle:
-            pickle.dump(th_dict, handle)
-    elif os.path.isfile('th_dict.pickle'):
-        os.remove('th_dict.pickle')
-
+        para_dict['stim_dict']['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
+        para_dict['special_dict']['orient_tuning'] = orient
+    print_summary(para_dict)
 
 # set constant parameters
 def set_constant():
     net_dict['g'] = -6
     net_dict['bg_rate'] = 4.0
-    special_dict['orient_tuning'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
@@ -61,17 +52,6 @@ def set_constant():
            [0.    , 0.0017, 0.0029, 0.007 , 0.0297, 0.0133, 0.0086, 0.0381, 0.0162, 0.0138, 0.021 , 0.3249, 0.3014],
            [0.0026, 0.0001, 0.0002, 0.0019, 0.0047, 0.002 , 0.0004, 0.015 , 0.    , 0.0028, 0.1865, 0.3535, 0.2968],
            [0.0021, 0.    , 0.0002, 0.2618, 0.0043, 0.0018, 0.0003, 0.0141, 0.    , 0.0019, 0.1955, 0.3321, 0.0307]])
-
-    # thalamic input
-    if os.path.isfile('th_dict.pickle'):
-        with open('th_dict.pickle', 'rb') as handle:
-            th_dict = pickle.load(handle)
-        for key in th_dict.keys():
-            try:
-                stim_dict[key] = th_dict[key]
-            except:
-                print('stim_dict[{}] use default'.format(key))
-                pass
 
 
 # print summary of parameters
@@ -201,7 +181,7 @@ def set_main(out_list, f1, f2, f3=None, f4=None):
         if f3 is not None:
             f3(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
-        print_summary(all_dict)
+        # print_summary(all_dict)
 
 
 # set parameters for single-run
@@ -220,7 +200,7 @@ def params_single(path):
     with open(path, 'wb') as h:
         pickle.dump(all_dict, h)
 
-    print_summary(all_dict)
+    # print_summary(all_dict)
 
 
 if __name__ == "__main__":
