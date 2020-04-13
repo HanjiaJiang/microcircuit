@@ -20,10 +20,16 @@ populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
 
 subtype_label = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
 
+subtype_pos = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+
 plotlayers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
 
-plotcolors = ['b', 'r', 'orange', 'g', 'b', 'r', 'orange',
-             'b', 'r', 'orange', 'b', 'r', 'orange']
+plotcolors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
+                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
+# plotcolors = ['b', 'r', 'orange', 'g', 'b', 'r', 'orange',
+#              'b', 'r', 'orange', 'b', 'r', 'orange']
 
 layerlabels = ['L2/3', 'L4', 'L5', 'L6']
 
@@ -190,8 +196,8 @@ System
 '''
 # let print() function print to file (use: exec(set2txt))
 def set2txt(path):
-    str_out = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}\', \'w\')\nsys.stdout = f\n'.format(os.path.join(path, 'out_log.txt'))
-    str_error = 'orig_stderr = sys.stderr\ng = open(\'{}\', \'w\')\nsys.stderr = g\n'.format(os.path.join(path, 'out_err.txt'))
+    str_out = 'import sys\norig_stdout = sys.stdout\nf = open(\'{}\', \'w\')\nsys.stdout = f\n'.format(os.path.join(path, 'out.txt'))
+    str_error = 'orig_stderr = sys.stderr\ng = open(\'{}\', \'w\')\nsys.stderr = g\n'.format(os.path.join(path, 'err.txt'))
     return str_out + str_error
 
 
@@ -206,7 +212,7 @@ Files and folders, etc.
 '''
 def openfile():
     Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
-    filename = askopenfilename(initialdir = "~/Documents/") # show an "Open" dialog box and return the path to the selected file
+    filename = askopenfilename(initialdir = os.getcwd()) # show an "Open" dialog box and return the path to the selected file
     return filename
 
 # print pickle content
@@ -632,14 +638,16 @@ def get_ts_by_id(data, id):
     return return_data
 
 
-def selectivity(spikes, stims, bin_w=10.0, n_bin=10):
+def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
     data_all = spikes.get_data(stims[0], stims[-1] + interval/2)
-    SI_by_popbin = []
-    fig, axs = plt.subplots(4, 1, figsize=(6, 12), sharex=True, sharey=True, constrained_layout=True)
-    plt.ylim(0.0, 1.2)
+    SIs_by_popbin = []
+    xs = np.arange(0.0, bin_w*n_bin, bin_w)
+    fig, axs = plt.subplots(4, 1, figsize=(8, 16), sharex=True, sharey=True, constrained_layout=True)
+    ylims = np.array([-3.0, 3.0])
+    plt.ylim(ylims[0], ylims[1])
     plt.xlabel('time (ms)')
     plt.ylabel('selectivity')
     axs = axs.ravel()
@@ -647,33 +655,72 @@ def selectivity(spikes, stims, bin_w=10.0, n_bin=10):
     for i in range(len(data_all)):
         data_pop = data_all[i]
         if type(data_pop) == np.ndarray and data_pop.ndim == 2:
+            # calculate SI by neuron
             pop_len = spikes.gids[i][1] - spikes.gids[i][0] + 1
+            SI_by_neuronbin = np.full((pop_len, n_bin), np.nan)
             SI_by_neuronbin = np.full((pop_len, n_bin), np.nan)
             for j, gid in enumerate(range(spikes.gids[i][0], spikes.gids[i][1]+1)):
                 # get ts by id
                 ts = get_ts_by_id(data=data_pop, id=gid)
                 for b in range(n_bin):
-                    # split by stims
+                    # get spike counts and stds by stims
                     cnts_by_stim = np.array([len(np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]) for stim in stims])
                     pooled_std = np.sqrt((np.var(cnts_by_stim[0::2], ddof=1) + np.var(cnts_by_stim[1::2], ddof=1))/2)
-                    # if j < 3 and b < 3:
-                    #     print('pop = {}, id = {}, ts = \n{}'.format(i, gid, [ts[np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]] for stim in stims]))
-                    #     print('cnts_by_stim =\n{}'.format(cnts_by_stim))
                     if pooled_std != 0: # set some more criteria, e.g. spike number must > 0 ...?
-                        SI_by_neuronbin[j, b] = (np.abs(np.mean(cnts_by_stim[0::2]) - np.mean(cnts_by_stim[1::2])))/pooled_std
-                    # else:
-                    #     SI_by_neuronbin[j, b] = 0
-            # print('pop {} SI by neuron:\n{}\n'.format(i, SI_by_neuronbin))
-            SI_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
-            # plot the last population
+                        if raw is True:
+                            SI_by_neuronbin[j, b] = (np.mean(cnts_by_stim[0::2]) - np.mean(cnts_by_stim[1::2]))/pooled_std
+                        else:
+                            SI_by_neuronbin[j, b] = 2*(np.abs(np.mean(cnts_by_stim[0::2]) - np.mean(cnts_by_stim[1::2])))/pooled_std    # multiplied by 2 to compare!
+
+            # Calculate population selectivity and plot
+            len_q = int(len(SI_by_neuronbin)/4)
             idx_lyr = plotlayers[i]
-            if i < 4:
-                axs[idx_lyr].plot(np.arange(0.0, bin_w*n_bin, bin_w), SI_by_popbin[-1], color=plotcolors[i], linewidth=4, label=subtype_label[i])
-                axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
+            SIs_s1 = SI_by_neuronbin[len_q:3*len_q]
+            SIs_s2 = np.concatenate((SI_by_neuronbin[:len_q], SI_by_neuronbin[3*len_q:]), axis=0)
+            if raw is True:
+                SIs_by_popbin.append(np.nanmean(SIs_s1, axis=0) - np.nanmean(SIs_s2, axis=0))
             else:
-                axs[idx_lyr].plot(np.arange(0.0, bin_w*n_bin, bin_w), SI_by_popbin[-1], color=plotcolors[i], linewidth=4)
-            axs[idx_lyr].text(-30.0, 0.5, layerlabels[idx_lyr])
-    plt.savefig(os.path.join(spikes.path, 'selectivity.png'))
+                SIs_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
+            # main lines
+            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=plotcolors[i], linewidth=2, label=subtype_label[i])
+            # boxplot
+            if raw is True:
+                for k, SIs in enumerate(SIs_s1.T):
+                    axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
+                    positions=[xs[k] + 2*subtype_pos[i]*bin_w/10.0],
+                    boxprops=dict(color=plotcolors[i], linewidth=2),
+                    whiskerprops=dict(color=plotcolors[i], linewidth=2),
+                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=2),
+                    medianprops=dict(color=plotcolors[i], linewidth=2),
+                    capprops=dict(color=plotcolors[i], linewidth=2))
+                for k, SIs in enumerate(SIs_s2.T):
+                    axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
+                    positions=[xs[k] + (2*subtype_pos[i] + 1)*bin_w/10.0],
+                    boxprops=dict(color=plotcolors[i], linewidth=1),
+                    whiskerprops=dict(color=plotcolors[i], linewidth=1),
+                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=1),
+                    medianprops=dict(color=plotcolors[i], linewidth=1),
+                    capprops=dict(color=plotcolors[i], linewidth=1))
+            else:
+                for k, SIs in enumerate(SI_by_neuronbin.T):
+                    axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
+                    positions=[xs[k] + 2*subtype_pos[i]*bin_w/10.0],
+                    boxprops=dict(color=plotcolors[i], linewidth=1.5),
+                    whiskerprops=dict(color=plotcolors[i], linewidth=1.5),
+                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=1.5),
+                    medianprops=dict(color=plotcolors[i], linewidth=1.5),
+                    capprops=dict(color=plotcolors[i], linewidth=1.5))
+            axs[idx_lyr].spines['right'].set_visible(False)
+            axs[idx_lyr].spines['top'].set_visible(False)
+            if i == 0:
+                axs[idx_lyr].plot([0.0, duration], [ylims[1], ylims[1]], color='k', linewidth=10)
+            if i < 4:
+                axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
+            axs[idx_lyr].text(-25.0, np.mean(ylims), layerlabels[idx_lyr])
+    for ax in axs:
+        ax.plot([0.0, bin_w*n_bin], [0.0, 0.0], color='k', linestyle='--')
+    plt.xticks(xs[::2], labels=xs[::2].astype(str))
+    plt.savefig(os.path.join(spikes.path, 'selectivity-raw={}.png'.format(raw)))
     plt.close()
 
 

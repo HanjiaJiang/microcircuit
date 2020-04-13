@@ -30,6 +30,7 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
 def set_constant():
     net_dict['g'] = -6
     net_dict['bg_rate'] = 4.0
+    net_dict['psc_by_default_ctsp'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
@@ -166,7 +167,6 @@ def set_seed(all_dict, lvl):
 
 # main loop
 def set_main(out_list, f1, f2, f3=None, f4=None):
-    # origin_seed = sim_dict['master_seed']
     all_dict = {
         'net_dict': net_dict,
         'sim_dict': sim_dict,
@@ -174,14 +174,12 @@ def set_main(out_list, f1, f2, f3=None, f4=None):
         'special_dict': special_dict
     }
     for i, out in enumerate(out_list):
-        # all_dict['sim_dict']['master_seed'] = origin_seed + i
         lvls_list = read_levels(out)[1]
-        f1(all_dict, lvls_list[0])
-        f2(all_dict, lvls_list[1])
+        f1(all_dict, lvls_list[:2])
+        f2(all_dict, lvls_list[2:])
         if f3 is not None:
             f3(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
-        # print_summary(all_dict)
 
 
 # set parameters for single-run
@@ -211,4 +209,4 @@ if __name__ == "__main__":
     set_constant()
 
     # set the network with parameters
-    set_main(output_list, set_stp_config, set_seed, set_g_bg)
+    set_main(output_list, set_ins, set_g_bg)

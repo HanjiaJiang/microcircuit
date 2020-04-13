@@ -9,10 +9,15 @@ from microcircuit.create_params import params_single, set_thalamic
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     on_server = False
     run_analysis = True
     print_to_file = False
+
+    # analysis settings
+    do_ai = False
+    do_response = False
+    do_selectivity = True
 
     # set ai segments
     n_seg_ai = 1
@@ -25,15 +30,16 @@ if __name__ == "__main__":
     th_rate = 200.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     interval_stim = 500.0
     ana_win = 40.0
-    orient = False
+    orient = True
     duration = 30.0
+    sel_raw = False  # use raw selectivity index
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
     print('stims = {}'.format(stims))
 
     # set others
-    plot_half_len = 500.0
+    plot_half_len = 100.0
     if n_stim == 0:
         plot_center = start_ai
     else:
@@ -94,18 +100,20 @@ if __name__ == "__main__":
         spikes = tools.Spikes(para_dict['sim_dict']['data_path'], 'spike_detector')
         mean_fr, std_fr = \
             tools.fire_rate(spikes, start_ai, start_ai + len_ai)
-        if n_seg_ai > 0:
+        if do_ai and n_seg_ai > 0:
             t0 = time.time()
             tools.ai_score(spikes, start_ai, start_ai + len_ai, seg_len=seg_ai)
             print('ai analysis time = {}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
-            tools.response(spikes, start_stim,
-                           para_dict['stim_dict']['th_start'],
-                           window=ana_win,
-                           exportplot=True)
+            if do_response:
+                tools.response(spikes, start_stim,
+                               para_dict['stim_dict']['th_start'],
+                               window=ana_win,
+                               exportplot=True)
             t2 = time.time()
-            tools.selectivity(spikes, para_dict['stim_dict']['th_start'])
+            if do_selectivity:
+                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=sel_raw)
             t3 = time.time()
             print('response analysis time = {}'.format(t2 - t1))
             print('selectivity analysis time = {}'.format(t3 - t2))

@@ -194,7 +194,7 @@ net_dict = {
         'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
-    'animal': 'rat',
+    'animal': 'mouse',
     'renew_conn': False,
     'w_dict': {
         'psp_mtx':
@@ -209,7 +209,8 @@ net_dict = {
                       [1.0520, 0.9618, 1.2379, 1.0000],
                       [1.0520, 1.3124, 0.8739, 1.3884]])
             # np.full((4, 4), 1.0) # previous
-        }
+        },
+    'psc_by_default_ctsp': True, 
     }
 
 

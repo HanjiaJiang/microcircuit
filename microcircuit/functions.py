@@ -379,10 +379,16 @@ def get_weights(net_dict, dim=13, lyr_gps=None):
             psp = net_dict['w_dict']['psp_mtx'][a, b]
             for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
                 if celltype in net_dict['populations'][i]:
-                    psc = calc_psc(psp,
-                    net_dict['neuron_params']['C_m']['default'],
-                    net_dict['neuron_params']['tau_m']['default'],
-                    net_dict['neuron_params']['tau_syn_ex'])
+                    if net_dict['psc_by_default_ctsp']:
+                        psc = calc_psc(psp,
+                        net_dict['neuron_params']['C_m']['default'],
+                        net_dict['neuron_params']['tau_m']['default'],
+                        net_dict['neuron_params']['tau_syn_ex'])
+                    else:
+                        psc = calc_psc(psp,
+                        net_dict['neuron_params']['C_m'][celltype],
+                        net_dict['neuron_params']['tau_m'][celltype],
+                        net_dict['neuron_params']['tau_syn_ex'])
                     if j in [0, 4, 7, 10]:
                         pscs[i, j] = psc
                     else:

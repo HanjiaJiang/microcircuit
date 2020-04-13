@@ -1,12 +1,12 @@
 F1_COUNT = 2
 F2_COUNT = 2
 
-G_START = 6
-G_END = 6
+G_START = 4
+G_END = 10
 G_STEP = 1
 
-BG_START = 4
-BG_END = 4
+BG_START = 2
+BG_END = 8
 BG_STEP = 1
 
 SOM_START = 1300
@@ -21,23 +21,21 @@ localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}_{d}/lts_distr.npy',
-            a=range(F1_COUNT),
-            b=range(F2_COUNT),
+        expand('scans/{a}_{b}_{c}_{d}/ai.dat',
+            a=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
+            b=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP),
             c=range(G_START, G_END + G_STEP, G_STEP),
             d=range(BG_START, BG_END + BG_STEP, BG_STEP))
-    output:
-        expand('{a}_ltc-distr.png', a=range(F1_COUNT))
     shell:
         '''
-        python ltc_distr.py {input}
+        cp * scans/
         '''
 
 rule create:
     output:
         expand('scans/{a}_{b}_{c}_{d}.pickle',
-            a=range(F1_COUNT),
-            b=range(F2_COUNT),
+            a=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
+            b=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP),
             c=range(G_START, G_END + G_STEP, G_STEP),
             d=range(BG_START, BG_END + BG_STEP, BG_STEP))
     shell:
@@ -53,7 +51,7 @@ rule create:
 
 rule simulate:
     input: 'scans/{a}_{b}_{c}_{d}.pickle'
-    output: 'scans/{a}_{b}_{c}_{d}/lts_distr.npy'
+    output: 'scans/{a}_{b}_{c}_{d}/ai.dat'
     shell:
         '''
         python -W ignore run_network.py {input} {output}
