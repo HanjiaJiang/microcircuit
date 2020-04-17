@@ -28,9 +28,12 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
 
 # set constant parameters
 def set_constant():
+    # testing area
+    net_dict['neuron_params']['tau_syn_ex'] = 2.37
+    net_dict['neuron_params']['tau_syn_in'] = 8.3
+
     net_dict['g'] = -6
     net_dict['bg_rate'] = 4.0
-    net_dict['psc_by_default_ctsp'] = False
     special_dict['stp_dict'] = doiron_stp_weak
     net_dict['K_ext'] = np.array([2000, 2000, 1500, 600,
                                   2000, 2000, 1500,
@@ -210,3 +213,4 @@ if __name__ == "__main__":
 
     # set the network with parameters
     set_main(output_list, set_ins, set_g_bg)
+    # set_main(output_list, set_stp_config, set_seed, set_g_bg)

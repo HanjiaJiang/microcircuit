@@ -226,7 +226,7 @@ class Network:
                 )
             try:
                 self.poisson_th = [nest.Create('poisson_generator', len(self.thalamic_population)) for x in range(len(self.stim_dict['th_start']))]
-                set_thalamus_input(self.thalamic_population, self.poisson_th,
+                set_thalamus_poisson(self.thalamic_population, self.poisson_th,
                                    self.stim_dict['th_start'], self.stop_th,
                                    self.stim_dict['th_rate'],
                                    self.stim_dict['orientation'],
@@ -348,7 +348,7 @@ class Network:
                     else:
                         pass
                     try:
-                        nr = connect_by_cluster(source_name, target_name, synapse_nr, syn_dict,
+                        nr = connect_by_orientation(source_name, target_name, synapse_nr, syn_dict,
                                            source_pop, target_pop, self.spe_dict, conn_prob=self.net_dict['conn_probs'][i, j])
                     except NameError:
                         print('\'connect_by_cluster()\' does not exist')
@@ -394,7 +394,7 @@ class Network:
             if isinstance(psp, np.ndarray):
                 mu = calc_psc(psp[i], C_m, tau_m, tau_syn)
             else:
-                mu = calc_psc(psp, C_m, tau_m, tau_syn)            
+                mu = calc_psc(psp, C_m, tau_m, tau_syn)
             conn_dict_th = {
                 'rule': 'fixed_total_number',
                 'N': int(self.nr_synapses_th[i])

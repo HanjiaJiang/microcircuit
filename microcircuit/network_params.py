@@ -210,7 +210,9 @@ net_dict = {
                       [1.0520, 1.3124, 0.8739, 1.3884]])
             # np.full((4, 4), 1.0) # previous
         },
-    'psc_by_default_ctsp': True, 
+    # ctsp-dependent psc presumably not favorable
+    # since background input is also related
+    'ctsp_dependent_psc': False,
     }
 
 

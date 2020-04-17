@@ -9,14 +9,14 @@ from microcircuit.create_params import params_single, set_thalamic
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = False
+    run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = False
+    print_to_file = True
 
     # analysis settings
-    do_ai = False
-    do_response = False
+    do_ai = True
+    do_response = True
     do_selectivity = True
 
     # set ai segments
@@ -26,13 +26,13 @@ if __name__ == "__main__":
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 20
-    th_rate = 200.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
+    n_stim = 0
+    th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     interval_stim = 500.0
     ana_win = 40.0
     orient = True
     duration = 30.0
-    sel_raw = False  # use raw selectivity index
+    sel_raw = True  # use raw selectivity index
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))

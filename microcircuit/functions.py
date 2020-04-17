@@ -96,7 +96,7 @@ def inh_weight(source_name, weight, spe_dict):
 
 
 # clumsy, to be improved...
-def set_thalamus_input(th_pop,
+def set_thalamus_poisson(th_pop,
                        poisson_pops,
                        start_times,
                        stop_times,
@@ -231,7 +231,7 @@ def connect_thalamus_orientation(th_pop,
             )
 
 
-def connect_by_cluster(source_name,
+def connect_by_orientation(source_name,
                        target_name,
                        synapse_nr,
                        syn_dict,
@@ -339,19 +339,6 @@ def ctsp_assign(pop, net_dict, spe_dict):
     return E_L, V_th, C_m, tau_m
 
 
-def get_weight(psp_val, net_dict):
-    C_m = net_dict['neuron_params']['C_m']['default']
-    tau_m = net_dict['neuron_params']['tau_m']['default']
-    tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
-
-    PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn_ex / (
-        tau_syn_ex - tau_m) * ((tau_m / tau_syn_ex) ** (
-            - tau_m / (tau_m - tau_syn_ex)) - (tau_m / tau_syn_ex) ** (
-                - tau_syn_ex / (tau_m - tau_syn_ex)))) ** (-1))
-    PSC_e = (PSC_e_over_PSP_e * psp_val)
-    return PSC_e
-
-
 # calculate celltype-specific psc
 def calc_psc(psp_val, C_m, tau_m, tau_syn):
     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn / (
@@ -360,6 +347,14 @@ def calc_psc(psp_val, C_m, tau_m, tau_syn):
                 - tau_syn / (tau_m - tau_syn)))) ** (-1))
     PSC_e = (PSC_e_over_PSP_e * psp_val)
     return PSC_e
+
+
+# get psc from single psp
+def get_weight(psp_val, net_dict):
+    C_m = net_dict['neuron_params']['C_m']['default']
+    tau_m = net_dict['neuron_params']['tau_m']['default']
+    tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
+    return calc_psc(psp_val, C_m, tau_m, tau_syn_ex)
 
 
 # get the psc matrix
@@ -379,15 +374,15 @@ def get_weights(net_dict, dim=13, lyr_gps=None):
             psp = net_dict['w_dict']['psp_mtx'][a, b]
             for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
                 if celltype in net_dict['populations'][i]:
-                    if net_dict['psc_by_default_ctsp']:
-                        psc = calc_psc(psp,
-                        net_dict['neuron_params']['C_m']['default'],
-                        net_dict['neuron_params']['tau_m']['default'],
-                        net_dict['neuron_params']['tau_syn_ex'])
-                    else:
+                    if net_dict['ctsp_dependent_psc']:
                         psc = calc_psc(psp,
                         net_dict['neuron_params']['C_m'][celltype],
                         net_dict['neuron_params']['tau_m'][celltype],
+                        net_dict['neuron_params']['tau_syn_ex'])
+                    else:
+                        psc = calc_psc(psp,
+                        net_dict['neuron_params']['C_m']['default'],
+                        net_dict['neuron_params']['tau_m']['default'],
                         net_dict['neuron_params']['tau_syn_ex'])
                     if j in [0, 4, 7, 10]:
                         pscs[i, j] = psc
@@ -409,6 +404,7 @@ def get_weight_stds(net_dict, dim=13, lyr_gps=None):
     return std_ratios
 
 
+# equalize inhibitory connectivity; for a network without specific connectivity
 def eq_inh_conn(n_full, conn, lyr_gps=None):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
