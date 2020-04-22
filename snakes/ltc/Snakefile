@@ -1,24 +1,25 @@
+F1_COUNT = 8
+F2_COUNT = 10
+
 localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}_{d}/raster_plot.png',
-            a=range(8),
-            b=range(10),
-            c=6,
-            d=4)
+        expand('scans/{a}_{b}_6_4/lts_distr.npy',
+            a=range(F1_COUNT),
+            b=range(F2_COUNT))
+    output:
+        expand('{a}_ltc-distr.png', a=range(F1_COUNT))
     shell:
         '''
-        cp * scans/
+        python ltc_distr.py {input}
         '''
 
 rule create:
     output:
-        expand('scans/{a}_{b}_{c}_{d}.pickle',
-            a=range(8),
-            b=range(10),
-            c=6,
-            d=4)
+        expand('scans/{a}_{b}_6_4.pickle',
+            a=range(F1_COUNT),
+            b=range(F2_COUNT))
     shell:
         '''
         python microcircuit/create_params.py {output}
@@ -32,7 +33,7 @@ rule create:
 
 rule simulate:
     input: 'scans/{a}_{b}_{c}_{d}.pickle'
-    output: 'scans/{a}_{b}_{c}_{d}/raster_plot.png'
+    output: 'scans/{a}_{b}_{c}_{d}/lts_distr.npy'
     shell:
         '''
         python -W ignore run_network.py {input} {output}

@@ -13,6 +13,9 @@ if __name__ == "__main__":
         linestyles = ['solid', 'solid', 'solid', 'dashed']
         fig = plt.figure(figsize=(8, 4), constrained_layout=True)
         ax = fig.add_subplot(111)
+        if ltc_avg is None:
+            plt.savefig('{}_ltc-distr.png'.format(mem))
+            return
         for i, lyr in enumerate(ltc_avg):
             xs = lyr[0]
             ys = lyr[1]
@@ -38,16 +41,16 @@ if __name__ == "__main__":
 
     ltc_sum = None  # sum for averaging
     cnt = 0 # count for averaging
+    data_shape = np.load(ltc_files[0]).shape
     for i, file in enumerate(ltc_files):
         print(file)
         npload = np.load(file)
-        if npload.ndim != 3:
-            continue
-        if ltc_sum is None:
-            ltc_sum = npload
-        else:
-            ltc_sum = np.add(ltc_sum, npload)
-        cnt += 1
+        if npload.ndim == 3:           
+            if ltc_sum is None:
+                ltc_sum = npload
+            else:
+                ltc_sum = np.add(ltc_sum, npload)
+            cnt += 1
         # get next value
         if i+1 < len(ltc_files):
             next_tag = tags[i+1]
@@ -55,6 +58,10 @@ if __name__ == "__main__":
             next_tag = None
         # plot and reset when next value is different
         if tags[i] != next_tag:
-            plot_ltc(ltc_sum/cnt, tags[i])
+            if ltc_sum is None:
+                ltc_avg = None                
+            else:
+                ltc_avg = ltc_sum/cnt
+            plot_ltc(ltc_avg, tags[i])
             ltc_sum = None
             cnt = 0

@@ -5,7 +5,7 @@ rule all:
         expand('scans/{a}_{b}_{c}_{d}/raster_plot.png',
             a=range(8),
             b=range(10),
-            c=6,
+            c=7,
             d=4)
     shell:
         '''
@@ -17,7 +17,7 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle',
             a=range(8),
             b=range(10),
-            c=6,
+            c=7,
             d=4)
     shell:
         '''

@@ -17,22 +17,21 @@ if __name__ == "__main__":
     # analysis settings
     do_ai = True
     do_response = True
-    do_selectivity = True
+    do_selectivity = False
 
     # set ai segments
-    n_seg_ai = 1
+    n_seg_ai = 5
     start_ai = 2000.0
-    seg_ai = 2000.0
+    seg_ai = 10000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
     n_stim = 0
-    th_rate = 120.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
-    interval_stim = 500.0
+    th_rate = 200.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
+    interval_stim = 2000.0
     ana_win = 40.0
-    orient = True
-    duration = 30.0
-    sel_raw = True  # use raw selectivity index
+    orient = False
+    duration = 10.0
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
@@ -110,10 +109,11 @@ if __name__ == "__main__":
                 tools.response(spikes, start_stim,
                                para_dict['stim_dict']['th_start'],
                                window=ana_win,
-                               exportplot=True)
+                               exportplot=False)
             t2 = time.time()
             if do_selectivity:
-                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=sel_raw)
+                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
+                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
             t3 = time.time()
             print('response analysis time = {}'.format(t2 - t1))
             print('selectivity analysis time = {}'.format(t3 - t2))

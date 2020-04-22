@@ -480,7 +480,7 @@ def get_total_number_of_synapses(net_dict):
             animal_dict = mouse_dict
         else:
             animal_dict = rat_dict
-        conn_probs = conn_barrel_integrate(animal_dict, bbp, exp, allen, dia_allen)
+        conn_probs = conn_barrel_integrate(animal_dict, bbp, exp, allen, dia)
 
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
     N_full_matrix = np.column_stack((N_full for i in list(range(number_N))))
