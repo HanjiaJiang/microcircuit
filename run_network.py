@@ -12,7 +12,7 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = True
+    print_to_file = False
 
     # analysis settings
     do_ai = True
@@ -20,22 +20,21 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai = 5
+    n_seg_ai = 1
     start_ai = 2000.0
-    seg_ai = 10000.0
+    seg_ai = 2000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 0
+    n_stim = 10
     th_rate = 200.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
-    interval_stim = 2000.0
+    interval_stim = 500.0
     ana_win = 40.0
     orient = False
     duration = 10.0
     start_stim = start_ai + len_ai
     len_stim = interval_stim*n_stim
     stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
-    print('stims = {}'.format(stims))
 
     # set others
     plot_half_len = 100.0
@@ -57,15 +56,16 @@ if __name__ == "__main__":
 
         # handle data path
         data_path = os.path.join(cwd, 'data')
-        if not os.path.isdir(data_path):
-            os.mkdir(data_path)
+        os.system('mkdir -p ' + data_path)
         os.system('cp run_network.py ' + data_path)
 
-        # handle microcircuit files
-        m_path = os.path.join(data_path, 'microcircuit')
-        if not os.path.isdir(m_path):
-            os.mkdir(m_path)
+        # copy files
+        os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit'))
+        os.system('mkdir -p ' + os.path.join(data_path, 'conn_probs'))
+        os.system('mkdir -p ' + os.path.join(data_path, 'stp'))
         os.system('cp microcircuit/*.py ' + os.path.join(data_path, 'microcircuit'))
+        os.system('cp conn_probs/*.npy ' + os.path.join(data_path, 'conn_probs'))
+        os.system('cp stp/*.py ' + os.path.join(data_path, 'stp'))
 
     # assign parameters
     with open(pickle_path, 'rb') as handle:
@@ -86,6 +86,8 @@ if __name__ == "__main__":
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
     para_dict['sim_dict']['t_sim'] = start_ai + len_ai + len_stim
+    print('start_ai = {}, len_ai = {}'.format(start_ai, len_ai))
+    print('stims = {}'.format(stims))
 
     # run simulation
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
@@ -106,10 +108,7 @@ if __name__ == "__main__":
         if n_stim > 0:
             t1 = time.time()
             if do_response:
-                tools.response(spikes, start_stim,
-                               para_dict['stim_dict']['th_start'],
-                               window=ana_win,
-                               exportplot=False)
+                tools.response(spikes, start_stim, stims, window=ana_win)
             t2 = time.time()
             if do_selectivity:
                 tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
