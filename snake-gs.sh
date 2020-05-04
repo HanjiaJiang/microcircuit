@@ -3,7 +3,7 @@
 #SBATCH -e ./err-gs.txt
 #SBATCH --job-name hj-gs
 #SBATCH --mem=4G
-#SBATCH --time=0
+#SBATCH --time=24:00:0
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
 #SBATCH --partition=hambach,blaustein,hamstein

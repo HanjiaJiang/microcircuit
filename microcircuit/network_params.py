@@ -53,61 +53,61 @@ def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
     return std_delays
 
 
-def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
-    """ Creates a matrix of the mean evoked postsynaptic potential.
-
-    The function creates a matrix of the mean evoked postsynaptic
-    potentials between the recurrent connections of the microcircuit.
-    The weight of the connection from L4E to L23E is doubled.
-
-    Arguments
-    ---------
-    PSP_e
-        Mean evoked potential.
-    g
-        Relative strength of the inhibitory to excitatory connection.
-    number_of_pop
-        Number of populations in the microcircuit.
-
-    Returns
-    -------
-    weights
-        Matrix of the weights for the recurrent connections.
-
-    """
-    dim = number_of_pop
-    weights = np.zeros((dim, dim))
-    exc = PSP_e
-    inh = PSP_e * g
-    weights[:] = inh
-    weights[:, [0,4,7,10]] = exc
-    weights[0, 4] = exc * 2
-    return weights
-
-
-def get_std_PSP_matrix(PSP_rel, number_of_pop):
-    """ Relative standard deviation matrix of postsynaptic potential created.
-
-    The relative standard deviation matrix of the evoked postsynaptic potential
-    for the recurrent connections of the microcircuit is created.
-
-    Arguments
-    ---------
-    PSP_rel
-        Relative standard deviation of the evoked postsynaptic potential.
-    number_of_pop
-        Number of populations in the microcircuit.
-
-    Returns
-    -------
-    std_mat
-        Matrix of the standard deviation of postsynaptic potentials.
-
-    """
-    dim = number_of_pop
-    std_mat = np.zeros((dim, dim))
-    std_mat[:, :] = PSP_rel
-    return std_mat
+# def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
+#     """ Creates a matrix of the mean evoked postsynaptic potential.
+#
+#     The function creates a matrix of the mean evoked postsynaptic
+#     potentials between the recurrent connections of the microcircuit.
+#     The weight of the connection from L4E to L23E is doubled.
+#
+#     Arguments
+#     ---------
+#     PSP_e
+#         Mean evoked potential.
+#     g
+#         Relative strength of the inhibitory to excitatory connection.
+#     number_of_pop
+#         Number of populations in the microcircuit.
+#
+#     Returns
+#     -------
+#     weights
+#         Matrix of the weights for the recurrent connections.
+#
+#     """
+#     dim = number_of_pop
+#     weights = np.zeros((dim, dim))
+#     exc = PSP_e
+#     inh = PSP_e * g
+#     weights[:] = inh
+#     weights[:, [0,4,7,10]] = exc
+#     weights[0, 4] = exc * 2
+#     return weights
+#
+#
+# def get_std_PSP_matrix(PSP_rel, number_of_pop):
+#     """ Relative standard deviation matrix of postsynaptic potential created.
+#
+#     The relative standard deviation matrix of the evoked postsynaptic potential
+#     for the recurrent connections of the microcircuit is created.
+#
+#     Arguments
+#     ---------
+#     PSP_rel
+#         Relative standard deviation of the evoked postsynaptic potential.
+#     number_of_pop
+#         Number of populations in the microcircuit.
+#
+#     Returns
+#     -------
+#     std_mat
+#         Matrix of the standard deviation of postsynaptic potentials.
+#
+#     """
+#     dim = number_of_pop
+#     std_mat = np.zeros((dim, dim))
+#     std_mat[:, :] = PSP_rel
+#     return std_mat
 
 net_dict = {
     # Neuron model.
@@ -128,29 +128,29 @@ net_dict = {
     # 'N_full': np.array([5099, 521, 67, 88, 4089, 287, 61, 3267, 540, 140, 4425, 290, 102]),
     # Connection probabilities. The first index corresponds to the targets
     # and the second to the sources.
-    'conn_probs': # 190707
-        np.array([
-               [0.0872, 0.3173, 0.4612, 0.0448, 0.1056, 0.4011, 0.0374, 0.0234, 0.09  , 0.1864, 0.    , 0.    , 0.    ],
-               [0.3763, 0.3453, 0.2142, 0.0683, 0.0802, 0.012 , 0.0257, 0.0257, 0.1937, 0.2237, 0.0001, 0.0001, 0.0062],
-               [0.2288, 0.1342, 0.1242, 0.2618, 0.0033, 0.0097, 0.0363, 0.0003, 0.0222, 0.018 , 0.    , 0.    , 0.    ],
-               [0.0224, 0.0516, 0.0567, 0.0274, 0.0021, 0.0086, 0.0142, 0.0002, 0.0008, 0.0051, 0.    , 0.0001, 0.0048],
+    'conn_probs': # 200426
+        np.array([ [0.0839, 0.3053, 0.4438, 0.0522, 0.1039, 0.0192, 0.0429, 0.0232, 0.0891, 0.1845, 0.    , 0.    , 0.    ],
+                   [0.3621, 0.3323, 0.2061, 0.0806, 0.0042, 0.0155, 0.0298, 0.0254, 0.1918, 0.2215, 0.0001, 0.0001, 0.0054],
+                   [0.2201, 0.4057, 0.0254, 0.2519, 0.0038, 0.0111, 0.0417, 0.0004, 0.022 , 0.0199, 0.    , 0.    , 0.    ],
+                   [0.0262, 0.0574, 0.0662, 0.0318, 0.0024, 0.0097, 0.0162, 0.0002, 0.0009, 0.0056, 0.    , 0.0001, 0.005 ],
 
-               [0.0128, 0.0668, 0.049 , 0.0584, 0.1764, 0.4577, 0.2761, 0.0059, 0.0232, 0.0427, 0.    , 0.0017, 0.0212],
-               [0.0317, 0.0121, 0.0198, 0.0428, 0.0937, 0.3487, 0.4068, 0.0072, 0.0231, 0.0369, 0.0009, 0.002 , 0.0157],
-               [0.033 , 0.0144, 0.0198, 0.2618, 0.2906, 0.4432, 0.0386, 0.0087, 0.0257, 0.0384, 0.001 , 0.0018, 0.0198],
+                   [0.0126, 0.0333, 0.0562, 0.0663, 0.1668, 0.4327, 0.261 , 0.0058, 0.0264, 0.0491, 0.    , 0.0021, 0.0232],
+                   [0.0378, 0.0152, 0.0216, 0.0503, 0.0886, 0.3297, 0.3846, 0.009 , 0.0262, 0.0446, 0.0013, 0.0026, 0.0175],
+                   [0.0379, 0.0172, 0.0227, 0.0458, 0.0859, 0.419 , 0.0264, 0.01  , 0.0303, 0.0441, 0.0017, 0.0021, 0.0217],
 
-               [0.0841, 0.0528, 0.072 , 0.0539, 0.0844, 0.0546, 0.0621, 0.0957, 0.1871, 0.1575, 0.0094, 0.0139, 0.0418],
-               [0.0705, 0.1211, 0.0444, 0.0165, 0.0315, 0.0225, 0.0183, 0.0846, 0.3574, 0.2594, 0.0029, 0.0102, 0.0212],
-               [0.0998, 0.0072, 0.0089, 0.2618, 0.0343, 0.0225, 0.0209, 0.0587, 0.1182, 0.0427, 0.0038, 0.0124, 0.0262],
+                   [0.0832, 0.0523, 0.0713, 0.0589, 0.0826, 0.0658, 0.0714, 0.091 , 0.178 , 0.1498, 0.0093, 0.0167, 0.0477],
+                   [0.0698, 0.1199, 0.0439, 0.0186, 0.0362, 0.0288, 0.0216, 0.0804, 0.34  , 0.2468, 0.0047, 0.0122, 0.0243],
+                   [0.0988, 0.0071, 0.0098, 0.0184, 0.0394, 0.0285, 0.024 , 0.0558, 0.1124, 0.0355, 0.0061, 0.014 , 0.0299],
 
-               [0.    , 0.0018, 0.0028, 0.0068, 0.0297, 0.0125, 0.0084, 0.0381, 0.017 , 0.0128, 0.021 , 0.3249, 0.3014],
-               [0.0025, 0.0001, 0.0003, 0.002 , 0.0045, 0.0016, 0.0004, 0.0149, 0.    , 0.0031, 0.1865, 0.3535, 0.2968],
-               [0.0021, 0.    , 0.0002, 0.2618, 0.0004, 0.0014, 0.0003, 0.0141, 0.    , 0.0019, 0.1062, 0.3321, 0.0379]]),
+                   [0.    , 0.0018, 0.0031, 0.0075, 0.0291, 0.0145, 0.0094, 0.0374, 0.0184, 0.0157, 0.0199, 0.3083, 0.286 ],
+                   [0.0028, 0.0001, 0.0002, 0.002 , 0.0052, 0.0022, 0.0005, 0.0171, 0.    , 0.0032, 0.177 , 0.3355, 0.2817],
+                   [0.0022, 0.    , 0.0002, 0.0011, 0.0047, 0.0019, 0.0003, 0.0161, 0.    , 0.0021, 0.1208, 0.3151, 0.0292]]),
+
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
     'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),
     # Mean amplitude of excitatory postsynaptic potential (in mV).
-    'PSP_e': 0.5,
+    'PSP_e': 0.4,
     # Relative standard deviation of the postsynaptic potential.
     'PSP_sd': 1.0,
     # Relative inhibitory synaptic strength (in relative units).
@@ -176,20 +176,20 @@ net_dict = {
         # Standard deviation of the average membrane potential (in mV).
         'V0_sd': 5.0, #10.0,
         # Reset membrane potential of the neurons (in mV).
-        'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, #-67.0,
+        'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Threshold potential of the neurons (in mV).
         'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
         # 'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane potential after a spike (in mV).
         'V_reset': -67.0, #-65.0,
         # Membrane capacitance (in pF).
-        'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, #200.0, #250.0,
+        'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane time constant (in ms).
-        'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, #7.0, #10.0,
+        'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Time constant of postsynaptic excitatory currents (in ms).
-        'tau_syn_ex': 2.1, # 1.74, # 0.5,
+        'tau_syn_ex': 2.1, # Allen Institue,
         # Time constant of postsynaptic inhibitory currents (in ms).
-        'tau_syn_in': 3.2, # 4.6, # 0.5,
+        'tau_syn_in': 3.2, # Allen Institue,
         # Time constant of external postsynaptic excitatory current (in ms).
         'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).
@@ -198,34 +198,36 @@ net_dict = {
     'renew_conn': False,
     'w_dict': {
         'psp_mtx':
-            np.array([[0.70, 0.78, 0.47, 0.23],
-                      [0.34, 0.95, 0.38, 0.23],
-                      [0.70, 0.63, 0.68, 0.23],
-                      [0.70, 2.27, 0.40, 0.53]]),
+            np.array([[0.7001, 0.7800, 0.4673, 0.3783],
+                      [0.3433, 0.9500, 0.3767, 0.3783],
+                      [0.7006, 0.6270, 0.6763, 0.2267],
+                      [0.5813, 2.2700, 0.4025, 0.5300]]),
             # np.full((4, 4), 0.5), # previous
         'psp_std_mtx':
-            np.array([[0.8958, 1.2372, 0.7228, 1.0000],
-                      [0.4540, 1.3421, 1.0000, 1.0000],
-                      [1.0520, 0.9618, 1.2379, 1.0000],
-                      [1.0520, 1.3124, 0.8739, 1.3884]])
+            np.array([[0.8958, 1.2372, 0.7228, 1.3884],
+                      [0.4540, 1.3421, 0.9566, 1.3884],
+                      [1.0520, 0.9618, 1.2379, 1.3884],
+                      [0.8240, 1.3124, 0.8739, 1.3884]])
             # np.full((4, 4), 1.0) # previous
         },
-    # ctsp-dependent psc presumably not favorable
-    # since background input is also related
-    'ctsp_dependent_psc': False,
+    'ctsp_dependent_psc': True,
+    # relative inhibitory strengths
+    'subtype_relative': True,
+    'som_power': 1.0,
+    'pv_power': 1.0,
     }
 
 
 def net_update(n_dict, g):
     updated_dict = {
-        # PSP mean matrix.
-        'PSP_mean_matrix': get_mean_PSP_matrix(
-            n_dict['PSP_e'], n_dict['g'], len(n_dict['populations'])
-        ),
-        # PSP std matrix.
-        'PSP_std_matrix': get_std_PSP_matrix(
-            n_dict['PSP_sd'], len(n_dict['populations'])
-        ),
+        # # PSP mean matrix.
+        # 'PSP_mean_matrix': get_mean_PSP_matrix(
+        #     n_dict['PSP_e'], n_dict['g'], len(n_dict['populations'])
+        # ),
+        # # PSP std matrix.
+        # 'PSP_std_matrix': get_std_PSP_matrix(
+        #     n_dict['PSP_sd'], len(n_dict['populations'])
+        # ),
         # mean delay matrix.
         'mean_delay_matrix': get_mean_delays(
             n_dict['mean_delay_exc'], n_dict['mean_delay_inh'],

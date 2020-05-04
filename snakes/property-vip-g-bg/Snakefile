@@ -1,7 +1,7 @@
-PROP_CNT = 8
+PROP = 7
 
-VIP_START = 100
-VIP_END = 500
+VIP_START = 900
+VIP_END = 1100
 VIP_STEP = 100
 
 G_START = 4
@@ -17,7 +17,7 @@ localrules: all, create
 rule all:
     input:
         expand('scans/{a}_{b}_{c}_{d}/ai.dat',
-            a=range(PROP_CNT),
+            a=PROP,
             b=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP),
             c=range(G_START, G_END + G_STEP, G_STEP),
             d=range(BG_START, BG_END + BG_STEP, BG_STEP))
@@ -32,7 +32,7 @@ rule all:
 rule create:
     output:
         expand('scans/{a}_{b}_{c}_{d}.pickle',
-            a=range(PROP_CNT),
+            a=PROP,
             b=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP),
             c=range(G_START, G_END + G_STEP, G_STEP),
             d=range(BG_START, BG_END + BG_STEP, BG_STEP))

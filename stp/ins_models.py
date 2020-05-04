@@ -3,7 +3,7 @@ import nest
 import copy
 from microcircuit.network_params import net_dict
 import matplotlib.pyplot as plt
-from stp_dicts import cell_types, allen_stp, doiron_stp, test_stp, allen_1to5, tau_arr
+from stp_dicts import *
 np.set_printoptions(precision=3, suppress=True)
 
 # define
@@ -16,6 +16,7 @@ input_type = cell_types[order]
 spk_w = 50000.0 # for generator --> pre-synaptic cell
 plot_Vms = True
 run_single = False
+stp = custom_stp
 
 # weights
 exc_w = 72.10248947711023
@@ -246,7 +247,7 @@ if __name__ == "__main__":
         print('target stps={}'.format(np.array(allen_1to5)[:, order].T))
         print('result stps={}'.format(f.T))
     else:
-        f, f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=test_stp)
+        f, f_diff = test_stp_dicts(cells_pre, cells_post, s_dict=stp)
         print('cell={}'.format(cell_types[order]))
         print('target={}'.format(np.array(allen_1to5)[:, order].T))
         print('result stps={}'.format(f.T))

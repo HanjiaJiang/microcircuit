@@ -1,0 +1,58 @@
+EXC_START = 1600
+EXC_END = 2000
+EXC_STEP = 100
+
+PV_START = 2000
+PV_END = 2000
+PV_STEP = 100
+
+SOM_START = 500
+SOM_END = 1000
+SOM_STEP = 100
+
+VIP_START = 100
+VIP_END = 500
+VIP_STEP = 100
+
+localrules: all, create
+
+rule all:
+    input:
+        expand('scans/{a}_{b}_{c}_{d}/ai.dat',
+            a=range(EXC_START, EXC_END + EXC_STEP, EXC_STEP),
+            b=range(PV_START, PV_END + PV_STEP, PV_STEP),
+            c=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
+            d=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP))
+    shell:
+        '''
+        python analysis_gs.py {input}
+        mkdir -p png
+        mv *.png png
+        cp * scans/
+        '''
+
+rule create:
+    output:
+        expand('scans/{a}_{b}_{c}_{d}.pickle',
+            a=range(EXC_START, EXC_END + EXC_STEP, EXC_STEP),
+            b=range(PV_START, PV_END + PV_STEP, PV_STEP),
+            c=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
+            d=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP))
+    shell:
+        '''
+        python microcircuit/create_params.py {output}
+        mkdir -p scans/microcircuit/
+        cp microcircuit/*.py scans/microcircuit/
+        mkdir -p scans/stp/
+        cp stp/*.py scans/stp/
+        mkdir -p scans/conn_probs/
+        cp conn_probs/* scans/conn_probs/
+        '''
+
+rule simulate:
+    input: 'scans/{a}_{b}_{c}_{d}.pickle'
+    output: 'scans/{a}_{b}_{c}_{d}/ai.dat'
+    shell:
+        '''
+        python -W ignore run_network.py {input} {output}
+        '''

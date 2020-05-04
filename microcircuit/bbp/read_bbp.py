@@ -3,7 +3,7 @@ import json
 # import easygui
 # fn_anatomy = easygui.fileopenbox()
 # fn_layer = easygui.fileopenbox()
-np.set_printoptions(precision=4, suppress=True)
+np.set_printoptions(precision=4, suppress=True, linewidth=1000)
 fn_anatomy = 'pathways_anatomy_factsheets_simplified.json'
 fn_layer = 'layer_download.json'
 
@@ -56,6 +56,7 @@ def conn_sum(pre_layer, post_layer, pre_mtypes, post_mtypes):
                                 print('{} = {}, {} = {}'.format(pre_gp, gps_str[0], post_gp, gps_str[1]))
                                 # real connection number = pre_n * post_n * probability
                                 real_sum += pre_n * post_n * value['connection_probability'] / 100.0
+                                print('pre_n, post_n, conn.(%) = {}, {}, {}'.format(pre_n, post_n, value['connection_probability']))
     return max_sum, real_sum
 
 len_mtx = len(layers)*len(cell_types)
@@ -77,6 +78,7 @@ for i, pre_ly in enumerate(layers):
         post_i = 0
 
 # delete vip in L4, L5, L6
+print(repr(conn_arr))
 conn_arr = np.delete(conn_arr, [7, 11, 15], 0)
 conn_arr = np.delete(conn_arr, [7, 11, 15], 1)
 

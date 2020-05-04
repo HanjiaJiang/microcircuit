@@ -31,10 +31,6 @@ special_dict = {
     'ctsp': True,
     # STP
     'stp_dict': doiron_stp_weak,
-    # relative inhibitory strengths
-    'adjust_inh': True,
-    'som_power': 1.0,
-    'pv_power': 1.0,
     # selectivity
     'orient_tuning': False,
     'sel_inh_src': ['PV', 'SOM'],
@@ -45,6 +41,21 @@ special_dict = {
     'k_i2e': 0.2
 }
 
+'''
+Verification
+'''
+verify_dict = {}
+def verify_collect(in_str, tag):
+    if tag in verify_dict.keys():
+        verify_dict[tag] += in_str
+    else:
+        verify_dict[tag] = in_str
+
+def verify_print():
+    for key, value in verify_dict.items():
+        with open('verify-{}.txt'.format(key), 'w') as f:
+            f.write(value)
+            f.close()
 
 def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
     syn_dict = {
@@ -84,25 +95,14 @@ def set_fmax(names, population, spe_dict):
             nest.SetStatus(population, {'t_ref': 15.3})
 
 
-def inh_weight(source_name, weight, spe_dict):
-    # HJ: Short-Term Plasticity of Unitary Inhibitory-to-Inhibitory
-    # Synapses Depends on the Presynaptic Interneuron Subtype
-    if spe_dict['adjust_inh'] is True:
-        if 'SOM' in source_name:
-            weight *= spe_dict['som_power']
-        if 'PV' in source_name:
-            weight *= spe_dict['pv_power']
-        return weight
-
-
 # clumsy, to be improved...
-def set_thalamus_poisson(th_pop,
-                       poisson_pops,
-                       start_times,
-                       stop_times,
-                       rate_0,
-                       stim_theta,
-                       spe_dict):
+def set_thalamus(th_pop,
+                   poisson_pops,
+                   start_times,
+                   stop_times,
+                   rate_0,
+                   stim_theta,
+                   spe_dict):
     # tuning
     if spe_dict['orient_tuning'] is True:
         # limits are +- pi/2
@@ -116,6 +116,7 @@ def set_thalamus_poisson(th_pop,
         do_conj = False
         # each poisson population is for 1 stimulus (in e.g. 20 repetitions)
         for i, pop in enumerate(poisson_pops):
+            # print('set_thalamus_poisson():\npop len={}'.format(len(pop)))
             # switching
             if do_conj:
                 current_theta = conj_theta
@@ -123,12 +124,14 @@ def set_thalamus_poisson(th_pop,
             else:
                 current_theta = base_theta
                 do_conj = True
+            # print('stim no. {}, theta={}'.format(i, current_theta))
             # within each population,
             # rates are distributed according to stimulus angle
             for j, node in enumerate(pop):
                 theta = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(len(pop)))
                 rate = rate_0 * (1.0 + spe_dict['k_th']
                                  * np.cos(2.0 * (theta - current_theta)))
+                # print('node {}, rate = {}'.format(j, rate))
                 nest.SetStatus([node], {
                     'rate': rate,
                     'start': start_times[i],
@@ -139,32 +142,34 @@ def set_thalamus_poisson(th_pop,
     # no tuning
     else:
         for i, pop in enumerate(poisson_pops):
+            print('set_thalamus_poisson():\npop len={}'.format(len(pop)))
             nest.SetStatus(pop, {
                 'rate': rate_0,
                 'start': start_times[i],
                 'stop': stop_times[i]
             })
-            nest.Connect(pop, th_pop, conn_spec={'rule': 'one_to_one'})
+            nest.Connect(pop, th_pop)
+            # nest.Connect(pop, th_pop, conn_spec={'rule': 'one_to_one'})
 
 
-def connect_thalamus_orientation(th_pop,
-                                 target_pop,
-                                 target_name,
-                                 nr_synapses,
-                                 syn_dict_th,
-                                 spe_dict,
-                                 bernoulli_prob=None,
-                                 nr_cluster=8):
+def connect_tc(th_pop,
+                 target_pop,
+                 target_name,
+                 total_conn_nr,
+                 syn_dict_th,
+                 spe_dict,
+                 bernoulli_prob=None,
+                 nr_cluster=8):
     if spe_dict['orient_tuning'] and 'Exc' in target_name:
-        # assign dictionary by rules
-        if bernoulli_prob is None:
-            p_0 = nr_synapses / float(len_th * len_target)
-        else:
-            p_0 = bernoulli_prob
-
-        # length of population
+        # size of population
         len_th = len(th_pop)
         len_target = len(target_pop)
+
+        # determine p_0 by type of connection
+        if isinstance(bernoulli_prob, float):
+            p_0 = bernoulli_prob
+        else:
+            p_0 = total_conn_nr / float(len_th * len_target)
 
         # thalamus clustering
         len_th_cluster = int(len_th / nr_cluster)
@@ -187,7 +192,6 @@ def connect_thalamus_orientation(th_pop,
         for y in range(nr_cluster):
             head_idx = y * len_target_cluster
             tail_idx = (y + 1) * len_target_cluster
-            # print('head,tail={0},{1}'.format(head_idx,tail_idx))
             if tail_idx <= len(target_pop):
                 target_cluster_list.append(target_pop[head_idx:tail_idx])
             else:
@@ -200,22 +204,23 @@ def connect_thalamus_orientation(th_pop,
                 theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
                 theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
                 p = p_0 * (1.0 + spe_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
-                if bernoulli_prob is None:
-                    conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
-                    conn_dict={'rule': 'fixed_total_number', 'N': conn_nr}
-                else:
+                conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
+                if isinstance(bernoulli_prob, float):
                     conn_dict = {'rule': 'pairwise_bernoulli', 'p': p}
-                    syn_sum += int(round(len(th_cluster) * len(target_cluster) * p))
+                else:
+                    conn_dict = {'rule': 'fixed_total_number', 'N': conn_nr}
+                syn_sum += conn_nr
                 # print('theta_th={}, theta_target={}, p_0={}, p={}'
                 #       .format(theta_th, theta_target, p_0, p))
                 nest.Connect(th_cluster, target_cluster,
                              conn_spec=conn_dict,
                              syn_spec=syn_dict_th
                              )
-        print('unclustered vs. clustered syn. n: {} vs., {}'.format(int(p_0*len_th*len_target), syn_sum))
+        # print('thalamus to {} expected vs. clustered conn. nr.: {} vs., {}'.
+        # format(target_name, int(p_0*len_th*len_target), syn_sum))
     else:
         # connect by probability (Bernoulli)
-        if bernoulli_prob is not None:
+        if isinstance(bernoulli_prob, float):
             nest.Connect(th_pop, target_pop,
             conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
             syn_spec=syn_dict_th)
@@ -225,23 +230,31 @@ def connect_thalamus_orientation(th_pop,
                 th_pop, target_pop,
                 conn_spec={
                     'rule': 'fixed_total_number',
-                    'N': nr_synapses,
+                    'N': total_conn_nr,
                 },
                 syn_spec=syn_dict_th
             )
 
 
-def connect_by_orientation(source_name,
+def connect_recurrent(source_name,
                        target_name,
-                       synapse_nr,
+                       total_conn_nr,
                        syn_dict,
                        source_pop,
                        target_pop,
                        spe_dict,
-                       conn_prob=None):
-    # For orientation clustering
-    nr_cluster = 8  # number of clusters
-    k = 0.0     # modulation constant
+                       bernoulli_prob=None,
+                       nr_cluster=8):
+    # get sizes and probability
+    len_source = len(source_pop)
+    len_target = len(target_pop)
+    if isinstance(bernoulli_prob, float):
+        p_0 = bernoulli_prob
+    else:
+        p_0 = total_conn_nr / float(len_source * len_target)
+
+    # get k (modulation constant)
+    k = 0.0
     if 'Exc' in source_name and 'Exc' in target_name:
         k = spe_dict['k_e2e']
     for inh_target in spe_dict['sel_inh_trg']:
@@ -250,13 +263,10 @@ def connect_by_orientation(source_name,
     for inh_source in spe_dict['sel_inh_src']:
         if inh_source in source_name and 'Exc' in target_name:
             k = spe_dict['k_i2e']
-    if spe_dict['orient_tuning'] is True and k != 0.0:
-        # do it only if connection is not 0
-        if synapse_nr > 0:
-            len_source = len(source_pop)
-            len_target = len(target_pop)
-            p_0 = synapse_nr / float(len_source * len_target)
 
+    # connection
+    if spe_dict['orient_tuning'] is True and k != 0.0:
+        if p_0 != 0.0:
             # source clustering
             len_source_cluster = int(len_source / nr_cluster)
             if len_source % nr_cluster != 0:
@@ -286,41 +296,47 @@ def connect_by_orientation(source_name,
                 else:
                     target_cluster_list.append(target_pop[head_idx:])
 
+            # connection
             conn_nr_sum = 0
             for i, source_cluster in enumerate(source_cluster_list):
                 for j, target_cluster in enumerate(target_cluster_list):
+                    # calculate p and connection number
                     theta_source = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
                     theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
                     p = p_0 * (1.0 + k * np.cos(2.0 * (theta_source - theta_target)))
                     conn_nr = int(round(len(source_cluster) * len(target_cluster) * p))
-                    # print('theta_source={:.2f}, theta_target={:.2f}, conn_nr={:.2f}'
-                    #       .format(theta_source, theta_target, conn_nr))
+                    # if 'Exc' in source_name and 'PV' in target_name:
+                    #     print('theta_source={:.2f}, theta_target={:.2f}, p={:.4f}'
+                    #           .format(theta_source, theta_target, p))
+
+                    # define conn_dict
+                    if isinstance(bernoulli_prob, float):
+                        conn_dict = {'rule': 'pairwise_bernoulli', 'p': p}
+                    else:
+                        conn_dict = {'rule': 'fixed_total_number', 'N': conn_nr}
                     nest.Connect(source_cluster, target_cluster,
-                                 conn_spec={
-                                     'rule': 'fixed_total_number',
-                                     'N': conn_nr,
-                                 },
-                                 syn_spec=syn_dict
-                                 )
+                                 conn_spec=conn_dict,
+                                 syn_spec=syn_dict)
                     conn_nr_sum += conn_nr
-            print(source_name + ' to ' + target_name + ' verify synapse_nr: {0}, {1}'.format(
-                synapse_nr, conn_nr_sum))
+            print(source_name + ' to ' + target_name + ' expected vs. clustered conn. nr.: {} vs. {}'.format(
+                int(p_0*len_source*len_target), conn_nr_sum))
     else:
-        if isinstance(conn_prob, float):
+        if isinstance(bernoulli_prob, float):
+            # verify how?
             conn_dict_rec = {
-                'rule': 'pairwise_bernoulli', 'p': conn_prob
+                'rule': 'pairwise_bernoulli', 'p': bernoulli_prob
             }
-            synapse_nr = len(source_pop)*len(target_pop)*conn_prob
+            total_conn_nr = int(len_source*len_target*bernoulli_prob)
         else:
             conn_dict_rec = {
-                'rule': 'fixed_total_number', 'N': synapse_nr
+                'rule': 'fixed_total_number', 'N': total_conn_nr
             }
         nest.Connect(
             source_pop, target_pop,
             conn_spec=conn_dict_rec,
             syn_spec=syn_dict
         )
-    return synapse_nr
+    return total_conn_nr
 
 
 def ctsp_assign(pop, net_dict, spe_dict):
@@ -336,6 +352,7 @@ def ctsp_assign(pop, net_dict, spe_dict):
                 C_m = net_dict['neuron_params']['C_m'][celltype]
                 tau_m = net_dict['neuron_params']['tau_m'][celltype]
                 break
+    # print('pop={}, E_L={}, V_th={}, C_m={}, tau_m={}'.format(pop, E_L, V_th, C_m, tau_m))
     return E_L, V_th, C_m, tau_m
 
 
@@ -346,6 +363,7 @@ def calc_psc(psp_val, C_m, tau_m, tau_syn):
             - tau_m / (tau_m - tau_syn)) - (tau_m / tau_syn) ** (
                 - tau_syn / (tau_m - tau_syn)))) ** (-1))
     PSC_e = (PSC_e_over_PSP_e * psp_val)
+    verify_collect('calc_psc(): psp_val={:.2f}, C_m={:.2f}, tau_m={:.2f}, PSC_e={:.2f}\n'.format(psp_val, C_m, tau_m, PSC_e), 'psc')
     return PSC_e
 
 
@@ -358,36 +376,39 @@ def get_weight(psp_val, net_dict):
 
 
 # get the psc matrix
-def get_weights(net_dict, dim=13, lyr_gps=None):
-    if lyr_gps is None:
-        lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    pscs = np.zeros((dim, dim))
-    for i in range(dim):    # post
-        for j in range(dim):    # pre
-            a = 0
-            b = 0
-            for idx, gps in enumerate(lyr_gps):
-                if i in gps:
-                    a = idx
-                if j in gps:
-                    b = idx
-            psp = net_dict['w_dict']['psp_mtx'][a, b]
-            for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
-                if celltype in net_dict['populations'][i]:
-                    if net_dict['ctsp_dependent_psc']:
-                        psc = calc_psc(psp,
-                        net_dict['neuron_params']['C_m'][celltype],
-                        net_dict['neuron_params']['tau_m'][celltype],
-                        net_dict['neuron_params']['tau_syn_ex'])
-                    else:
-                        psc = calc_psc(psp,
-                        net_dict['neuron_params']['C_m']['default'],
-                        net_dict['neuron_params']['tau_m']['default'],
-                        net_dict['neuron_params']['tau_syn_ex'])
-                    if j in [0, 4, 7, 10]:
-                        pscs[i, j] = psc
-                    else:
-                        pscs[i, j] = psc*net_dict['g']
+def get_weight_mtx(net_dict, ctsp):
+    np.set_printoptions(precision=2, linewidth=500, suppress=True)
+    lyrs = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+    types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+    pscs = np.zeros((len(types), len(types)))
+    psps = np.zeros(pscs.shape)
+    taus = np.zeros(pscs.shape)
+    for i, trg_type in enumerate(types):    # post
+        for j, src_type in enumerate(types):    # pre
+            psp = net_dict['w_dict']['psp_mtx'][lyrs[i], lyrs[j]]
+            tau_syn = net_dict['neuron_params']['tau_syn_ex']
+            # adjustment for inhibitory neurons
+            if src_type != 'Exc':
+                psp *= net_dict['g']
+                tau_syn = net_dict['neuron_params']['tau_syn_in']
+                if net_dict['subtype_relative']:
+                    if src_type == 'SOM':
+                        psp *= net_dict['som_power']
+                    if src_type == 'PV':
+                        psp *= net_dict['pv_power']
+            psps[i, j] = psp
+            taus[i, j] = tau_syn
+            if ctsp and net_dict['ctsp_dependent_psc']:
+                type = trg_type
+            else:
+                type = 'default'
+            psc = calc_psc(psp,
+            net_dict['neuron_params']['C_m'][type],
+            net_dict['neuron_params']['tau_m'][type],
+            tau_syn)
+            pscs[i, j] = psc
+    verify_collect('psps=\n{}\n'.format(psps), 'psc')
+    verify_collect('pscs=\n{}\n'.format(pscs), 'psc')
     return pscs
 
 
@@ -401,6 +422,7 @@ def get_weight_stds(net_dict, dim=13, lyr_gps=None):
         for j, post_lyr in enumerate(lyr_gps):
             std_ratio = net_dict['w_dict']['psp_std_mtx'][j, i]
             std_ratios[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]:pre_lyr[-1]+1] = std_ratio
+    # print('get_weight_stds():\nstd_ratios=\n{}\n'.format(std_ratios))
     return std_ratios
 
 
@@ -467,14 +489,14 @@ def compute_DC(net_dict, w_ext):
         )
     return DC
 
-
+# no using (using Bernoulli now)
 def get_total_number_of_synapses(net_dict):
     N_full = net_dict['N_full']
     number_N = len(N_full)
     conn_probs = net_dict['conn_probs']
     prod = np.outer(N_full, N_full)
 
-    #
+    # connectivity integration
     if net_dict['renew_conn'] is True:
         if net_dict['animal'] == 'mouse':
             animal_dict = mouse_dict

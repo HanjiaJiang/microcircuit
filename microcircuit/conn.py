@@ -26,9 +26,9 @@ def conn_barrel_integrate(animal_dict, arr_0, arr_1, arr_2, dia):
             post_base = z_arr[i][0]
             post_top = z_arr[i][1]
             if dia[i, j] == 0:
-                r = 210.0
+                r = 210.0   # Markram et al., 2015, Cell
             else:
-                r = 100.0
+                r = 50.0
             pass_flag = False
             barrel_pass_flag = False
 
@@ -59,7 +59,7 @@ def conn_barrel_integrate(animal_dict, arr_0, arr_1, arr_2, dia):
         for j in range(arr_len):
             pre_base = z_arr[j][0]
             post_base = z_arr[i][0]
-            r = 100.0
+            r = 50.0
             if dia[i, j] == 0:
                 r = 210.0
                 conn = arr_0[i, j]
@@ -133,5 +133,3 @@ def integrand_connectivity_profile_exp(r1, r2, phi, z1, z2, phi_max, lmbda):
 
 def integrand_vol(r1, r2, phi, z1, z2, phi_max):
     return 2 * r1 * r2 * (phi_max - phi)
-
-

@@ -7,10 +7,12 @@ from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 import microcircuit.functions as func
-from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak
+from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp
 import copy
+import json
 np.set_printoptions(suppress=True, precision=4)
 
+stp = custom_stp
 
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):
@@ -20,44 +22,54 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
         para_dict['stim_dict']['th_rate'] = th_rate
         para_dict['stim_dict']['th_start'] = np.array(th_starts).astype(float)
         para_dict['stim_dict']['th_duration'] = duration
-        para_dict['stim_dict']['n_thal'] = 200 # Constantinople, Bruno, 2013; Oberlaender et al., 2011
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
         para_dict['stim_dict']['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
         para_dict['special_dict']['orient_tuning'] = orient
-    print_summary(para_dict)
+    # print_summary(para_dict)
+    # print_all(para_dict)
 
 # set constant parameters
 def set_constant():
     # testing area
-    net_dict['neuron_params']['tau_syn_ex'] = 2.37  # Feldmeyer, Sakmann, 2002, J of Physiology
-    net_dict['neuron_params']['tau_syn_in'] = 8.3   # Gupta, Markram, 2000, Science
+    # net_dict['neuron_params']['tau_syn_ex'] = 2.37  # Feldmeyer, Sakmann, 2002, J of Physiology
+    # net_dict['neuron_params']['tau_syn_in'] = 8.3   # Gupta, Markram, 2000, Science
+    # special_dict['ctsp'] = False
     # net_dict['renew_conn'] = True
+    # sim_dict['master_seed'] = 55
+    # net_dict['w_dict'] = {
+    #     'psp_mtx':
+    #         np.full((4, 4), 0.5),
+    #     'psp_std_mtx':
+    #         np.full((4, 4), 1.0)}
 
-    net_dict['g'] = -6
+    net_dict['g'] = -8
     net_dict['bg_rate'] = 4.0
-    special_dict['stp_dict'] = doiron_stp_weak
-    net_dict['K_ext'] = np.array([2000, 1800, 800, 300,
-                                  2000, 1800, 800,
-                                  2000, 2000, 500,
-                                  2000, 2000, 500])
-    # 20-04-21
-    # 1st: L6 conn by averaging; 2nd: L6 conn as L5
+    special_dict['stp_dict'] = custom_stp
+    net_dict['K_ext'] = np.array([2000, 2000, 1000, 1000,
+                                  2000, 2000, 1000,
+                                  2000, 2000, 1000,
+                                  2000, 2000, 1000])
+
+    # 20-04-26
+    # L6 conn by averaging
     net_dict['conn_probs'] = \
-    np.array([ [0.1014, 0.3688, 0.536 , 0.0522, 0.1174, 0.0192, 0.0429, 0.0247, 0.0948, 0.1963, 0.    , 0.    , 0.    ],
-               [0.4374, 0.4014, 0.249 , 0.0806, 0.0042, 0.0155, 0.0298, 0.027 , 0.2039, 0.2355, 0.0001, 0.0001, 0.0054],
-               [0.2659, 0.4901, 0.0306, 0.3043, 0.0038, 0.0111, 0.0417, 0.0004, 0.0234, 0.0199, 0.    , 0.    , 0.    ],
-               [0.0262, 0.0574, 0.0662, 0.0318, 0.0024, 0.0097, 0.0162, 0.0002, 0.0009, 0.0056, 0.    , 0.0001, 0.005 ],
-               [0.0142, 0.0333, 0.0562, 0.0663, 0.2058, 0.5339, 0.322 , 0.0065, 0.0264, 0.0491, 0.    , 0.0021, 0.0232],
-               [0.0378, 0.0152, 0.0216, 0.0503, 0.1093, 0.4068, 0.4746, 0.009 , 0.0262, 0.0446, 0.0013, 0.0026, 0.0175],
-               [0.0379, 0.0172, 0.0227, 0.0458, 0.1059, 0.5169, 0.0326, 0.01  , 0.0303, 0.0441, 0.0017, 0.0021, 0.0217],
-               [0.0885, 0.0556, 0.0758, 0.0589, 0.0932, 0.0658, 0.0714, 0.1098, 0.2146, 0.1807, 0.0103, 0.0167, 0.0477],
-               [0.0742, 0.1275, 0.0467, 0.0186, 0.0362, 0.0288, 0.0216, 0.097 , 0.41  , 0.2976, 0.0047, 0.0122, 0.0243],
-               [0.1051, 0.0076, 0.0098, 0.0184, 0.0394, 0.0285, 0.024 , 0.0673, 0.1355, 0.0428, 0.0061, 0.014 , 0.0299],
-               [0.    , 0.0018, 0.0031, 0.0075, 0.0306, 0.0145, 0.0094, 0.0418, 0.0184, 0.0157, 0.0241, 0.3737, 0.3468],
-               [0.0028, 0.0001, 0.0002, 0.002 , 0.0052, 0.0022, 0.0005, 0.0171, 0.    , 0.0032, 0.2145, 0.4067, 0.3414],
-               [0.0022, 0.    , 0.0002, 0.0011, 0.0047, 0.0019, 0.0003, 0.0161, 0.    , 0.0021, 0.1464, 0.382 , 0.0353]])
-    # net_dict['conn_probs'] = np.load('conn_probs/conn_probs_200423.npy')
-    # net_dict['conn_probs'] = np.load('conn_probs/conn_probs_l6-as-l5.npy')
+        np.array([ [0.0839, 0.3053, 0.4438, 0.0522, 0.1039, 0.0192, 0.0429, 0.0232, 0.0891, 0.1845, 0.    , 0.    , 0.    ],
+                   [0.3621, 0.3323, 0.2061, 0.0806, 0.0042, 0.0155, 0.0298, 0.0254, 0.1918, 0.2215, 0.0001, 0.0001, 0.0054],
+                   [0.2201, 0.4057, 0.0254, 0.2519, 0.0038, 0.0111, 0.0417, 0.0004, 0.022 , 0.0199, 0.    , 0.    , 0.    ],
+                   [0.0262, 0.0574, 0.0662, 0.0318, 0.0024, 0.0097, 0.0162, 0.0002, 0.0009, 0.0056, 0.    , 0.0001, 0.005 ],
+                   [0.0126, 0.0333, 0.0562, 0.0663, 0.1668, 0.4327, 0.261 , 0.0058, 0.0264, 0.0491, 0.    , 0.0021, 0.0232],
+                   [0.0378, 0.0152, 0.0216, 0.0503, 0.0886, 0.3297, 0.3846, 0.009 , 0.0262, 0.0446, 0.0013, 0.0026, 0.0175],
+                   [0.0379, 0.0172, 0.0227, 0.0458, 0.0859, 0.419 , 0.0264, 0.01  , 0.0303, 0.0441, 0.0017, 0.0021, 0.0217],
+                   [0.0832, 0.0523, 0.0713, 0.0589, 0.0826, 0.0658, 0.0714, 0.091 , 0.178 , 0.1498, 0.0093, 0.0167, 0.0477],
+                   [0.0698, 0.1199, 0.0439, 0.0186, 0.0362, 0.0288, 0.0216, 0.0804, 0.34  , 0.2468, 0.0047, 0.0122, 0.0243],
+                   [0.0988, 0.0071, 0.0098, 0.0184, 0.0394, 0.0285, 0.024 , 0.0558, 0.1124, 0.0355, 0.0061, 0.014 , 0.0299],
+                   [0.    , 0.0018, 0.0031, 0.0075, 0.0291, 0.0145, 0.0094, 0.0374, 0.0184, 0.0157, 0.0199, 0.3083, 0.286 ],
+                   [0.0028, 0.0001, 0.0002, 0.002 , 0.0052, 0.0022, 0.0005, 0.0171, 0.    , 0.0032, 0.177 , 0.3355, 0.2817],
+                   [0.0022, 0.    , 0.0002, 0.0011, 0.0047, 0.0019, 0.0003, 0.0161, 0.    , 0.0021, 0.1208, 0.3151, 0.0292]])
+
+    # net_dict['conn_probs'] = func.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
+
+    # net_dict['conn_probs'] = np.load('conn_probs/conn_probs_200426.npy')
 
 
 # print summary of parameters
@@ -78,6 +90,26 @@ def print_summary(all_dict):
         f.write('w_dict = \n{}\n\n'.format(all_dict['net_dict']['w_dict']))
         f.write('conn_probs = \n{}\n\n'.format(all_dict['net_dict']['conn_probs']))
 
+def print_all(all_dict):
+    os.system('mkdir -p ' + all_dict['sim_dict']['data_path'])
+    for k1, v1 in all_dict.items():
+        with open(os.path.join(all_dict['sim_dict']['data_path'], 'params_{}.txt'.format(k1)), 'w') as f:
+            for k2, v2 in v1.items():
+                if isinstance(v2, dict):
+                    f.write(k2 + ':\n')
+                    for k3, v3 in v2.items():
+                        f.write(k3 + '=\n')
+                        f.write('{}\n'.format(v3))
+                        # if isinstance(v3, np.ndarray):
+                        #     f.write('hash={}\n'.format(hash(bytes(v3))))
+                    f.write('\n')
+                else:
+                    f.write(k2 + ':\n')
+                    f.write('{}\n'.format(v2))
+                    # if isinstance(v2, np.ndarray):
+                    #     f.write('hash={}\n'.format(hash(bytes(v2))))
+                    f.write('\n')
+            f.close()
 
 # save assigned parameters to pickle
 def save_pickle(pickle_str, all_dict):
@@ -112,39 +144,18 @@ def get_conn_probs(list_n=10):
     return return_list
 
 
-# psp list
-def list_psp():
-    w_dict_normal = {
-        'psp_mtx':
-            np.full((4, 4), 0.5),
-        'psp_std_mtx':
-            np.full((4, 4), 1.0)}
-    w_dict_specific = {
-        'psp_mtx':
-        np.array([[0.70, 0.78, 0.47, 0.23],
-                  [0.34, 0.95, 0.38, 0.23],
-                  [0.70, 0.63, 0.68, 0.23],
-                  [0.70, 2.27, 0.40, 0.53]]),
-        'psp_std_mtx':
-        np.array([[0.8958, 1.2372, 0.7228, 1.0000],
-                  [0.4540, 1.3421, 1.0000, 1.0000],
-                  [1.0520, 0.9618, 1.2379, 1.0000],
-                  [1.0520, 1.3124, 0.8739, 1.3884]])}
-    return [w_dict_normal, w_dict_specific]
-
-
-# double-parameter
+# multi-parameter
 def set_g_bg(all_dict, lvls):
     all_dict['net_dict']['g'] = -float(lvls[0])
     all_dict['net_dict']['bg_rate'] = float(lvls[1])
 
-def set_ins(all_dict, lvls):
+def set_indg_somvip(all_dict, lvls):
     all_dict['net_dict']['K_ext'] = np.array([2000, 2000, lvls[0], lvls[1],
                                               2000, 2000, lvls[0],
                                               2000, 2000, lvls[0],
                                               2000, 2000, lvls[0]])
 
-def set_K_ext(all_dict, lvls):
+def set_indg_all(all_dict, lvls):
     all_dict['net_dict']['K_ext'] = np.array([lvls[0], lvls[1], lvls[2], lvls[3],
                                               lvls[0], lvls[1], lvls[2],
                                               lvls[0], lvls[1], lvls[2],
@@ -153,18 +164,14 @@ def set_K_ext(all_dict, lvls):
 
 # single-parameter
 def set_stp_config(all_dict, lvl):
-    stp_list = [copy.deepcopy(doiron_stp_weak)]
-    for key_a in doiron_stp_weak.keys():
-        for key_b in doiron_stp_weak[key_a].keys():
-            tmp_stp = copy.deepcopy(doiron_stp_weak)
+    stp_list = [copy.deepcopy(stp)]
+    for key_a in stp.keys():
+        for key_b in stp[key_a].keys():
+            tmp_stp = copy.deepcopy(stp)
             tmp_stp[key_a][key_b] = {'model': 'static_synapse'}
             stp_list.append(tmp_stp)
     if lvl < len(stp_list):
         all_dict['special_dict']['stp_dict'] = stp_list[lvl]
-
-def set_stp(all_dict, lvl):
-    stp_list = [no_stp, doiron_stp_weak, allen_stp]
-    all_dict['special_dict']['stp_dict'] = stp_list[lvl]
 
 def set_ctsp(all_dict, lvl):
     if lvl == 0:
@@ -175,23 +182,17 @@ def set_ctsp(all_dict, lvl):
 def set_seed(all_dict, lvl):
     all_dict['sim_dict']['master_seed'] = 55 + lvl
 
-def set_ctsp_stp(all_dict, lvl):
-    if lvl < 4:
-        ctsp = [False, False, True, True]
-        stp = [no_stp, doiron_stp_weak, no_stp, doiron_stp_weak]
-        all_dict['special_dict']['ctsp'] = ctsp[lvl]
-        all_dict['special_dict']['stp_dict'] = stp[lvl]
-
-def set_conn_ctsp_stp(all_dict, lvl):
+def set_properties(all_dict, lvl):
     if lvl < 8:
+        # set equal conn for INs
         if lvl < 4:
             all_dict['net_dict']['conn_probs'] = func.eq_inh_conn(all_dict['net_dict']['N_full'], all_dict['net_dict']['conn_probs'])
         ctsp = [False, False, True, True, False, False, True, True]
-        stp = [no_stp, doiron_stp_weak, no_stp, doiron_stp_weak, no_stp, doiron_stp_weak, no_stp, doiron_stp_weak]
+        stps = [no_stp, stp, no_stp, stp, no_stp, stp, no_stp, stp]
         all_dict['special_dict']['ctsp'] = ctsp[lvl]
-        all_dict['special_dict']['stp_dict'] = stp[lvl]
+        all_dict['special_dict']['stp_dict'] = stps[lvl]
 
-def set_vip(all_dict, lvl):
+def set_indg_vip(all_dict, lvl):
     all_dict['net_dict']['K_ext'][3] = lvl
 
 
@@ -213,7 +214,7 @@ def set_main(out_list, f1, f2, f3=None, f4=None):
 
 
 # set parameters for single-run
-def params_single(path):
+def set_single(path):
     set_constant()
     # net_dict['conn_probs'] = func.eq_inh_conn(net_dict['N_full'], net_dict['conn_probs'])
     # special_dict['stp_dict'] = no_stp
@@ -236,7 +237,7 @@ if __name__ == "__main__":
     set_constant()
 
     # set the network with parameters
-    set_main(output_list, set_conn_ctsp_stp, set_vip, set_g_bg)
-    # set_main(output_list, set_K_ext, f2=None)
-    # set_main(output_list, set_ins, set_g_bg)
+    set_main(output_list, set_properties, set_indg_vip, set_g_bg)
+    # set_main(output_list, set_indg_all, f2=None)
+    # set_main(output_list, set_indg_somvip, set_g_bg)
     # set_main(output_list, set_stp_config, set_seed, set_g_bg)

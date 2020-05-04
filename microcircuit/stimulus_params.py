@@ -8,7 +8,7 @@ stim_dict = {
     # Turn DC input on or off (True or False).
     'dc_input': False,
     # Number of thalamic neurons.
-    'n_thal': 904, #902,    # round up to fit 8 clusters
+    'n_thal': 200,  # Constantinople, Bruno, 2013; Oberlaender et al., 2011
     # Mean amplitude of the thalamic postsynaptic potential (in mV).
     'PSP_th': 0.49, #0.15,  # Bruno, 2006, Cortex Is Driven...
     # Standard deviation of the postsynaptic potential (in relative units).

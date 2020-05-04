@@ -357,21 +357,16 @@ def plot_raster(spikes, begin, end):
     L6_label_pos = (gids_numpy_changed[10][0] + gids_numpy_changed[12][1])/2
     ylabels = ['L2/3', 'L4', 'L5', 'L6']
 
-    color_list = [
-        'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
-        'blue', 'red', 'orange', 'blue', 'red', 'orange'
-    ]
-
     fig, ax = plt.subplots(figsize=(16, 12))
     for i in list(range(len(data))):
         if len(data[i]) > 0:
             times = data[i][:, 1]
             neurons = np.abs(data[i][:, 0] - highest_gid) + 1
             if i < 4:
-                plt.plot(times, neurons, '.', color=color_list[i],
+                plt.plot(times, neurons, '.', color=plotcolors[i],
                          label=subtype_label[i])
             else:
-                plt.plot(times, neurons, '.', color=color_list[i])
+                plt.plot(times, neurons, '.', color=plotcolors[i])
 
     #
     vline_ys = [[gids_numpy_changed[3][1], gids_numpy_changed[0][0]],
@@ -449,11 +444,7 @@ def fr_boxplot(net_dict, path):
             list_rates_rev.append(
                 np.load(rate_filepath)
                 )
-    color_list = [
-        'blue', 'red', 'orange', 'green', 'blue', 'red', 'orange',
-        'blue', 'red', 'orange', 'blue', 'red', 'orange'
-    ]
-    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', populations, color_list, (-1.0, 50.0))
+    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', populations, plotcolors, (-1.0, 50.0))
 
 
 '''

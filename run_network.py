@@ -5,30 +5,32 @@ import multiprocessing as mp
 import time
 import microcircuit.network as network
 import microcircuit.tools as tools
-from microcircuit.create_params import params_single, set_thalamic
+import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = False
+    print_to_file = True
 
     # analysis settings
-    do_ai = True
-    do_response = True
+    do_ai = False
+    do_response = False
     do_selectivity = False
 
     # set ai segments
     n_seg_ai = 1
-    start_ai = 2000.0
-    seg_ai = 2000.0
+    start_ai = 1000.0
+    seg_ai = 1000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 10
-    th_rate = 200.0 # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
-    interval_stim = 500.0
+    n_stim = 2
+    # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
+    # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
+    th_rate = 300.0
+    interval_stim = 1000.0
     ana_win = 40.0
     orient = False
     duration = 10.0
@@ -52,12 +54,13 @@ if __name__ == "__main__":
 
         # create pickle file
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
-        params_single(pickle_path)
+        create.set_single(pickle_path)
 
         # handle data path
         data_path = os.path.join(cwd, 'data')
         os.system('mkdir -p ' + data_path)
         os.system('cp run_network.py ' + data_path)
+        os.system('cp config.yml ' + data_path)
 
         # copy files
         os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit'))
@@ -82,12 +85,17 @@ if __name__ == "__main__":
         exec(tools.set2txt(para_dict['sim_dict']['data_path']))
 
     # set simulation condition
-    set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
+    create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
     para_dict['sim_dict']['local_num_threads'] = \
         int(mp.cpu_count() * cpu_ratio)
     para_dict['sim_dict']['t_sim'] = start_ai + len_ai + len_stim
     print('start_ai = {}, len_ai = {}'.format(start_ai, len_ai))
-    print('stims = {}'.format(stims))
+    print('thalamic_input = {}'.format(para_dict['stim_dict']['thalamic_input']))
+    print('stims = {}'.format(para_dict['stim_dict']['th_start']))
+
+    # print parameters
+    create.print_summary(para_dict)
+    create.print_all(para_dict)
 
     # run simulation
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
@@ -117,8 +125,9 @@ if __name__ == "__main__":
             print('response analysis time = {}'.format(t2 - t1))
             print('selectivity analysis time = {}'.format(t3 - t2))
 
-        tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-        tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
+        if not on_server:
+            tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+            tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(para_dict['sim_dict']['data_path']):

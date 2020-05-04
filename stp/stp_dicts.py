@@ -129,47 +129,114 @@ doiron_stp_weak = {
 }
 
 '''
-For testing in ins_models.py
+self-defined
 '''
-dep_syn = {
+dep_e_low = {
+    'model': 'tsodyks_synapse',
+    'U': 0.75,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 50.0,
+}
+dep_e_high = {
+    'model': 'tsodyks_synapse',
+    'U': 0.75,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 200.0,
+}
+dep_i_low = {
     'model': 'tsodyks_synapse',
     'U': 0.9,
     'tau_fac': 0.0,
-    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
-    'tau_rec': 10.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+    'tau_rec': 50.0,
+}
+dep_i_high = {
+    'model': 'tsodyks_synapse',
+    'U': 0.9,
+    'tau_fac': 0.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+    'tau_rec': 200.0,
 }
 
-fac_syn = {
+fac_e_low = {
     'model': 'tsodyks_synapse',
     'U': 0.5,
-    'tau_fac': 10.0,
+    'tau_fac': 100.0,
     'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
     'tau_rec': 0.01,
 }
-
-test_stp = {
+fac_e_high = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 200.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex'],
+    'tau_rec': 0.01,
+}
+fac_i_low = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 100.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+    'tau_rec': 0.01,
+}
+fac_i_high = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_fac': 200.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_in'],
+    'tau_rec': 0.01,
+}
+custom_stp = {
     'Exc': {
-        'Exc': dep_syn,
-        'PV': dep_syn,
-        'SOM': fac_syn,
+        'Exc': dep_e_high,
+        'PV': static_template,
+        'SOM': fac_e_high,
         'VIP': static_template
     },
     'PV': {
-        'Exc': dep_syn,
-        'PV': dep_syn,
-        'SOM': dep_syn,
-        'VIP': dep_syn
+        'Exc': static_template,
+        'PV': static_template,
+        'SOM': static_template,
+        'VIP': static_template
     },
     'SOM': {
-        'Exc': dep_syn,
-        'PV': dep_syn,
-        'SOM': dep_syn,
-        'VIP': fac_syn
+        'Exc': static_template,
+        'PV': static_template,
+        'SOM': static_template,
+        'VIP': static_template
     },
     'VIP': {
         'Exc': static_template,
         'PV': static_template,
         'SOM': static_template,
-        'VIP': dep_syn
+        'VIP': static_template
     },
 }
+
+def create_neuron(subtype, n_dict):
+    nid = nest.Create(n_dict['neuron_model'])
+    nest.SetStatus(nid, {
+        'tau_syn_ex': n_dict['neuron_params']['tau_syn_ex'],
+        'tau_syn_in': n_dict['neuron_params']['tau_syn_in'],
+        'E_L': n_dict['neuron_params']['E_L'][subtype],
+        'V_th': n_dict['neuron_params']['V_th'][subtype],
+        'C_m': n_dict['neuron_params']['C_m'][subtype],
+        'tau_m': n_dict['neuron_params']['tau_m'][subtype],
+        'V_reset':  n_dict['neuron_params']['V_reset'],
+        't_ref': n_dict['neuron_params']['t_ref']
+        })
+    return nid
+
+if __name__ == '__main__':
+    # create cells and connections
+    pre_cells = []
+    post_cells = []
+    for cell_type in cell_types:
+        pre_cells.append(create_neuron(cell_type, net_dict))
+        post_cells.append(create_neuron(cell_type, net_dict))
+    for i, pre_type in enumerate(cell_types):
+        for j, post_type in enumerate(cell_types):
+            nest.Connect(pre_cells[i], post_cells[i], syn_spec=custom_stp[pre_type][post_type])
+    # create
