@@ -8,4 +8,4 @@ from microcircuit import network_params
 from microcircuit import raw_data
 from microcircuit import sim_params
 from microcircuit import stimulus_params
-from microcircuit import tools
+from microcircuit import analysis

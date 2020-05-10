@@ -4,7 +4,7 @@ import pickle
 import multiprocessing as mp
 import time
 import microcircuit.network as network
-import microcircuit.tools as tools
+import microcircuit.analysis as analysis
 import microcircuit.create_params as create
 
 if __name__ == "__main__":
@@ -12,25 +12,25 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = True
+    print_to_file = False
 
-    # analysis settings
-    do_ai = False
+    #  settings
+    do_ai = True
     do_response = False
     do_selectivity = False
 
     # set ai segments
     n_seg_ai = 1
-    start_ai = 1000.0
-    seg_ai = 1000.0
+    start_ai = 2000.0
+    seg_ai = 2000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 2
+    n_stim = 0
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    th_rate = 300.0
-    interval_stim = 1000.0
+    th_rate = 200.0
+    interval_stim = 500.0
     ana_win = 40.0
     orient = False
     duration = 10.0
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     # set print to file
     if print_to_file:
-        exec(tools.set2txt(para_dict['sim_dict']['data_path']))
+        exec(analysis.set2txt(para_dict['sim_dict']['data_path']))
 
     # set simulation condition
     create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
@@ -106,28 +106,30 @@ if __name__ == "__main__":
 
     # analysis
     if run_analysis:
-        spikes = tools.Spikes(para_dict['sim_dict']['data_path'], 'spike_detector')
+        spikes = analysis.Spikes(para_dict['sim_dict']['data_path'], 'spike_detector')
         mean_fr, std_fr = \
-            tools.fire_rate(spikes, start_ai, start_ai + len_ai)
+            analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
             t0 = time.time()
-            tools.ai_score(spikes, start_ai, start_ai + len_ai, seg_len=seg_ai)
-            print('ai analysis time = {}'.format(time.time() - t0))
+            analysis.ai_score(spikes, start_ai, start_ai + len_ai, bw=10.0, seg_len=seg_ai)
+            print('ai_score() running time = {}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
             if do_response:
-                tools.response(spikes, start_stim, stims, window=ana_win)
+                analysis.response(spikes, start_stim, stims, window=ana_win)
             t2 = time.time()
             if do_selectivity:
-                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
-                tools.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
+                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
+                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
             t3 = time.time()
-            print('response analysis time = {}'.format(t2 - t1))
-            print('selectivity analysis time = {}'.format(t3 - t2))
+            print('response() runing time = {}'.format(t2 - t1))
+            print('selectivity() runing time = {}'.format(t3 - t2))
 
         if not on_server:
-            tools.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-            tools.fr_boxplot(para_dict['net_dict'], para_dict['sim_dict']['data_path'])
+            analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+            analysis.fr_boxplot(spikes, para_dict['net_dict'], para_dict['sim_dict']['data_path'])
+
+        spikes.verify_print()
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(para_dict['sim_dict']['data_path']):
@@ -136,4 +138,4 @@ if __name__ == "__main__":
                 os.remove(os.path.join(para_dict['sim_dict']['data_path'], item))
 
     if print_to_file:
-        exec(tools.end2txt())
+        exec(analysis.end2txt())

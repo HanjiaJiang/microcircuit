@@ -1,9 +1,9 @@
 import nest
 import numpy as np
 import copy
-from stp.stp_dicts import cell_types, allen_stp, doiron_stp, doiron_stp_weak
+from stp.stp_dicts import doiron_stp_weak
 from microcircuit.conn import conn_barrel_integrate
-from microcircuit.raw_data import rat_dict, mouse_dict, bbp, exp, dia, allen, dia_allen
+import microcircuit.raw_data as raw
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 '''
@@ -57,6 +57,9 @@ def verify_print():
             f.write(value)
             f.close()
 
+'''
+Main functions
+'''
 def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
     syn_dict = {
         'model': 'static_synapse',
@@ -142,7 +145,7 @@ def set_thalamus(th_pop,
     # no tuning
     else:
         for i, pop in enumerate(poisson_pops):
-            print('set_thalamus_poisson():\npop len={}'.format(len(pop)))
+            # print('set_thalamus_poisson():\npop len={}'.format(len(pop)))
             nest.SetStatus(pop, {
                 'rate': rate_0,
                 'start': start_times[i],
@@ -224,6 +227,7 @@ def connect_tc(th_pop,
             nest.Connect(th_pop, target_pop,
             conn_spec={'rule': 'pairwise_bernoulli', 'p': bernoulli_prob},
             syn_spec=syn_dict_th)
+            verify_collect('{}, p={:.4f}\n'.format(target_name, bernoulli_prob), 'thalamus')
         # connect by synapse number
         else:
             nest.Connect(
@@ -480,8 +484,19 @@ def eq_inh_conn(n_full, conn, lyr_gps=None):
 
     return conn_out
 
+def renew_conn(net_dict):
+    # connectivity integration
+    if net_dict['renew_conn'] is True:
+        if net_dict['animal'] == 'mouse':
+            animal_dict = raw.mouse_dict
+        else:
+            animal_dict = raw.rat_dict
+        net_dict['conn_probs'] = conn_barrel_integrate(animal_dict, raw.bbp, raw.exp, raw.allen, raw.flg_mtx)
 
-# original helpers.py functions
+
+'''
+from helpers.py
+'''
 def compute_DC(net_dict, w_ext):
     DC = (
         net_dict['bg_rate'] * net_dict['K_ext'] *
@@ -495,21 +510,12 @@ def get_total_number_of_synapses(net_dict):
     number_N = len(N_full)
     conn_probs = net_dict['conn_probs']
     prod = np.outer(N_full, N_full)
-
-    # connectivity integration
-    if net_dict['renew_conn'] is True:
-        if net_dict['animal'] == 'mouse':
-            animal_dict = mouse_dict
-        else:
-            animal_dict = rat_dict
-        conn_probs = conn_barrel_integrate(animal_dict, bbp, exp, allen, dia)
-
     n_syn_temp = np.log(1. - conn_probs)/np.log((prod - 1.) / prod)
     N_full_matrix = np.column_stack((N_full for i in list(range(number_N))))
     K = (((n_syn_temp * (N_full_matrix).astype(int)) / N_full_matrix).astype(int))
     return K
 
-
+# no using (using Bernoulli now)
 def synapses_th_matrix(net_dict, stim_dict):
     N_full = net_dict['N_full']
     conn_probs = stim_dict['conn_probs_th']

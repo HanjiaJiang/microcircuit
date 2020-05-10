@@ -13,25 +13,6 @@ from tkinter.filedialog import askopenfilename
 import scipy.stats as stats
 from scipy import interpolate
 
-populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
-               'L4 Exc', 'L4 PV', 'L4 SOM',
-               'L5 Exc', 'L5 PV', 'L5 SOM',
-               'L6 Exc', 'L6 PV', 'L6 SOM']
-
-subtype_label = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
-
-subtype_pos = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
-
-plotlayers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
-
-plotcolors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
-                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
-                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
-                (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
-# plotcolors = ['b', 'r', 'orange', 'g', 'b', 'r', 'orange',
-#              'b', 'r', 'orange', 'b', 'r', 'orange']
-
-layerlabels = ['L2/3', 'L4', 'L5', 'L6']
 
 class Spikes:
     def __init__(self, path, name):
@@ -41,11 +22,13 @@ class Spikes:
         self.detectors = []
         self.data = []
         self.react_lines = []
+        self.veri_dict = {}
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
             os.mkdir(self.path)
             print('Spikes.__init__(): data directory created')
+        self.set_labels()
         self.load()
 
     def read_name(self):
@@ -61,6 +44,7 @@ class Spikes:
             a = l.split()
             self.gids.append([int(a[0]), int(a[1])])
         self.detectors = sorted(self.detectors)
+        self.verify_collect('self.detectors={}\n'.format(self.detectors), 'reading')
 
     def load(self):
         self.read_name()
@@ -75,8 +59,10 @@ class Spikes:
                         + '-' + all_filenames[x].split('-')[1]) in
                        self.detectors[i]
                 ]
+                self.verify_collect('thread_filenames:\n', 'reading')
                 data_temp = []
                 for f in thread_filenames:
+                    self.verify_collect('{}\n'.format(f), 'reading')
                     load_tmp = np.array([])
                     try:
                         load_tmp = np.loadtxt(os.path.join(self.path, f))
@@ -87,10 +73,16 @@ class Spikes:
                     if len(load_tmp.shape) == 2:
                         data_temp.append(load_tmp)
                 if len(data_temp) > 0:
-                    data_concatenated = np.concatenate(data_temp)
-                    self.data.append(data_concatenated[np.argsort(data_concatenated[:, 1])])
+                    data = np.concatenate(data_temp)
+                    data = data[np.argsort(data[:, 1])]
+                    self.data.append(data)
+                    self.verify_collect('data_final:\n', 'reading')
+                    self.verify_collect('{}...\n'.format(data[:100]), 'reading')
+                    # for d in data_final:
+                    #     self.verify_collect('{}\n'.format(d), 'reading')
                 else:
                     self.data.append([])
+                    self.verify_collect('data_final=[]\n', 'reading')
         else:
             print('Spikes.load_spikes_all(): detectors or gids not found')
 
@@ -103,13 +95,42 @@ class Spikes:
                 data_ret.append([])
         return data_ret
 
-    def get_ts_by_id(data, id):
+    def get_ts_by_id(self, data, id):
         return_data = []
         if isinstance(data, np.ndarray) and data.ndim == 2:
             ids = data[:, 0]
             ts = data[:, 1]
             return_data = ts[ids == id]
         return return_data
+
+    def verify_collect(self, in_str, tag):
+        if tag in self.veri_dict.keys():
+            self.veri_dict[tag] += in_str
+        else:
+            self.veri_dict[tag] = in_str
+
+    def verify_print(self):
+        for key, value in self.veri_dict.items():
+            with open('verify-spikes-{}.txt'.format(key), 'w') as f:
+                f.write(value)
+                f.close()
+
+    def set_labels(self):
+        self.populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
+                       'L4 Exc', 'L4 PV', 'L4 SOM',
+                       'L5 Exc', 'L5 PV', 'L5 SOM',
+                       'L6 Exc', 'L6 PV', 'L6 SOM']
+
+        self.subtype_labels = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+
+        self.pos_labels = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+
+        self.layer_labels = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+        self.color_labels = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
 
 
 '''
@@ -180,6 +201,8 @@ def get_corr(list1, list2=None, proc_id=None, rtr_dict=None):
             if np.sum(hist1) != 0 and np.sum(hist2) != 0:
                 coef = np.corrcoef(hist1, hist2)[0, 1]
                 coef_list.append(coef)
+                # if int(proc_id) == 0:
+                #     print('hist({})={}\nhist({})={}\n'.format(i, hist1, j, hist2))
             else:
                 print('oops, no data in one/both histograms')
 
@@ -232,7 +255,6 @@ def folders_with(target_str):
             return_list.append(folder)
     return return_list
 
-
 # make a folder with specific name
 def make_folder(folder_name):
     data_path = ''
@@ -251,68 +273,9 @@ def make_folder(folder_name):
 '''
 From the original helpers.py
 '''
-def read_name(path, name):
-    # Import filenames
-    files = []
-    for file in os.listdir(path):
-        if file.endswith('.gdf') and file.startswith(name):
-            temp = file.split('-')[0] + '-' + file.split('-')[1]
-            if temp not in files:
-                files.append(temp)
-
-    # Import GIDs
-    gidfile = open(os.path.join(path, 'population_GIDs.dat'), 'r')
-    gids = []
-    for l in gidfile:
-        a = l.split()
-        gids.append([int(a[0]), int(a[1])])
-    files = sorted(files)
-    return files, gids
-
-
-def load_spike_times(path, name, begin, end):
-    detector_names, gids = read_name(path, name)    # names: populations
-    data = {}
-    if len(detector_names) > 0 and len(gids) > 0:
-        for i in list(range(len(detector_names))):
-            all_filenames = os.listdir(path)
-            thread_filenames = [
-                all_filenames[x] for x in list(range(len(all_filenames)))
-                if all_filenames[x].endswith('gdf') and
-                   all_filenames[x].startswith('spike') and
-                   (all_filenames[x].split('-')[0]
-                    + '-' + all_filenames[x].split('-')[1]) in
-                   detector_names[i]
-                ]
-            # ids_temp = np.array([])
-            # times_temp = np.array([])
-            data_temp = []
-            for f in thread_filenames:
-                load_tmp = np.array([])
-                try:
-                    load_tmp = np.loadtxt(os.path.join(path, f))
-                except ValueError:
-                    print(os.path.join(path, f))
-                else:
-                    pass
-                if len(load_tmp.shape) == 2:
-                    data_temp.append(load_tmp)
-                    # ids_temp = np.append(ids_temp, load_tmp[:, 0])
-                    # times_temp = np.append(times_temp, load_tmp[:, 1])
-            # data_concatenated = np.array([ids_temp, times_temp]).T  # transpose
-            if len(data_temp) > 0:
-                data_concatenated = np.concatenate(data_temp)
-                data_raw = \
-                    data_concatenated[np.argsort(data_concatenated[:, 1])]
-                idx = ((data_raw[:, 1] > begin) * (data_raw[:, 1] < end))
-                data[i] = data_raw[idx]
-            else:
-                data[i] = []
-    return data, gids   # an extra return: gids
-
-
 def fire_rate(spikes, begin, end):
     data = spikes.get_data(begin, end)
+    spikes.verify_collect('data[2]=\n{}\n'.format(data[2]), 'fr')
     gids = spikes.gids
     rates_averaged_all = []
     rates_std_all = []
@@ -320,15 +283,27 @@ def fire_rate(spikes, begin, end):
         if len(data[h]) > 0:
             n_fil = data[h][:, 0]
             n_fil = n_fil.astype(int)
-            count_of_n = np.bincount(n_fil)
-            count_of_n_fil = count_of_n[gids[h][0]-1:gids[h][1]]
+            count_of_n = np.bincount(n_fil) # bin count from 0
+            count_of_n_fil = count_of_n[gids[h][0]:gids[h][1]+1] # get data with corresponding indices
             rate_each_n = count_of_n_fil * 1000. / (end - begin)
             rate_averaged = np.mean(rate_each_n)
             rate_std = np.std(rate_each_n)
             rates_averaged_all.append(float('%.3f' % rate_averaged))
             rates_std_all.append(float('%.3f' % rate_std))
-            np.save(os.path.join(spikes.path, ('rate' + str(h) + '.npy')),
-                    rate_each_n)
+            np.save(os.path.join(spikes.path, ('rate' + str(h) + '.npy')), rate_each_n)
+            if h == 2:
+                spikes.verify_collect('gids[2]=\n{}\n'.format(gids[2]), 'fr')
+                spikes.verify_collect('len(n_fil)={}, values=\n'.format(len(n_fil)), 'fr')
+                for n in n_fil:
+                    spikes.verify_collect('{} '.format(n), 'fr')
+                spikes.verify_collect('\n', 'fr')
+                spikes.verify_collect('count_of_n(tail)=\n{}\n'.format(count_of_n[-len(count_of_n_fil):]), 'fr')
+                spikes.verify_collect('count_of_n_fil=\n{}\n'.format(count_of_n_fil), 'fr')
+                spikes.verify_collect('np.sum(count_of_n_fil)=\n{}\n'.format(np.sum(count_of_n_fil)), 'fr')
+                spikes.verify_collect('len(count_of_n)=\n{}\n'.format(len(count_of_n)), 'fr')
+                spikes.verify_collect('len(count_of_n_fil)=\n{}\n'.format(len(count_of_n_fil)), 'fr')
+                spikes.verify_collect('rate_each_n=\n{}\n'.format(rate_each_n), 'fr')
+                spikes.verify_collect('rate_averaged=\n{:.2f}\n'.format(rate_averaged), 'fr')
         else:
             rates_averaged_all.append(0.0)
             rates_std_all.append(0.0)
@@ -363,10 +338,10 @@ def plot_raster(spikes, begin, end):
             times = data[i][:, 1]
             neurons = np.abs(data[i][:, 0] - highest_gid) + 1
             if i < 4:
-                plt.plot(times, neurons, '.', color=plotcolors[i],
-                         label=subtype_label[i])
+                plt.plot(times, neurons, '.', color=spikes.color_labels[i],
+                         label=spikes.subtype_labels[i])
             else:
-                plt.plot(times, neurons, '.', color=plotcolors[i])
+                plt.plot(times, neurons, '.', color=spikes.color_labels[i])
 
     #
     vline_ys = [[gids_numpy_changed[3][1], gids_numpy_changed[0][0]],
@@ -433,7 +408,7 @@ def do_boxplot(data, path, title, xlbls, ylbls, clr_list, xlims):
     plt.savefig(os.path.join(path, 'box_plot_' + title + '.png'), dpi=300)
     plt.close()
 
-def fr_boxplot(net_dict, path):
+def fr_boxplot(spikes, net_dict, path):
     pops = net_dict['N_full']
     # list of population length e.g. [0, 1, ..., 12]
     reversed_order_list = list(range(len(pops) - 1, -1, -1))
@@ -444,7 +419,7 @@ def fr_boxplot(net_dict, path):
             list_rates_rev.append(
                 np.load(rate_filepath)
                 )
-    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', populations, plotcolors, (-1.0, 50.0))
+    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', spikes.populations, spikes.color_labels, (-1.0, 50.0))
 
 
 '''
@@ -501,7 +476,7 @@ def sample_by_layer(data, ids, layers, n_sample=140):
             else:
                 rdata.append([])
         # layer sample n must > 90% desired
-        if len(selected) < n_sample * sample_cri and flg_exc is True:
+        if len(selected) < n_sample * sample_cri or flg_exc is True:
             validity[i] = 0
             print('layer of {} n < 90% desired; abandon this layer'.format(i))
         set_selected_by_lyr.append(selected)
@@ -542,8 +517,11 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
 
     # ai calculation
     ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
+    ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
     cvs_by_seg_by_layer = []
     validity_by_seg = []
+    grp = 2
+    lyr = 0
     # by segment
     for i, seg_head in enumerate(seg_list):
         seg_end = seg_head + seg_len
@@ -557,12 +535,21 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
                 data_seg.append(data_group[(data_group[:, 1] >= seg_head) & (data_group[:, 1] < seg_end)])
             else:
                 data_seg.append([])
+        #
+        if i == 0:
+            spikes.verify_collect('data[grp]=\n{}\n'.format(data_all[grp]), 'gs')
+            spikes.verify_collect('data_seg[grp]=\n{}\n'.format(data_seg[grp]), 'gs')
+
         # filter
         data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
         # sample
         data_seg, valids = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
         # cache for layer data validity
         validity_by_seg.append(valids)
+
+        #
+        if i == 0:
+            spikes.verify_collect('data_seg[grp](sampled)=\n{}\n'.format(data_seg[grp]), 'gs')
 
         # calculation:
         cvs_by_layer = []
@@ -581,25 +568,45 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
                     if type(data) == np.ndarray and data.ndim == 2:
                         layer_ids = np.concatenate((layer_ids, data[:, 0]))
                         layer_ts = np.concatenate((layer_ts, data[:, 1]))
+
+                #
+                if i==0 and j == lyr:
+                    spikes.verify_collect('layer_ids=\n', 'gs')
+                    for id in layer_ids:
+                        spikes.verify_collect('{} '.format(id), 'gs')
+                        spikes.verify_collect('\n', 'gs')
+                    spikes.verify_collect('layer_ts=\n', 'gs')
+                    for t in layer_ts:
+                        spikes.verify_collect('{:.1f} '.format(t), 'gs')
+                        spikes.verify_collect('\n', 'gs')
+
                 # obtain histogram and calculate pair-corr and cv-isi
-                for k in layer:
-                    for gid in range(gids[k][0], gids[k][1] + 1):   # each neuron id of this group
-                        ts = layer_ts[layer_ids == gid]
-                        if len(ts) > 0:
-                            hists.append(
-                                np.histogram(ts, bins=np.arange(seg_head, seg_end + bw, bw))[0])
+                for gid in list(set(layer_ids)):   # each id in the selected
+                    ts = layer_ts[layer_ids == gid]
+                    if len(ts) > 0:
+                        hist_bins = np.arange(seg_head, seg_end + bw, bw)
+                        hist = np.histogram(ts, bins=hist_bins)[0]
+                        if not np.all(hist == hist[0]):
+                            hists.append(hist)
                             cnt_corr += 1
-                            if len(ts) > 3:
-                                isi = np.diff(ts)
-                                cvs.append(np.std(isi) / np.mean(isi))
-                                cnt_cv += 1
+                        if len(ts) > 3:
+                            isi = np.diff(ts)
+                            cvs.append(np.std(isi) / np.mean(isi))
+                            cnt_cv += 1
+                            #
+                            if i==0 and j == lyr and gid == layer_ids[0]:
+                                spikes.verify_collect('hist_bins={}\n'.format(hist_bins), 'gs')
+                                spikes.verify_collect('hist={}\n'.format(hist), 'gs')
+                                spikes.verify_collect('isi={}\n'.format(isi), 'gs')
+                # conclude this layer
                 print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
+                ai_n.write('{}, {}\n'.format(cnt_corr, cnt_cv))
                 # set multiprocessing
-                proc = Process(target=get_corr,
-                               args=(hists, None, int(i * (len(layers)) + j), return_dict))
+                proc = Process(target=get_corr, args=(hists, None, int(i * (len(layers)) + j), return_dict))
                 procs.append(proc)
                 proc.start()
             cvs_by_layer.append(cvs)
+        ai_n.write('\n')
         cvs_by_seg_by_layer.append(cvs_by_layer)
 
     # join multiprocessing for correlation
@@ -611,23 +618,22 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
         corr_means_by_seg = []
         cv_means_by_seg = []
         for i in range(len(seg_list)):
+            n_corrs = np.nan
+            n_cvs = np.nan
             if validity_by_seg[i][j] == 1:
                 corrs = return_dict[str(int(i * (len(layers)) + j))]
                 corr_means_by_seg.append(np.mean(corrs))
                 cvs = cvs_by_seg_by_layer[i][j]
                 cv_means_by_seg.append(np.mean(cvs))
-        ai.write(str(np.mean(corr_means_by_seg)) + ', ' + str(np.mean(cv_means_by_seg)) + '\n')
+                n_corrs = len(corrs)
+                n_cvs = len(cvs)
+                for a, corr in enumerate(corrs):
+                    if np.isnan(corr):
+                        print('corr no. {} is nan'.format(a))
+        ai.write('{}, {}\n'.format(str(np.mean(corr_means_by_seg)), str(np.mean(cv_means_by_seg))))
 
     ai.close()
-
-def get_ts_by_id(data, id):
-    return_data = []
-    if isinstance(data, np.ndarray) and data.ndim == 2:
-        ids = data[:, 0]
-        ts = data[:, 1]
-        return_data = ts[ids == id]
-    return return_data
-
+    ai_n.close()
 
 def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
     n_stim = len(stims)
@@ -652,7 +658,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
             SI_by_neuronbin = np.full((pop_len, n_bin), np.nan)
             for j, gid in enumerate(range(spikes.gids[i][0], spikes.gids[i][1]+1)):
                 # get ts by id
-                ts = get_ts_by_id(data=data_pop, id=gid)
+                ts = spikes.get_ts_by_id(data=data_pop, id=gid)
                 for b in range(n_bin):
                     # get spike counts and stds by stims
                     cnts_by_stim = np.array([len(np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]) for stim in stims])
@@ -665,7 +671,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
             # Calculate population selectivity and plot
             len_q = int(len(SI_by_neuronbin)/4)
-            idx_lyr = plotlayers[i]
+            idx_lyr = spikes.layer_labels[i]
             SIs_s1 = SI_by_neuronbin[len_q:3*len_q]
             SIs_s2 = np.concatenate((SI_by_neuronbin[:len_q], SI_by_neuronbin[3*len_q:]), axis=0)
             if raw is True:
@@ -673,41 +679,41 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
             else:
                 SIs_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
             # main lines
-            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=plotcolors[i], linewidth=2, label=subtype_label[i])
+            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=spikes.color_labels[i], linewidth=2, label=spikes.subtype_labels[i])
             # boxplot
             if raw is True:
                 for k, SIs in enumerate(SIs_s1.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + 2*subtype_pos[i]*bin_w/10.0],
-                    boxprops=dict(color=plotcolors[i], linewidth=2),
-                    whiskerprops=dict(color=plotcolors[i], linewidth=2),
-                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=2),
-                    medianprops=dict(color=plotcolors[i], linewidth=2),
-                    capprops=dict(color=plotcolors[i], linewidth=2))
+                    positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
+                    boxprops=dict(color=spikes.color_labels[i], linewidth=2),
+                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=2),
+                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=2),
+                    medianprops=dict(color=spikes.color_labels[i], linewidth=2),
+                    capprops=dict(color=spikes.color_labels[i], linewidth=2))
                 for k, SIs in enumerate(SIs_s2.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + (2*subtype_pos[i] + 1)*bin_w/10.0],
-                    boxprops=dict(color=plotcolors[i], linewidth=1),
-                    whiskerprops=dict(color=plotcolors[i], linewidth=1),
-                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=1),
-                    medianprops=dict(color=plotcolors[i], linewidth=1),
-                    capprops=dict(color=plotcolors[i], linewidth=1))
+                    positions=[xs[k] + (2*spikes.pos_labels[i] + 1)*bin_w/10.0],
+                    boxprops=dict(color=spikes.color_labels[i], linewidth=1),
+                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=1),
+                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=1),
+                    medianprops=dict(color=spikes.color_labels[i], linewidth=1),
+                    capprops=dict(color=spikes.color_labels[i], linewidth=1))
             else:
                 for k, SIs in enumerate(SI_by_neuronbin.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + 2*subtype_pos[i]*bin_w/10.0],
-                    boxprops=dict(color=plotcolors[i], linewidth=1.5),
-                    whiskerprops=dict(color=plotcolors[i], linewidth=1.5),
-                    flierprops=dict(markeredgecolor=plotcolors[i], marker='.', markersize=1.5),
-                    medianprops=dict(color=plotcolors[i], linewidth=1.5),
-                    capprops=dict(color=plotcolors[i], linewidth=1.5))
+                    positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
+                    boxprops=dict(color=spikes.color_labels[i], linewidth=1.5),
+                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=1.5),
+                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=1.5),
+                    medianprops=dict(color=spikes.color_labels[i], linewidth=1.5),
+                    capprops=dict(color=spikes.color_labels[i], linewidth=1.5))
             axs[idx_lyr].spines['right'].set_visible(False)
             axs[idx_lyr].spines['top'].set_visible(False)
             if i == 0:
                 axs[idx_lyr].plot([0.0, duration], [ylims[1], ylims[1]], color='k', linewidth=10)
             if i < 4:
                 axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
-            axs[idx_lyr].text(-25.0, np.mean(ylims), layerlabels[idx_lyr])
+            axs[idx_lyr].text(-25.0, np.mean(ylims), spikes.layer_labels[idx_lyr])
     for ax in axs:
         ax.plot([0.0, bin_w*n_bin], [0.0, 0.0], color='k', linestyle='--')
     plt.xticks(xs[::2], labels=xs[::2].astype(str))
@@ -785,7 +791,7 @@ def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=Fal
         ax.plot(xs, ys,
             linestyle=linestyles[a],
             linewidth=3,
-            label=populations[i],
+            label=spikes.populations[i],
             color=colors[a])
         ax.set_xlabel('mean spike latency (ms)')
         ax.set_ylabel('fraction')
@@ -807,44 +813,3 @@ def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=Fal
     if empty_flg:
         xy_by_layer = []
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
-
-
-# to be improved ..
-def plot_psth(path, name, begin, end):
-    files, gids = read_name(path, name)
-    data_all, gids = load_spike_times(path, name, begin, end)
-    fig, axs = plt.subplots(4, 1, figsize=(12, 12),
-                            sharex=True, sharey=True, constrained_layout=True)
-    colors = ['b', 'r', 'orange', 'g',
-              'b', 'r', 'orange',
-              'b', 'r', 'orange',
-              'b', 'r', 'orange']
-    bin_width = 1.0
-    for i in list(range(len(data_all))):
-        # times = np.array([])
-        if len(data_all[i]) > 0:
-            times = data_all[i][:, 1]
-            # times = times.astype(int)
-
-            # indexing for plots
-            if i < 4:
-                a = 0
-                # b = i % 3.0
-                # if i == 3:
-                #     b = 3.0
-            else:
-                a = int((i - 1) / 3)
-                # b = (i - 1) % 3.0
-
-            # bar_width = window / 5.0
-            # axs[a].bar(t_plot+b*bar_width, si_abs_arr[:, i], width=bar_width,
-            #            label=populations[i] + ' all cells (abs)', color=colors[i], align='center')
-            axs[a].hist(times, np.arange(begin, end + bin_width, bin_width), color=colors[i], label=populations[i])
-            axs[a].legend(loc='upper right')
-            # axs[a].set_ylim(-0.7, 0.7)
-            # axs[a].set_xlim(t_plot[0] - 10.0, t_plot[-1] + 50.0)
-
-    plt.xlabel('t (ms)')
-    plt.ylabel('spikes')
-    plt.savefig(os.path.join(path, 'psth.png'))
-    plt.close()

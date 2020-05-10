@@ -215,6 +215,78 @@ custom_stp = {
     },
 }
 
+'''
+BBP data
+'''
+e1 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.09,
+    'tau_rec': 138.0,
+    'tau_fac': 670.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+e2 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.5,
+    'tau_rec': 671.0,
+    'tau_fac': 17.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+e3 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.29,
+    'tau_rec': 329.0,
+    'tau_fac': 326.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+i1 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.016,
+    'tau_rec': 45.0,
+    'tau_fac': 376.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+i2 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.25,
+    'tau_rec': 706.0,
+    'tau_fac': 21.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+i3 = {
+    'model': 'tsodyks_synapse',
+    'U': 0.32,
+    'tau_rec': 144.0,
+    'tau_fac': 62.0,
+    'tau_psc': net_dict['neuron_params']['tau_syn_ex']
+}
+bbp_stp = {
+    'Exc': {
+        'Exc': e2,
+        'PV': e2,
+        'SOM': e1,
+        'VIP': e1
+    },
+    'PV': {
+        'Exc': i3,
+        'PV': i3,
+        'SOM': i3,
+        'VIP': i3
+    },
+    'SOM': {
+        'Exc': i2,
+        'PV': i2,
+        'SOM': i2,
+        'VIP': i2
+    },
+    'VIP': {
+        'Exc': i2,
+        'PV': i2,
+        'SOM': i2,
+        'VIP': i2
+    },
+}
+
 def create_neuron(subtype, n_dict):
     nid = nest.Create(n_dict['neuron_model'])
     nest.SetStatus(nid, {

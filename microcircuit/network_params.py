@@ -187,9 +187,9 @@ net_dict = {
         # Membrane time constant (in ms).
         'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Time constant of postsynaptic excitatory currents (in ms).
-        'tau_syn_ex': 2.1, # Allen Institue,
+        'tau_syn_ex': 2.0, #2.1, # Allen Institue,
         # Time constant of postsynaptic inhibitory currents (in ms).
-        'tau_syn_in': 3.2, # Allen Institue,
+        'tau_syn_in': 4.0, #3.2, # Allen Institue,
         # Time constant of external postsynaptic excitatory current (in ms).
         'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).

@@ -1,6 +1,8 @@
 import os
 from microcircuit.functions import *
 from microcircuit.network_params import net_update
+# from stp.stp_dicts import bbp_stp
+# import copy
 np.set_printoptions(precision=4, suppress=True, linewidth=100)
 
 class Network:
@@ -61,8 +63,7 @@ class Network:
 
     def create_populations(self):
         self.nr_neurons = self.net_dict['N_full']
-        # not using by default (using Bernoulli now) but still for connectivity integration
-        self.synapses = get_total_number_of_synapses(self.net_dict)
+        self.synapses = get_total_number_of_synapses(self.net_dict) # not using
         self.K_ext = self.net_dict['K_ext']
         # self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
         self.weight_mat = get_weight_mtx(self.net_dict, self.spe_dict['ctsp'])
@@ -233,43 +234,54 @@ class Network:
     def create_connections(self):
         if nest.Rank() == 0:
             print('Recurrent connections are established')
+        renew_conn(self.net_dict)
         mean_delays = self.net_dict['mean_delay_matrix']
         std_delays = self.net_dict['std_delay_matrix']
+        verify_collect('weight_mat=\n{}\n'.format(self.weight_mat), 'lognormal')
+        verify_collect('weight_mat_std=\n{}\n'.format(self.weight_mat_std), 'lognormal')
         for i, target_pop in enumerate(self.pops):
             for j, source_pop in enumerate(self.pops):
-                synapse_nr = int(self.synapses[i][j])
+                p = self.net_dict['conn_probs'][i, j]
+                if p <= 0.:
+                    continue
+                synapse_nr = int(self.synapses[i][j])   # not using
                 target_name = self.net_dict['populations'][i]
                 source_name = self.net_dict['populations'][j]
-                if synapse_nr >= 0.:
-                    weight = self.weight_mat[i][j]
-                    w_sd = abs(weight * self.weight_mat_std[i][j])
-                    var_ln = np.log((weight ** 2 + w_sd ** 2) / weight ** 2)
-                    mu_ln = np.log(abs(weight)) - var_ln / 2.
-                    conn_dict_rec = {
-                        'rule': 'fixed_total_number', 'N': synapse_nr
-                        }
-                    weight_dict = {
-                       'distribution': 'lognormal', 'mu': mu_ln,
-                       'sigma': np.sign(weight)*np.sqrt(var_ln)
-                       }
-                    delay_dict = {
-                        'distribution': 'normal_clipped',
-                        'mu': mean_delays[i][j], 'sigma': std_delays[i][j],
-                        'low': self.sim_resolution
-                        }
-                    syn_dict = assign_stp(source_name, target_name, weight_dict, delay_dict, self.stp_dict)
-                    # syn_dict = {
-                    #     'model': 'static_synapse',
-                    #     'weight': weight_dict,
-                    #     'delay': delay_dict
-                    # }
-                    nr = connect_recurrent(source_name, target_name, synapse_nr, syn_dict,
-                                       source_pop, target_pop, self.spe_dict, bernoulli_prob=self.net_dict['conn_probs'][i, j])
-                    # nest.Connect(
-                    #     source_pop, target_pop,
-                    #     conn_spec=conn_dict_rec,
-                    #     syn_spec=syn_dict
-                    #     )
+                w = self.weight_mat[i][j]
+                w_sd = abs(w * self.weight_mat_std[i][j])
+                # var_n, mu_n: variance and mean of the underlying normal distribution
+                var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
+                mu_n = np.log(abs(w)) - var_n / 2.
+                conn_dict_rec = {
+                    'rule': 'fixed_total_number', 'N': synapse_nr
+                    }
+                weight_dict = {
+                   'distribution': 'lognormal', 'mu': mu_n,
+                   'sigma': np.sign(w)*np.sqrt(var_n)
+                   }
+                # weight_dict = {
+                #    'distribution': 'normal_clipped', 'mu': w,
+                #    'sigma': w_sd
+                #    }
+                delay_dict = {
+                    'distribution': 'normal_clipped',
+                    'mu': mean_delays[i][j], 'sigma': std_delays[i][j],
+                    'low': self.sim_resolution
+                    }
+                syn_dict = assign_stp(source_name,
+                                        target_name,
+                                        weight_dict,
+                                        delay_dict,
+                                        self.stp_dict)
+                nr = connect_recurrent(source_name,
+                                        target_name,
+                                        synapse_nr,
+                                        syn_dict,
+                                        source_pop,
+                                        target_pop,
+                                        self.spe_dict,
+                                        bernoulli_prob=p)
+                verify_collect('{} to {}, [w, w_sd, mu_n, var_n] = [{:.4f}, {:.4f}, {:.4f}, {:.4f}]\n'.format(source_name, target_name, w, w_sd, mu_n, var_n), 'lognormal')
 
 
     def connect_poisson(self):
@@ -288,6 +300,17 @@ class Network:
                 self.net_dict['neuron_params']['C_m'][cell_type],
                 self.net_dict['neuron_params']['tau_m'][cell_type],
                 self.net_dict['neuron_params']['tau_syn_ex'])
+            # currently inconvenient to implement STPs
+            # because dinstinction of connections from
+            # different external neurons is not available
+            # (lognormal)
+            # w_sd = w
+            # var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
+            # mu_n = np.log(abs(w)) - var_n / 2.
+            # weight_dict = {
+            #    'distribution': 'lognormal', 'mu': mu_n,
+            #    'sigma': np.sign(w)*np.sqrt(var_n)
+            #    }
             syn_dict_poisson = {
                 'model': 'static_synapse',
                  'weight': w,
@@ -319,10 +342,11 @@ class Network:
                 mu = calc_psc(psp[i], C_m, tau_m, tau_syn)
             else:
                 mu = calc_psc(psp, C_m, tau_m, tau_syn)
-            conn_dict_th = {
-                'rule': 'fixed_total_number',
-                'N': int(self.nr_synapses_th[i])
-                }
+            # conn_dict_th = {
+            #     'rule': 'fixed_total_number',
+            #     'N': int(self.nr_synapses_th[i])
+            #     }
+            # lognormal to be implemented?
             syn_dict_th = {
                 'weight': {
                     'distribution': 'normal_clipped',

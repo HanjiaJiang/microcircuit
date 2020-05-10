@@ -7,7 +7,7 @@ from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 import microcircuit.functions as func
-from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp
+from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp, bbp_stp
 import copy
 import json
 np.set_printoptions(suppress=True, precision=4)
@@ -24,18 +24,13 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
         para_dict['stim_dict']['th_duration'] = duration
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
         para_dict['stim_dict']['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
-        para_dict['special_dict']['orient_tuning'] = orient
-    # print_summary(para_dict)
-    # print_all(para_dict)
+    para_dict['special_dict']['orient_tuning'] = orient
 
 # set constant parameters
 def set_constant():
     # testing area
-    # net_dict['neuron_params']['tau_syn_ex'] = 2.37  # Feldmeyer, Sakmann, 2002, J of Physiology
-    # net_dict['neuron_params']['tau_syn_in'] = 8.3   # Gupta, Markram, 2000, Science
-    # special_dict['ctsp'] = False
     # net_dict['renew_conn'] = True
-    # sim_dict['master_seed'] = 55
+    # sim_dict['master_seed'] = 60
     # net_dict['w_dict'] = {
     #     'psp_mtx':
     #         np.full((4, 4), 0.5),
@@ -44,11 +39,15 @@ def set_constant():
 
     net_dict['g'] = -8
     net_dict['bg_rate'] = 4.0
-    special_dict['stp_dict'] = custom_stp
-    net_dict['K_ext'] = np.array([2000, 2000, 1000, 1000,
-                                  2000, 2000, 1000,
-                                  2000, 2000, 1000,
-                                  2000, 2000, 1000])
+    special_dict['stp_dict'] = stp
+    exc = 2000
+    pv = 2000
+    som = 0
+    vip = 0
+    net_dict['K_ext'] = np.array([exc, pv, som, vip,
+                                  exc, pv, som,
+                                  exc, pv, som,
+                                  exc, pv, som])
 
     # 20-04-26
     # L6 conn by averaging
