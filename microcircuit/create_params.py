@@ -42,8 +42,8 @@ def set_constant():
     special_dict['stp_dict'] = stp
     exc = 2000
     pv = 2000
-    som = 0
-    vip = 0
+    som = 1000
+    vip = 1000
     net_dict['K_ext'] = np.array([exc, pv, som, vip,
                                   exc, pv, som,
                                   exc, pv, som,

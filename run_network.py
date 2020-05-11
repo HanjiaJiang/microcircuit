@@ -93,15 +93,13 @@ if __name__ == "__main__":
     print('thalamic_input = {}'.format(para_dict['stim_dict']['thalamic_input']))
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
-    # print parameters
-    create.print_summary(para_dict)
-    create.print_all(para_dict)
-
     # run simulation
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
                           para_dict['stim_dict'], para_dict['special_dict'])
     net.setup()
     if run_sim:
+        # print parameters
+        create.print_all(para_dict)
         net.simulate()
 
     # analysis
@@ -129,7 +127,7 @@ if __name__ == "__main__":
             analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
             analysis.fr_boxplot(spikes, para_dict['net_dict'], para_dict['sim_dict']['data_path'])
 
-        spikes.verify_print()
+        spikes.verify_print(para_dict['sim_dict']['data_path'])
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(para_dict['sim_dict']['data_path']):

@@ -109,11 +109,20 @@ class Spikes:
         else:
             self.veri_dict[tag] = in_str
 
-    def verify_print(self):
+    def verify_print(self, path=None):
+        if os.path.isdir(path):
+            path_flg = True
+        else:
+            path_flg = False
         for key, value in self.veri_dict.items():
-            with open('verify-spikes-{}.txt'.format(key), 'w') as f:
+            if path_flg:
+                fpath = os.path.join(path, 'verify-{}.txt'.format(key))
+            else:
+                fpath = 'verify-{}.txt'.format(key)
+            with open(fpath, 'w') as f:
                 f.write(value)
                 f.close()
+
 
     def set_labels(self):
         self.populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',

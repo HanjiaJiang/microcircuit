@@ -1,3 +1,4 @@
+import os
 import nest
 import numpy as np
 import copy
@@ -51,9 +52,17 @@ def verify_collect(in_str, tag):
     else:
         verify_dict[tag] = in_str
 
-def verify_print():
+def verify_print(path=None):        
+    if os.path.isdir(path):
+        path_flg = True
+    else:
+        path_flg = False
     for key, value in verify_dict.items():
-        with open('verify-{}.txt'.format(key), 'w') as f:
+        if path_flg:
+            fpath = os.path.join(path, 'verify-{}.txt'.format(key))
+        else:
+            fpath = 'verify-{}.txt'.format(key)
+        with open(fpath, 'w') as f:
             f.write(value)
             f.close()
 
@@ -367,7 +376,7 @@ def calc_psc(psp_val, C_m, tau_m, tau_syn):
             - tau_m / (tau_m - tau_syn)) - (tau_m / tau_syn) ** (
                 - tau_syn / (tau_m - tau_syn)))) ** (-1))
     PSC_e = (PSC_e_over_PSP_e * psp_val)
-    verify_collect('calc_psc(): psp_val={:.2f}, C_m={:.2f}, tau_m={:.2f}, PSC_e={:.2f}\n'.format(psp_val, C_m, tau_m, PSC_e), 'psc')
+    verify_collect('calc_psc(): psp_val={:.2f}, C_m={:.2f}, tau_m={:.2f}, tau_syn={:.2f}, PSC_e={:.2f}\n'.format(psp_val, C_m, tau_m, tau_syn, PSC_e), 'psc')
     return PSC_e
 
 
@@ -385,49 +394,27 @@ def get_weight_mtx(net_dict, ctsp):
     lyrs = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
     types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
     pscs = np.zeros((len(types), len(types)))
-    psps = np.zeros(pscs.shape)
     taus = np.zeros(pscs.shape)
+    verify_collect('psps=\n{}\n'.format(net_dict['psp_means']), 'psc')
     for i, trg_type in enumerate(types):    # post
         for j, src_type in enumerate(types):    # pre
-            psp = net_dict['w_dict']['psp_mtx'][lyrs[i], lyrs[j]]
+            psp = net_dict['psp_means'][i, j]
             tau_syn = net_dict['neuron_params']['tau_syn_ex']
-            # adjustment for inhibitory neurons
+            # for inhibitory connections
             if src_type != 'Exc':
-                psp *= net_dict['g']
                 tau_syn = net_dict['neuron_params']['tau_syn_in']
-                if net_dict['subtype_relative']:
-                    if src_type == 'SOM':
-                        psp *= net_dict['som_power']
-                    if src_type == 'PV':
-                        psp *= net_dict['pv_power']
-            psps[i, j] = psp
             taus[i, j] = tau_syn
             if ctsp and net_dict['ctsp_dependent_psc']:
                 type = trg_type
             else:
                 type = 'default'
-            psc = calc_psc(psp,
-            net_dict['neuron_params']['C_m'][type],
-            net_dict['neuron_params']['tau_m'][type],
-            tau_syn)
-            pscs[i, j] = psc
-    verify_collect('psps=\n{}\n'.format(psps), 'psc')
+            pscs[i, j] = calc_psc(psp,
+                net_dict['neuron_params']['C_m'][type],
+                net_dict['neuron_params']['tau_m'][type],
+                tau_syn)
     verify_collect('pscs=\n{}\n'.format(pscs), 'psc')
+    verify_collect('taus=\n{}\n'.format(taus), 'psc')
     return pscs
-
-
-# get the psc std matrix
-def get_weight_stds(net_dict, dim=13, lyr_gps=None):
-    if lyr_gps is None:
-        lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    std_ratios = np.zeros((dim, dim))
-    # print(net_dict['psp_std_mtx'])
-    for i, pre_lyr in enumerate(lyr_gps):
-        for j, post_lyr in enumerate(lyr_gps):
-            std_ratio = net_dict['w_dict']['psp_std_mtx'][j, i]
-            std_ratios[post_lyr[0]:post_lyr[-1]+1, pre_lyr[0]:pre_lyr[-1]+1] = std_ratio
-    # print('get_weight_stds():\nstd_ratios=\n{}\n'.format(std_ratios))
-    return std_ratios
 
 
 # equalize inhibitory connectivity; for a network without specific connectivity

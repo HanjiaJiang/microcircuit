@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     """ Creates matrix containing the delay of all connections.
 
@@ -25,7 +24,6 @@ def get_mean_delays(mean_delay_exc, mean_delay_inh, number_of_pop):
     mean_delays[:] = mean_delay_inh
     mean_delays[:, [0, 4, 7, 10]] = mean_delay_exc
     return mean_delays
-
 
 def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
     """ Creates matrix containing the standard deviations of all delays.
@@ -52,62 +50,29 @@ def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
     std_delays[:, [0, 4, 7, 10]] = std_delay_exc
     return std_delays
 
-
-# def get_mean_PSP_matrix(PSP_e, g, number_of_pop):
-#     """ Creates a matrix of the mean evoked postsynaptic potential.
-#
-#     The function creates a matrix of the mean evoked postsynaptic
-#     potentials between the recurrent connections of the microcircuit.
-#     The weight of the connection from L4E to L23E is doubled.
-#
-#     Arguments
-#     ---------
-#     PSP_e
-#         Mean evoked potential.
-#     g
-#         Relative strength of the inhibitory to excitatory connection.
-#     number_of_pop
-#         Number of populations in the microcircuit.
-#
-#     Returns
-#     -------
-#     weights
-#         Matrix of the weights for the recurrent connections.
-#
-#     """
-#     dim = number_of_pop
-#     weights = np.zeros((dim, dim))
-#     exc = PSP_e
-#     inh = PSP_e * g
-#     weights[:] = inh
-#     weights[:, [0,4,7,10]] = exc
-#     weights[0, 4] = exc * 2
-#     return weights
-#
-#
-# def get_std_PSP_matrix(PSP_rel, number_of_pop):
-#     """ Relative standard deviation matrix of postsynaptic potential created.
-#
-#     The relative standard deviation matrix of the evoked postsynaptic potential
-#     for the recurrent connections of the microcircuit is created.
-#
-#     Arguments
-#     ---------
-#     PSP_rel
-#         Relative standard deviation of the evoked postsynaptic potential.
-#     number_of_pop
-#         Number of populations in the microcircuit.
-#
-#     Returns
-#     -------
-#     std_mat
-#         Matrix of the standard deviation of postsynaptic potentials.
-#
-#     """
-#     dim = number_of_pop
-#     std_mat = np.zeros((dim, dim))
-#     std_mat[:, :] = PSP_rel
-#     return std_mat
+def get_psp_mtx(mtx_exc, mtx_inh, use, g=None):
+    pv2e = mtx_inh[0, 1]
+    if use:
+        mtx = np.tile(mtx_inh, (4, 4))
+        for a, row in enumerate(mtx_exc):
+            for b, exc in enumerate(row):
+                # fit inh. conn. to net_dict['g']; for mean, not for std
+                if g is not None:
+                    mtx[a*4:a*4+4, b*4+1:b*4+4] *= np.abs(g/(pv2e/exc))
+                # for both mean and std
+                mtx[a*4:a*4+4, b*4] = exc
+    else:
+        mtx = np.zeros((16, 16))
+        for a, row in enumerate(mtx_exc):
+            for b, exc in enumerate(row):
+                if g is None:
+                    mtx[a*4:a*4+4, b*4:b*4+4] = exc
+                else:
+                    mtx[a*4:a*4+4, b*4] = exc
+                    mtx[a*4:a*4+4, b*4+1:b*4+4] = exc*g
+    mtx = np.delete(mtx, [7, 11, 15], 0)
+    mtx = np.delete(mtx, [7, 11, 15], 1)
+    return mtx
 
 net_dict = {
     # Neuron model.
@@ -196,38 +161,41 @@ net_dict = {
         't_ref': 2.0},
     'animal': 'mouse',
     'renew_conn': False,
-    'w_dict': {
-        'psp_mtx':
+    'ctsp_dependent_psc': True,
+    # EPSPs: Lefort et al., 2009, Neuron
+    'epsp': {
+        'means':
             np.array([[0.7001, 0.7800, 0.4673, 0.3783],
                       [0.3433, 0.9500, 0.3767, 0.3783],
                       [0.7006, 0.6270, 0.6763, 0.2267],
                       [0.5813, 2.2700, 0.4025, 0.5300]]),
             # np.full((4, 4), 0.5), # previous
-        'psp_std_mtx':
-            np.array([[0.8958, 1.2372, 0.7228, 1.3884],
-                      [0.4540, 1.3421, 0.9566, 1.3884],
+        'stds':
+            np.array([[0.8958, 1.2372, 0.7581, 1.3884],
+                      [0.5243, 1.3421, 0.9566, 1.3884],
                       [1.0520, 0.9618, 1.2379, 1.3884],
                       [0.8240, 1.3124, 0.8739, 1.3884]])
             # np.full((4, 4), 1.0) # previous
         },
-    'ctsp_dependent_psc': True,
-    # relative inhibitory strengths
-    'subtype_relative': True,
-    'som_power': 1.0,
-    'pv_power': 1.0,
+    # IPSPs from different interneurons: Ma et al., 2012, J. Neurosci.
+    'ipsp': {
+        'use': False,
+        'means':
+            np.array([[0.0000, -2.7000, -1.0400, -1.7460],
+                      [0.0000, -1.7900, -1.3800, -1.7460],
+                      [0.0000, -1.8200, -1.2100, -1.7460],
+                      [0.0000, -2.1033, -1.2100, -1.7460]]),
+        'stds':
+            np.array([[0.0000, 0.2519, 0.1731, 0.1744],
+                      [0.0000, 0.1061, 0.1594, 0.1744],
+                      [0.0000, 0.1813, 0.1662, 0.1744],
+                      [0.0000, 0.1798, 0.1662, 0.1744]])
+        }
     }
 
 
 def net_update(n_dict, g):
     updated_dict = {
-        # # PSP mean matrix.
-        # 'PSP_mean_matrix': get_mean_PSP_matrix(
-        #     n_dict['PSP_e'], n_dict['g'], len(n_dict['populations'])
-        # ),
-        # # PSP std matrix.
-        # 'PSP_std_matrix': get_std_PSP_matrix(
-        #     n_dict['PSP_sd'], len(n_dict['populations'])
-        # ),
         # mean delay matrix.
         'mean_delay_matrix': get_mean_delays(
             n_dict['mean_delay_exc'], n_dict['mean_delay_inh'],
@@ -239,5 +207,14 @@ def net_update(n_dict, g):
             n_dict['mean_delay_inh'] * n_dict['rel_std_delay'],
             len(n_dict['populations'])
         ),
+        'psp_means': get_psp_mtx(
+            n_dict['epsp']['means'],
+            n_dict['ipsp']['means'],
+            n_dict['ipsp']['use'],
+            n_dict['g']),
+        'psp_stds': get_psp_mtx(
+            n_dict['epsp']['stds'],
+            n_dict['ipsp']['stds'],
+            n_dict['ipsp']['use'])
     }
     n_dict.update(updated_dict)

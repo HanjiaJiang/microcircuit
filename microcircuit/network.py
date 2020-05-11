@@ -67,7 +67,7 @@ class Network:
         self.K_ext = self.net_dict['K_ext']
         # self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
         self.weight_mat = get_weight_mtx(self.net_dict, self.spe_dict['ctsp'])
-        self.weight_mat_std = get_weight_stds(self.net_dict)
+        self.weight_mat_std = self.net_dict['psp_stds']
         # if self.net_dict['poisson_input']:
         #     self.DC_amp_e = np.zeros(len(self.net_dict['populations']))
         # else:
@@ -423,5 +423,5 @@ class Network:
 
     def simulate(self):
         """ Simulates the microcircuit."""
-        verify_print()
+        verify_print(self.data_path)
         nest.Simulate(self.sim_dict['t_sim'])
