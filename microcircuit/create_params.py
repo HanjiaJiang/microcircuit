@@ -7,12 +7,12 @@ from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 import microcircuit.functions as func
-from stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp, bbp_stp
+from microcircuit.stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp, bbp_stp
 import copy
 import json
 np.set_printoptions(suppress=True, precision=4)
 
-stp = custom_stp
+stp = doiron_stp
 
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):
@@ -123,24 +123,6 @@ def read_levels(in_str):
     out_str = os.path.basename(in_str).split('.')[0]    # filename with .
     out_list = np.array(out_str.split('_')).astype(int)
     return out_str, out_list
-
-
-# list generation
-# connection probability map
-def get_conn_probs(list_n=10):
-    cwd = os.getcwd()
-    conn_probs_list = []
-    conn_folder = os.path.join(cwd, 'conn_probs')
-    for file in os.listdir(conn_folder):
-        if file.endswith(".npy") and 'conn_probs' in file:
-            tmp = np.load(os.path.join(conn_folder, file))
-            if tmp.shape == net_dict['conn_probs'].shape:
-                conn_probs_list.append(tmp)
-    if len(conn_probs_list) < list_n:
-        return_list = conn_probs_list
-    else:
-        return_list = conn_probs_list[:list_n]
-    return return_list
 
 
 # multi-parameter

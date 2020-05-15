@@ -12,7 +12,7 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = False
+    print_to_file = True
 
     #  settings
     do_ai = True
@@ -29,8 +29,8 @@ if __name__ == "__main__":
     n_stim = 0
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    th_rate = 200.0
-    interval_stim = 500.0
+    th_rate = 120.0
+    interval_stim = 1000.0
     ana_win = 40.0
     orient = False
     duration = 10.0
@@ -64,11 +64,9 @@ if __name__ == "__main__":
 
         # copy files
         os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit'))
-        os.system('mkdir -p ' + os.path.join(data_path, 'conn_probs'))
-        os.system('mkdir -p ' + os.path.join(data_path, 'stp'))
+        os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit/stp'))
         os.system('cp microcircuit/*.py ' + os.path.join(data_path, 'microcircuit'))
-        os.system('cp conn_probs/*.npy ' + os.path.join(data_path, 'conn_probs'))
-        os.system('cp stp/*.py ' + os.path.join(data_path, 'stp'))
+        os.system('cp microcircuit/stp/*.py ' + os.path.join(data_path, 'microcircuit/stp'))
 
     # assign parameters
     with open(pickle_path, 'rb') as handle:
