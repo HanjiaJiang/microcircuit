@@ -1,14 +1,20 @@
+import sys
 import nest
 import numpy as np
 import matplotlib.pyplot as plt
-from microcircuit.stp import stp_dicts
 import copy
-
-stp = stp_dicts.doiron_stp_weak
+import pickle
+np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 class ConnTest:
-    def __init__(self, syn_dicts, pre_subtype, post_subtype, spk_n=10, spk_isi=50.0):
-        self.syn_dicts = syn_dicts
+    def __init__(self, syn_dict,
+                    pre_subtype,
+                    post_subtype,
+                    pprs=None,
+                    peaks=None,
+                    spk_n=10,
+                    spk_isi=50.0):
+        self.syn_dict = syn_dict
         self.pre_subtype = pre_subtype
         self.post_subtype = post_subtype
         self.spk_n = spk_n
@@ -18,7 +24,7 @@ class ConnTest:
         self.set_neurons()
         self.set_spkgen()
         self.set_mm()
-        self.set_data()
+        self.set_data(pprs, peaks)
 
     def set_params(self):
         # neuron params
@@ -39,6 +45,13 @@ class ConnTest:
                 'tau_syn_in': 4.0, #3.2, # Allen Institue,
             }
 
+    def set_labels(self):
+        self.color_labels = {
+            'Exc': (68/255,119/255,170/255),
+            'PV': (238/255,102/255,119/255),
+            'SOM': (34/255,136/255,51/255),
+            'VIP': (204/255,187/255,68/255)
+        }
 
     def set_neurons(self, w=100.0):
         self.pre_neuron = nest.Create(self.neuron_model)
@@ -53,14 +66,13 @@ class ConnTest:
                 'V_m': self.ctsp['E_L'][self.post_subtype],
             }
         nest.SetStatus(self.post_neuron, params_dict)
-        try:
-            syn_dict = self.syn_dicts[self.pre_subtype][self.post_subtype]
-        except KeyError:
-            syn_dict = {'model': 'static_synapse'}
+        syn_dict = self.syn_dict
         if self.pre_subtype == 'Exc':
             syn_dict['weight'] = w
+            syn_dict['tau_psc'] = params_dict['tau_syn_ex']
         else:
             syn_dict['weight'] = -w
+            syn_dict['tau_psc'] = params_dict['tau_syn_in']
         nest.Connect(self.pre_neuron, self.post_neuron, syn_spec=syn_dict)
 
     def set_spkgen(self, spk_w=3000.0):
@@ -104,6 +116,27 @@ class ConnTest:
         Vms_new = np.array(Vms_new)
         return Vms_new, ts_new
 
+    def set_data(self, exp_pprs, exp_peaks):
+        self.exp_data = {
+            'PPRs': exp_pprs
+        }
+        if isinstance(exp_peaks, np.ndarray):
+            self.exp_data['peaks_norm'] = (exp_peaks - np.mean(exp_peaks))/np.std(exp_peaks)
+        else:
+            self.exp_data['peaks_norm'] = np.nan
+
+        self.result = {
+            # PSPs subtracted from lagging waveform
+            'PSPs': np.full(self.spk_n, np.nan),
+            # Paired-pulse ratios
+            'PPRs': np.full(self.spk_n, np.nan),
+            # original peaks, calculated from baseline
+            'peaks': np.full(self.spk_n, np.nan),
+            'peaks_norm': np.full(self.spk_n, np.nan),
+            # fitness
+            'fitness': np.nan
+        }
+
     def run_sim(self, time):
         nest.Simulate(time)
 
@@ -111,34 +144,27 @@ class ConnTest:
         # get data
         dmm = nest.GetStatus(self.mm)[0]
         Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], 2)
-        fig, axes = plt.subplots(2, 1, figsize=(16, 16))
-        axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype])
-        axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype])
-        # axes[0, 1].set_ylim(self.ctsp['E_L'][self.post_subtype]-0.4, self.ctsp['E_L'][self.post_subtype]+0.2)
-        plt.show()
+
+        # plot for viewing
+        # fig, axes = plt.subplots(2, 1, figsize=(16, 16))
+        # axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype])
+        # axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype])
+        # plt.show()
         # plt.savefig('stp_test.png')
 
-        # calculate
+        # calculate results
         self.calc_psp(Vms[1], ts[1])
+        self.calc_fitness()
 
+        # print experimental data and results
+        print('exp_data:')
+        for key, value in self.exp_data.items():
+            print('{} = {}'.format(key, value))
+        print('result:')
+        for key, value in self.result.items():
+            print('{} = {}'.format(key, value))
 
-    def set_labels(self):
-        self.color_labels = {
-            'Exc': (68/255,119/255,170/255),
-            'PV': (238/255,102/255,119/255),
-            'SOM': (34/255,136/255,51/255),
-            'VIP': (204/255,187/255,68/255)
-        }
-
-    def set_data(self):
-        self.result = {
-            # raw PSPs, calculated from baseline
-            'peaks': np.full(self.spk_n, np.nan),
-            # PSPs subtracted from lagging waveform
-            'PSPs': np.full(self.spk_n, np.nan),
-            # fitness
-            'fitness_mtx': np.nan
-        }
+        return self.result['fitness']
 
     def calc_psp(self, Vms, ts):
         # transpose data for calculation
@@ -150,7 +176,7 @@ class ConnTest:
         spk_ts = self.spk_ts
 
         # verify
-        plt.plot(data[:, 0], data[:, 1], color='grey')
+        # plt.plot(data[:, 0], data[:, 1], color='grey')
 
         # peaks = depolarizations/polarizations
         for i in range(spk_n):
@@ -160,10 +186,15 @@ class ConnTest:
             data_ith = data[(ts>=t_start)&(ts<t_start+isi)]
             peak = np.max(data_ith[:, 1]) - baseline
             self.result['peaks'][i] = peak
-            print('peak({})={:.3f}'.format(i, peak))
+
+        # normalized peaks
+        peak_mean = np.mean(self.result['peaks'])
+        peak_std = np.std(self.result['peaks'])
+        for i in range(spk_n):
+            self.result['peaks_norm'][i] = (self.result['peaks'][i] - peak_mean)/peak_std
 
         # verify
-        plt.scatter(spk_ts[-1], self.result['peaks'], color='g')
+        # plt.scatter(spk_ts[-1], self.result['peaks'], color='g')
 
         # PSPs: PSP(i) is obtained by subtracting the 1st to (i-1)th pulses
         vms_base = np.zeros(len(Vms))
@@ -171,32 +202,117 @@ class ConnTest:
             t_start = spk_ts[i][0]
             # data of ith round (one round is 1~10 pulses)
             data_ith = data[(ts>=t_start) & (ts<t_start+spk_n*isi)]
-            #
-            plt.plot(data_ith[:, 0], data_ith[:, 1], color='b')
+            # verify
+            # plt.plot(data_ith[:, 0], data_ith[:, 1], color='b')
             # copy data to keep the original
             data_calc = copy.deepcopy(data_ith)
             # subtract baseline (1st to (i-1)th pulses)
             data_calc[:, 1] -= vms_base[:len(data_calc)]
             # truncate the data of ith pulse
             data_calc = data_calc[(data_calc[:, 0]>=spk_ts[i][i]) & (data_calc[:, 0]<spk_ts[i][i]+isi)]
-            #
-            plt.plot(data_calc[:, 0], data_calc[:, 1], color='r')
+            # verify
+            # plt.plot(data_calc[:, 0], data_calc[:, 1], color='r')
             # psp = amplitude of the obtained pulse data
             psp = np.max(data_calc[:, 1]) - np.min(data_calc[:, 1])
             # save pulse data of this round for subtraction in the next round
             vms_base = data_ith[:, 1]
             # save result
             self.result['PSPs'][i] = psp
-            #
-            print('psp({})={:.3f}'.format(i, psp))
+            # paired-pulse ratios
+            self.result['PPRs'][i] = psp/self.result['PSPs'][0]
 
-        plt.show()
+        # verify
+        # plt.show()
 
 
+    def calc_fitness(self):
+        exp_pprs = self.exp_data['PPRs']
+        exp_peaks_norm = self.exp_data['peaks_norm']
+        fitness = 0.0
+        # when using PPRs
+        if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
+            for i, ppr in enumerate(exp_pprs):
+                print('ppr={}'.format(ppr))
+                if np.isnan(ppr):
+                    continue
+                fitness += (self.result['PPRs'][i] - ppr)**2
+                print('fitness={:.2f}'.format(fitness))
+            self.result['fitness'] = fitness
+        # when using peaks (depolarization/polarization)
+        elif isinstance(exp_peaks_norm, np.ndarray) and exp_peaks_norm.ndim == 1:
+            for i, peak in enumerate(exp_peaks_norm):
+                if np.isnan(peak):
+                    continue
+                fitness += (self.result['peaks_norm'][i] - peak)**2
+            self.result['fitness'] = fitness
+        print()
 
 if __name__ == '__main__':
+    # neuron parameters
+    pre_subtype = 'Exc'
+    post_subtype = 'PV'
+
+    # stimulation parameters
     spk_n = 10
     spk_isi = 50.0
-    conntest = ConnTest(stp, 'Exc', 'PV', spk_n=spk_n, spk_isi=spk_isi)
+
+    # experimental data
+    pprs = np.full(5, np.nan)
+    pprs[0] = 1.0
+    pprs[4] = 1.0
+    peaks = np.arange(0.7, 0.2, -0.05)
+
+    # tsodyks Parameters
+    U = 0.75
+    tau_fac = 0.0
+    tau_rec = 100.0
+
+    # scanning input
+    try:
+        pickle_path = sys.argv[1]
+        with open(pickle_path, 'rb') as h:
+            para_dict = pickle.load(h)
+            pre_subtype = para_dict['pre_subtype']
+            post_subtype = para_dict['post_subtype']
+            spk_n = para_dict['spk_n']
+            spk_isi = para_dict['spk_isi']
+            pprs = para_dict['pprs']
+            peaks = para_dict['peaks']
+            U = para_dict['U']
+            tau_fac = para_dict['tau_fac']
+            tau_rec = para_dict['tau_rec']
+    except IndexError:
+        pass
+
+    # STP dictionary
+    syn_dict = {
+        'model': 'tsodyks_synapse',
+        'U': U,
+        'tau_fac': tau_fac,
+        'tau_rec': tau_rec,
+    }
+
+    # initiate and run
+    conntest = ConnTest(syn_dict,
+                        pre_subtype,
+                        post_subtype,
+                        pprs=pprs,
+                        peaks=peaks,
+                        spk_n=spk_n,
+                        spk_isi=spk_isi)
     conntest.run_sim(spk_n*spk_isi*(spk_n*2+1))
     conntest.run_analysis()
+
+    # write results to file
+    try:
+        outfile_path = sys.argv[2]
+    except IndexError:
+        outfile_path = 'test.txt'
+    with open(outfile_path,'w') as f:
+        f.write('exp_data:\n')
+        for key, value in conntest.exp_data.items():
+            f.write('{} = {}\n'.format(key, value))
+        f.write('result:\n')
+        for key, value in conntest.result.items():
+            f.write('{} = {}\n'.format(key, value))
+        f.close()
