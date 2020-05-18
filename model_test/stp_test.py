@@ -1,9 +1,9 @@
 import sys
+import copy
 import nest
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
-import pickle
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 class ConnTest:
@@ -15,6 +15,7 @@ class ConnTest:
                     spk_n=10,
                     spk_isi=50.0):
         self.syn_dict = syn_dict
+        pre_subtype, post_subtype = self.set_subtype(pre_subtype, post_subtype)
         self.pre_subtype = pre_subtype
         self.post_subtype = post_subtype
         self.spk_n = spk_n
@@ -25,6 +26,15 @@ class ConnTest:
         self.set_spkgen()
         self.set_mm()
         self.set_data(pprs, peaks)
+
+    def set_subtype(self, pretype, posttype):
+        subtypes = ['Exc', 'PV', 'SOM', 'VIP']
+        for subtype in subtypes:
+            if subtype in pretype:
+                pretype = subtype
+            if subtype in posttype:
+                posttype = subtype
+        return pretype, posttype
 
     def set_params(self):
         # neuron params
@@ -118,7 +128,8 @@ class ConnTest:
 
     def set_data(self, exp_pprs, exp_peaks):
         self.exp_data = {
-            'PPRs': exp_pprs
+            'PPRs': exp_pprs,
+            'peaks': exp_peaks,
         }
         if isinstance(exp_peaks, np.ndarray):
             self.exp_data['peaks_norm'] = (exp_peaks - np.mean(exp_peaks))/np.std(exp_peaks)
@@ -160,11 +171,10 @@ class ConnTest:
         print('exp_data:')
         for key, value in self.exp_data.items():
             print('{} = {}'.format(key, value))
+        print()
         print('result:')
         for key, value in self.result.items():
             print('{} = {}'.format(key, value))
-
-        return self.result['fitness']
 
     def calc_psp(self, Vms, ts):
         # transpose data for calculation
@@ -232,11 +242,11 @@ class ConnTest:
         # when using PPRs
         if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
             for i, ppr in enumerate(exp_pprs):
-                print('ppr={}'.format(ppr))
+                # print('ppr={}'.format(ppr))
                 if np.isnan(ppr):
                     continue
                 fitness += (self.result['PPRs'][i] - ppr)**2
-                print('fitness={:.2f}'.format(fitness))
+                # print('fitness={:.2f}'.format(fitness))
             self.result['fitness'] = fitness
         # when using peaks (depolarization/polarization)
         elif isinstance(exp_peaks_norm, np.ndarray) and exp_peaks_norm.ndim == 1:
@@ -245,9 +255,11 @@ class ConnTest:
                     continue
                 fitness += (self.result['peaks_norm'][i] - peak)**2
             self.result['fitness'] = fitness
-        print()
 
 if __name__ == '__main__':
+    # simulation settings
+    on_server = True
+
     # neuron parameters
     pre_subtype = 'Exc'
     post_subtype = 'PV'
@@ -282,6 +294,7 @@ if __name__ == '__main__':
             tau_fac = para_dict['tau_fac']
             tau_rec = para_dict['tau_rec']
     except IndexError:
+        print('No scanning input. Run single simulation.')
         pass
 
     # STP dictionary
@@ -305,14 +318,19 @@ if __name__ == '__main__':
 
     # write results to file
     try:
-        outfile_path = sys.argv[2]
+        dat_path = sys.argv[2]
     except IndexError:
-        outfile_path = 'test.txt'
-    with open(outfile_path,'w') as f:
-        f.write('exp_data:\n')
-        for key, value in conntest.exp_data.items():
-            f.write('{} = {}\n'.format(key, value))
-        f.write('result:\n')
-        for key, value in conntest.result.items():
-            f.write('{} = {}\n'.format(key, value))
+        dat_path = 'test.dat'
+    with open(dat_path, 'w') as f:
+        f.write(str(conntest.result['fitness']))
         f.close()
+    if not on_server:
+        with open(dat_path.replace('.dat', '.txt'),'w') as f:
+            f.write('exp_data:\n')
+            for key, value in conntest.exp_data.items():
+                f.write('{} = {}\n'.format(key, value))
+            f.write('\n')
+            f.write('result:\n')
+            for key, value in conntest.result.items():
+                f.write('{} = {}\n'.format(key, value))
+            f.close()

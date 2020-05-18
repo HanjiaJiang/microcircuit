@@ -1,0 +1,60 @@
+pretype = 'L4-Exc'
+posttype = 'L5-Exc'
+spk_n = 10
+spk_isi = 10
+pprs = '1.0-0.85'
+peaks = 'None'
+U_10times = range(5, 7, 1)
+tau_fac = range(10, 50, 20)
+tau_rec = range(10, 50, 20)
+article = 'Lefort-Petersen-2017'
+
+localrules: all, create
+
+rule all:
+    input:
+        expand('STP_{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h}_{i}_.dat',
+            a = pretype,
+            b = posttype,
+            c = spk_n,
+            d = spk_isi,
+            e = pprs,
+            f = peaks,
+            g = U_10times,
+            h = tau_fac,
+            i = tau_rec
+        )
+    shell:
+        '''
+        python -W ignore stp_evaluate.py {input} {article}
+        rm {input}
+        '''
+
+rule create:
+    output:
+        expand('STP_{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h}_{i}_.pickle',
+            a = pretype,
+            b = posttype,
+            c = spk_n,
+            d = spk_isi,
+            e = pprs,
+            f = peaks,
+            g = U_10times,
+            h = tau_fac,
+            i = tau_rec
+        )
+    shell:
+        '''
+        python create_stp.py {output}
+        '''
+
+rule run:
+    input:
+        'STP_{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h}_{i}_.pickle'
+    output:
+        'STP_{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h}_{i}_.dat'
+    shell:
+        '''
+        python -W ignore stp_test.py {input} {output}
+        rm {input}
+        '''
