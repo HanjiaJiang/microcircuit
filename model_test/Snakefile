@@ -45,7 +45,7 @@ rule create:
         )
     shell:
         '''
-        python create_stp.py {output}
+        python stp_create.py {output}
         '''
 
 rule run:
