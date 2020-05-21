@@ -272,7 +272,8 @@ class Network:
                                         target_name,
                                         weight_dict,
                                         delay_dict,
-                                        self.stp_dict)
+                                        self.stp_dict,
+                                        self.net_dict)
                 nr = connect_recurrent(source_name,
                                         target_name,
                                         synapse_nr,

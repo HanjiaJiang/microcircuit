@@ -1,9 +1,12 @@
+import os
 import sys
 import copy
 import nest
 import pickle
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.rcParams['font.size'] = 20.0
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 class ConnTest:
@@ -13,13 +16,15 @@ class ConnTest:
                     pprs=None,
                     peaks=None,
                     spk_n=10,
-                    spk_isi=50.0):
+                    spk_isi=50.0,
+                    verify=False):
         self.syn_dict = syn_dict
         pre_subtype, post_subtype = self.set_subtype(pre_subtype, post_subtype)
         self.pre_subtype = pre_subtype
         self.post_subtype = post_subtype
         self.spk_n = spk_n
         self.spk_isi = spk_isi
+        self.verify = verify
         self.set_params()
         self.set_labels()
         self.set_neurons()
@@ -27,6 +32,7 @@ class ConnTest:
         self.set_mm()
         self.set_data(pprs, peaks)
 
+    # change 'L23_Exc' to 'Exc'
     def set_subtype(self, pretype, posttype):
         subtypes = ['Exc', 'PV', 'SOM', 'VIP']
         for subtype in subtypes:
@@ -132,7 +138,7 @@ class ConnTest:
             'peaks': exp_peaks,
         }
         if isinstance(exp_peaks, np.ndarray):
-            self.exp_data['peaks_norm'] = (exp_peaks - np.mean(exp_peaks))/np.std(exp_peaks)
+            self.exp_data['peaks_norm'] = exp_peaks/np.max(exp_peaks)
         else:
             self.exp_data['peaks_norm'] = np.nan
 
@@ -151,21 +157,23 @@ class ConnTest:
     def run_sim(self, time):
         nest.Simulate(time)
 
-    def run_analysis(self):
+    def run_analysis(self, png_name):
         # get data
         dmm = nest.GetStatus(self.mm)[0]
         Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], 2)
 
         # plot for viewing
-        # fig, axes = plt.subplots(2, 1, figsize=(16, 16))
-        # axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype])
-        # axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype])
-        # plt.show()
-        # plt.savefig('stp_test.png')
+        if self.verify:
+            fig, axes = plt.subplots(2, 1, figsize=(16, 16), constrained_layout=True)
+            axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype], label='pre-synaptic')
+            axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype], label='post-synaptic')
+            plt.legend()
+            plt.savefig('stp_test:run_analysis().png')
+            plt.close()
 
         # calculate results
         self.calc_psp(Vms[1], ts[1])
-        self.calc_fitness()
+        self.calc_fitness(png_name)
 
         # print experimental data and results
         print('exp_data:')
@@ -178,6 +186,7 @@ class ConnTest:
 
     def calc_psp(self, Vms, ts):
         # transpose data for calculation
+        # [[t, Vm], ...]
         data = np.array([ts, Vms]).T
 
         # get parameters
@@ -185,43 +194,59 @@ class ConnTest:
         isi = self.spk_isi
         spk_ts = self.spk_ts
 
-        # verify
-        # plt.plot(data[:, 0], data[:, 1], color='grey')
+        if self.verify:
+            plt.plot(data[:, 0], data[:, 1], color='grey', label='raw')
 
-        # peaks = depolarizations/polarizations
+        # peaks: (de)polarizations
+        # baseline = Vms at the first stimulation
+        baseline = Vms[ts==spk_ts[-1][0]]
         for i in range(spk_n):
+            # data from last round
             t_start = spk_ts[-1][i]
-            baseline = data[ts==t_start][0, 1]
-            # data of ith pulse of the last round
+            # data of ith pulse
             data_ith = data[(ts>=t_start)&(ts<t_start+isi)]
-            peak = np.max(data_ith[:, 1]) - baseline
+            # determine the peak by Exc/Inh
+            if self.pre_subtype == 'Exc':
+                v_peak = np.max(data_ith[:, 1])
+            else:
+                v_peak = np.min(data_ith[:, 1])
+            # print('baseline,peak={},{}'.format(baseline, v_peak))
+            peak = np.abs(v_peak - baseline)
             self.result['peaks'][i] = peak
 
         # normalized peaks
-        peak_mean = np.mean(self.result['peaks'])
-        peak_std = np.std(self.result['peaks'])
+        # peak_mean = np.mean(self.result['peaks'])
+        # peak_std = np.std(self.result['peaks'])
+        peaks = self.result['peaks']
         for i in range(spk_n):
-            self.result['peaks_norm'][i] = (self.result['peaks'][i] - peak_mean)/peak_std
+            self.result['peaks_norm'][i] = peaks[i]/np.max(peaks)
 
-        # verify
-        # plt.scatter(spk_ts[-1], self.result['peaks'], color='g')
+        if self.verify:
+            plt.scatter(spk_ts[-1], self.result['peaks'], color='g', label='peaks')
 
         # PSPs: PSP(i) is obtained by subtracting the 1st to (i-1)th pulses
-        vms_base = np.zeros(len(Vms))
+        vms_base = np.full(len(Vms), data[0, 1])
         for i in range(spk_n):
             t_start = spk_ts[i][0]
             # data of ith round (one round is 1~10 pulses)
             data_ith = data[(ts>=t_start) & (ts<t_start+spk_n*isi)]
-            # verify
-            # plt.plot(data_ith[:, 0], data_ith[:, 1], color='b')
+            if self.verify:
+                if i == 0:
+                    plt.plot(data_ith[:, 0], data_ith[:, 1], color='b', label='raw (pulse)')
+                else:
+                    plt.plot(data_ith[:, 0], data_ith[:, 1], color='b')
             # copy data to keep the original
             data_calc = copy.deepcopy(data_ith)
             # subtract baseline (1st to (i-1)th pulses)
             data_calc[:, 1] -= vms_base[:len(data_calc)]
             # truncate the data of ith pulse
             data_calc = data_calc[(data_calc[:, 0]>=spk_ts[i][i]) & (data_calc[:, 0]<spk_ts[i][i]+isi)]
-            # verify
-            # plt.plot(data_calc[:, 0], data_calc[:, 1], color='r')
+            data_calc[:, 1] = np.abs(data_calc[:, 1])
+            if self.verify:
+                if i == 0:
+                    plt.plot(data_calc[:, 0], data_calc[:, 1], color='r', label='PSPs')
+                else:
+                    plt.plot(data_calc[:, 0], data_calc[:, 1], color='r')
             # psp = amplitude of the obtained pulse data
             psp = np.max(data_calc[:, 1]) - np.min(data_calc[:, 1])
             # save pulse data of this round for subtraction in the next round
@@ -232,22 +257,33 @@ class ConnTest:
             self.result['PPRs'][i] = psp/self.result['PSPs'][0]
 
         # verify
-        # plt.show()
+        if self.verify:
+            plt.legend()
+            plt.savefig('stp_test:calc_psp()')
+            plt.show()
+            plt.close()
 
 
-    def calc_fitness(self):
+    def calc_fitness(self, png_name):
         exp_pprs = self.exp_data['PPRs']
         exp_peaks_norm = self.exp_data['peaks_norm']
         fitness = 0.0
+        fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
+        plt.xlabel('pulse')
+        plt.ylim((0.0, 1.2))
         # when using PPRs
         if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
             for i, ppr in enumerate(exp_pprs):
                 # print('ppr={}'.format(ppr))
-                if np.isnan(ppr):
+                if np.isnan(ppr) or ppr <= 0:
                     continue
                 fitness += (self.result['PPRs'][i] - ppr)**2
                 # print('fitness={:.2f}'.format(fitness))
             self.result['fitness'] = fitness
+            plt.ylabel('paired-pulse ratio')
+            axs.plot(exp_pprs, marker='.', linestyle='solid', color='b', label='exp.')
+            axs.plot(self.result['PPRs'][:len(exp_pprs)], marker='.', linestyle='solid', color='r', label='sim.')
+
         # when using peaks (depolarization/polarization)
         elif isinstance(exp_peaks_norm, np.ndarray) and exp_peaks_norm.ndim == 1:
             for i, peak in enumerate(exp_peaks_norm):
@@ -255,10 +291,15 @@ class ConnTest:
                     continue
                 fitness += (self.result['peaks_norm'][i] - peak)**2
             self.result['fitness'] = fitness
+            plt.ylabel('normalized (de)polarization')
+            axs.plot(exp_peaks_norm, marker='.', linestyle='solid', color='b', label='exp.')
+            axs.plot(self.result['peaks_norm'][:len(exp_peaks_norm)], marker='.', linestyle='solid', color='r', label='sim.')
+        plt.legend()
+        plt.savefig(png_name)
 
 if __name__ == '__main__':
     # simulation settings
-    on_server = True
+    verify = False
 
     # neuron parameters
     pre_subtype = 'Exc'
@@ -266,18 +307,16 @@ if __name__ == '__main__':
 
     # stimulation parameters
     spk_n = 10
-    spk_isi = 50.0
+    spk_isi = 10.0
 
     # experimental data
-    pprs = np.full(5, np.nan)
-    pprs[0] = 1.0
-    pprs[4] = 1.0
-    peaks = np.arange(0.7, 0.2, -0.05)
+    pprs = None
+    peaks = np.array([0.88, 0.83, 0.68, 0.57, 0.54, 0.46, 0.41, 0.38, 0.34, 0.34])
 
     # tsodyks Parameters
-    U = 0.75
-    tau_fac = 0.0
-    tau_rec = 100.0
+    U = 0.5
+    tau_fac = 50.0
+    tau_rec = 0.0
 
     # scanning input
     try:
@@ -294,10 +333,13 @@ if __name__ == '__main__':
             tau_fac = para_dict['tau_fac']
             tau_rec = para_dict['tau_rec']
     except IndexError:
+        pickle_path = 'stp_test.pickle'
         print('No scanning input. Run single simulation.')
         pass
 
     # STP dictionary
+    if tau_rec == 0.0:
+        tau_rec = 0.01
     syn_dict = {
         'model': 'tsodyks_synapse',
         'U': U,
@@ -312,19 +354,20 @@ if __name__ == '__main__':
                         pprs=pprs,
                         peaks=peaks,
                         spk_n=spk_n,
-                        spk_isi=spk_isi)
+                        spk_isi=spk_isi,
+                        verify=verify)
     conntest.run_sim(spk_n*spk_isi*(spk_n*2+1))
-    conntest.run_analysis()
+    conntest.run_analysis(pickle_path.replace('.pickle', '.png'))
 
     # write results to file
     try:
         dat_path = sys.argv[2]
     except IndexError:
-        dat_path = 'test.dat'
+        dat_path = 'stp_test.dat'
     with open(dat_path, 'w') as f:
         f.write(str(conntest.result['fitness']))
         f.close()
-    if not on_server:
+    if verify:
         with open(dat_path.replace('.dat', '.txt'),'w') as f:
             f.write('exp_data:\n')
             for key, value in conntest.exp_data.items():

@@ -69,7 +69,7 @@ def verify_print(path=None):
 '''
 Main functions
 '''
-def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
+def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict, net_dict):
     syn_dict = {
         'model': 'static_synapse',
         'weight': weight_dict,
@@ -79,6 +79,10 @@ def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict):
         for post_type in stp_dict[pre_type].keys():
             if pre_type in source_name and post_type in target_name:
                 syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
+                if 'Exc' in pre_type:
+                    syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
+                else:
+                    syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
                 syn_dict['weight'] = weight_dict
                 syn_dict['delay'] = delay_dict
     # print(source_name, target_name)

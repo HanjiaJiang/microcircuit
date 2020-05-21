@@ -12,7 +12,7 @@ if __name__ == "__main__":
     run_sim = True
     on_server = False
     run_analysis = True
-    print_to_file = True
+    print_to_file = False
 
     #  settings
     do_ai = True

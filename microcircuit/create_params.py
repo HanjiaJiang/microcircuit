@@ -1,18 +1,22 @@
 import os
 import sys
-import numpy as np
+import copy
+import json
 import pickle
+import numpy as np
 from microcircuit.network_params import net_dict
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
 import microcircuit.functions as func
-from microcircuit.stp.stp_dicts import no_stp, allen_stp, doiron_stp, doiron_stp_weak, custom_stp, bbp_stp
-import copy
-import json
+import microcircuit.stp.stp_dicts as stps
 np.set_printoptions(suppress=True, precision=4)
 
-stp = doiron_stp
+# load fitted STPs
+with open('microcircuit/stp/stp_fitted.pickle', 'rb') as h:
+    fitted_stp = pickle.load(h)
+
+stp = stps.doiron_stp
 
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):

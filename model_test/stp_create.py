@@ -22,7 +22,7 @@ if __name__ == '__main__':
                 'spk_isi': float(params[3]),
                 'pprs': pprs,
                 'peaks': peaks,
-                'U': float(params[6])/10.0,
+                'U': float(params[6])*0.01,
                 'tau_fac': float(params[7]),
                 'tau_rec': float(params[8])
             }
