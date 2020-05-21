@@ -16,7 +16,7 @@ np.set_printoptions(suppress=True, precision=4)
 with open('microcircuit/stp/stp_fitted.pickle', 'rb') as h:
     fitted_stp = pickle.load(h)
 
-stp = stps.doiron_stp
+stp = fitted_stp
 
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):

@@ -70,8 +70,11 @@ class ConnTest:
         }
 
     def set_neurons(self, w=100.0):
+        # set neurons
         self.pre_neuron = nest.Create(self.neuron_model)
         self.post_neuron = nest.Create(self.neuron_model)
+        self.post_neuron_stat = nest.Create(self.neuron_model)
+        self.post_neuron_Uis1 = nest.Create(self.neuron_model)
         params_dict = {
                 'E_L': self.ctsp['E_L'][self.post_subtype],
                 'V_th': self.ctsp['V_th'][self.post_subtype],
@@ -82,14 +85,30 @@ class ConnTest:
                 'V_m': self.ctsp['E_L'][self.post_subtype],
             }
         nest.SetStatus(self.post_neuron, params_dict)
+        nest.SetStatus(self.post_neuron_stat, params_dict)
+        nest.SetStatus(self.post_neuron_Uis1, params_dict)
+        # syn_dict handling
         syn_dict = self.syn_dict
         if self.pre_subtype == 'Exc':
             syn_dict['weight'] = w
-            syn_dict['tau_psc'] = params_dict['tau_syn_ex']
+            tau_psc = params_dict['tau_syn_ex']
         else:
-            syn_dict['weight'] = -w
-            syn_dict['tau_psc'] = params_dict['tau_syn_in']
+            syn_dict['weight'] *= -w
+            tau_psc = params_dict['tau_syn_in']
+        syn_dict['tau_psc'] = tau_psc
+        # static version
+        syn_dict_stat = {'model': 'static_synapse'}
+        syn_dict_stat['weight'] = w
+        # U = 1 version
+        syn_dict_Uis1 = copy.deepcopy(syn_dict)
+        syn_dict_Uis1['U'] = 1.0
+        # make up for the release probability U
+        if syn_dict['U'] != 0.0:
+            syn_dict['weight'] /= syn_dict['U']
+        # connect
         nest.Connect(self.pre_neuron, self.post_neuron, syn_spec=syn_dict)
+        nest.Connect(self.pre_neuron, self.post_neuron_stat, syn_spec=syn_dict_stat)
+        nest.Connect(self.pre_neuron, self.post_neuron_Uis1, syn_spec=syn_dict_Uis1)
 
     def set_spkgen(self, spk_w=3000.0):
         self.spks = nest.Create('spike_generator')
@@ -110,8 +129,11 @@ class ConnTest:
         nest.SetStatus(self.mm, {"withtime": True, "record_from": ["V_m"], 'interval': resol})
         nest.Connect(self.mm, self.pre_neuron)
         nest.Connect(self.mm, self.post_neuron)
+        nest.Connect(self.mm, self.post_neuron_stat)
+        nest.Connect(self.mm, self.post_neuron_Uis1)
 
     def reshape_mm(self, Vms, ts, cell_n, resolution=0.1):
+        print('len(Vms)={}'.format(len(Vms)))
         freq = int(1.0/resolution)
         Vms = np.reshape(Vms, (int(len(Vms) / (cell_n*freq)), cell_n, freq))
         ts = np.reshape(ts, (int(len(ts) / (cell_n*freq)), cell_n, freq))
@@ -157,19 +179,26 @@ class ConnTest:
     def run_sim(self, time):
         nest.Simulate(time)
 
+    def plot_analysis(self, Vms, ts):
+        # plot for viewing
+        if self.verify:
+            fig, axes = plt.subplots(2, 1, figsize=(16, 12), constrained_layout=True)
+            axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype], label='presynaptic')
+            axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype],label='postsynaptic')
+            axes[1].plot(ts[2], Vms[2], color='black', label='postsynaptic_static')
+            axes[1].plot(ts[3], Vms[3], color='grey', label='postsynaptic_U=1')
+            axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype], self.ctsp['E_L'][self.post_subtype]+2.0)
+            axes[0].legend()
+            axes[1].legend()
+            plt.savefig('stp_test:run_analysis().png')
+            plt.show()
+            plt.close()
+
     def run_analysis(self, png_name):
         # get data
         dmm = nest.GetStatus(self.mm)[0]
-        Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], 2)
-
-        # plot for viewing
-        if self.verify:
-            fig, axes = plt.subplots(2, 1, figsize=(16, 16), constrained_layout=True)
-            axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype], label='pre-synaptic')
-            axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype], label='post-synaptic')
-            plt.legend()
-            plt.savefig('stp_test:run_analysis().png')
-            plt.close()
+        Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], 4)
+        self.plot_analysis(Vms, ts)
 
         # calculate results
         self.calc_psp(Vms[1], ts[1])
@@ -299,7 +328,7 @@ class ConnTest:
 
 if __name__ == '__main__':
     # simulation settings
-    verify = False
+    verify = True
 
     # neuron parameters
     pre_subtype = 'Exc'
@@ -315,8 +344,8 @@ if __name__ == '__main__':
 
     # tsodyks Parameters
     U = 0.5
-    tau_fac = 50.0
-    tau_rec = 0.0
+    tau_fac = 0.0
+    tau_rec = 50.0
 
     # scanning input
     try:
