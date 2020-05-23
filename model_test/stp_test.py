@@ -160,7 +160,7 @@ class ConnTest:
             'peaks': exp_peaks,
         }
         if isinstance(exp_peaks, np.ndarray):
-            self.exp_data['peaks_norm'] = exp_peaks/np.max(exp_peaks)
+            self.exp_data['peaks_norm'] = exp_peaks/exp_peaks[0]
         else:
             self.exp_data['peaks_norm'] = np.nan
 
@@ -248,7 +248,7 @@ class ConnTest:
         # peak_std = np.std(self.result['peaks'])
         peaks = self.result['peaks']
         for i in range(spk_n):
-            self.result['peaks_norm'][i] = peaks[i]/np.max(peaks)
+            self.result['peaks_norm'][i] = peaks[i]/peaks[0]
 
         if self.verify:
             plt.scatter(spk_ts[-1], self.result['peaks'], color='g', label='peaks')
@@ -296,30 +296,34 @@ class ConnTest:
     def calc_fitness(self, png_name):
         exp_pprs = self.exp_data['PPRs']
         exp_peaks_norm = self.exp_data['peaks_norm']
-        fitness = 0.0
+        SumSqErr = 0.0
         fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
         plt.xlabel('pulse')
         plt.ylim((0.0, 1.2))
         # when using PPRs
         if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
+            cnt = 0
             for i, ppr in enumerate(exp_pprs):
                 # print('ppr={}'.format(ppr))
-                if np.isnan(ppr) or ppr <= 0:
+                if i==0 or np.isnan(ppr) or ppr <= 0:
                     continue
-                fitness += (self.result['PPRs'][i] - ppr)**2
+                SumSqErr += (self.result['PPRs'][i] - ppr)**2
+                cnt += 1
                 # print('fitness={:.2f}'.format(fitness))
-            self.result['fitness'] = fitness
+            self.result['fitness'] = np.sqrt(SumSqErr/cnt)  # RMSE
             plt.ylabel('paired-pulse ratio')
             axs.plot(exp_pprs, marker='.', linestyle='solid', color='b', label='exp.')
             axs.plot(self.result['PPRs'][:len(exp_pprs)], marker='.', linestyle='solid', color='r', label='sim.')
 
         # when using peaks (depolarization/polarization)
         elif isinstance(exp_peaks_norm, np.ndarray) and exp_peaks_norm.ndim == 1:
+            cnt = 0
             for i, peak in enumerate(exp_peaks_norm):
                 if np.isnan(peak):
                     continue
-                fitness += (self.result['peaks_norm'][i] - peak)**2
-            self.result['fitness'] = fitness
+                SumSqErr += (self.result['peaks_norm'][i] - peak)**2
+                cnt += 1
+            self.result['fitness'] = np.sqrt(SumSqErr/cnt)  # RMSE
             plt.ylabel('normalized (de)polarization')
             axs.plot(exp_peaks_norm, marker='.', linestyle='solid', color='b', label='exp.')
             axs.plot(self.result['peaks_norm'][:len(exp_peaks_norm)], marker='.', linestyle='solid', color='r', label='sim.')
@@ -328,7 +332,7 @@ class ConnTest:
 
 if __name__ == '__main__':
     # simulation settings
-    verify = True
+    verify = False
 
     # neuron parameters
     pre_subtype = 'Exc'
@@ -386,7 +390,7 @@ if __name__ == '__main__':
                         spk_isi=spk_isi,
                         verify=verify)
     conntest.run_sim(spk_n*spk_isi*(spk_n*2+1))
-    conntest.run_analysis(pickle_path.replace('.pickle', '.png'))
+    conntest.run_analysis('stp_' + pickle_path.replace('.pickle', '.png'))
 
     # write results to file
     try:
@@ -394,6 +398,15 @@ if __name__ == '__main__':
     except IndexError:
         dat_path = 'stp_test.dat'
     with open(dat_path, 'w') as f:
+        f.write(pre_subtype + '\n')
+        f.write(post_subtype + '\n')
+        f.write(str(spk_n) + '\n')
+        f.write(str(spk_isi) + '\n')
+        f.write('{}\n'.format(pprs))
+        f.write('{}\n'.format(peaks))
+        f.write('{:.2f}\n'.format(U))
+        f.write(str(tau_fac) + '\n')
+        f.write(str(tau_rec) + '\n')
         f.write(str(conntest.result['fitness']))
         f.close()
     if verify:

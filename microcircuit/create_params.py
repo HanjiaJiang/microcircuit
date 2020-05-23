@@ -41,13 +41,13 @@ def set_constant():
     #     'psp_std_mtx':
     #         np.full((4, 4), 1.0)}
 
-    net_dict['g'] = -8
+    net_dict['g'] = -4
     net_dict['bg_rate'] = 4.0
     special_dict['stp_dict'] = stp
-    exc = 2000
-    pv = 2000
-    som = 1000
-    vip = 1000
+    exc = 500
+    pv = 500
+    som = 0
+    vip = 0
     net_dict['K_ext'] = np.array([exc, pv, som, vip,
                                   exc, pv, som,
                                   exc, pv, som,

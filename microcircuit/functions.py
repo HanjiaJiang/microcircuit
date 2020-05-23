@@ -69,24 +69,35 @@ def verify_print(path=None):
 '''
 Main functions
 '''
-def assign_stp(source_name, target_name, weight_dict, delay_dict, stp_dict, net_dict):
-    syn_dict = {
-        'model': 'static_synapse',
-        'weight': weight_dict,
-        'delay': delay_dict
-    }
+def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net_dict, resol):
+    syn_dict = {'model': 'static_synapse'}
     for pre_type in stp_dict.keys():
         for post_type in stp_dict[pre_type].keys():
             if pre_type in source_name and post_type in target_name:
+                # overwrite
                 syn_dict = copy.deepcopy(stp_dict[pre_type][post_type])
                 if 'Exc' in pre_type:
                     syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_ex']
                 else:
                     syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
-                syn_dict['weight'] = weight_dict
-                syn_dict['delay'] = delay_dict
-    # print(source_name, target_name)
-    # print(syn_dict)
+    # make up for the release probability U
+    if 'U' in syn_dict.keys():
+        w /= syn_dict['U']
+        w_sd /= syn_dict['U']
+    # var_n, mu_n: variance and mean of the underlying normal distribution
+    var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
+    mu_n = np.log(abs(w)) - var_n / 2.
+    weight_dict = {
+           'distribution': 'lognormal', 'mu': mu_n,
+           'sigma': np.sign(w)*np.sqrt(var_n)
+       }
+    delay_dict = {
+            'distribution': 'normal_clipped',
+            'mu': delay, 'sigma': delay_sd,
+            'low': resol
+        }
+    syn_dict['weight'] = weight_dict
+    syn_dict['delay'] = delay_dict
     return syn_dict
 
 

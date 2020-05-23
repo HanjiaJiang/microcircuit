@@ -234,9 +234,7 @@ class Network:
     def create_connections(self):
         if nest.Rank() == 0:
             print('Recurrent connections are established')
-        renew_conn(self.net_dict)
-        mean_delays = self.net_dict['mean_delay_matrix']
-        std_delays = self.net_dict['std_delay_matrix']
+        renew_conn(self.net_dict)        
         verify_collect('weight_mat=\n{}\n'.format(self.weight_mat), 'lognormal')
         verify_collect('weight_mat_std=\n{}\n'.format(self.weight_mat_std), 'lognormal')
         for i, target_pop in enumerate(self.pops):
@@ -244,45 +242,31 @@ class Network:
                 p = self.net_dict['conn_probs'][i, j]
                 if p <= 0.:
                     continue
-                synapse_nr = int(self.synapses[i][j])   # not using
+                synapse_nr = int(self.synapses[i][j])
                 target_name = self.net_dict['populations'][i]
                 source_name = self.net_dict['populations'][j]
                 w = self.weight_mat[i][j]
                 w_sd = abs(w * self.weight_mat_std[i][j])
-                # var_n, mu_n: variance and mean of the underlying normal distribution
-                var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
-                mu_n = np.log(abs(w)) - var_n / 2.
-                conn_dict_rec = {
-                    'rule': 'fixed_total_number', 'N': synapse_nr
-                    }
-                weight_dict = {
-                   'distribution': 'lognormal', 'mu': mu_n,
-                   'sigma': np.sign(w)*np.sqrt(var_n)
-                   }
-                # weight_dict = {
-                #    'distribution': 'normal_clipped', 'mu': w,
-                #    'sigma': w_sd
-                #    }
-                delay_dict = {
-                    'distribution': 'normal_clipped',
-                    'mu': mean_delays[i][j], 'sigma': std_delays[i][j],
-                    'low': self.sim_resolution
-                    }
-                syn_dict = assign_stp(source_name,
+                delay = self.net_dict['mean_delay_matrix'][i][j]
+                delay_sd = self.net_dict['std_delay_matrix'][i][j]
+                syn_dict = assign_syn(source_name,
                                         target_name,
-                                        weight_dict,
-                                        delay_dict,
+                                        w,
+                                        w_sd,
+                                        delay,
+                                        delay_sd,
                                         self.stp_dict,
-                                        self.net_dict)
-                nr = connect_recurrent(source_name,
-                                        target_name,
-                                        synapse_nr,
-                                        syn_dict,
-                                        source_pop,
-                                        target_pop,
-                                        self.spe_dict,
-                                        bernoulli_prob=p)
-                verify_collect('{} to {}, [w, w_sd, mu_n, var_n] = [{:.4f}, {:.4f}, {:.4f}, {:.4f}]\n'.format(source_name, target_name, w, w_sd, mu_n, var_n), 'lognormal')
+                                        self.net_dict,
+                                        self.sim_resolution)
+                connect_recurrent(source_name,
+                                    target_name,
+                                    synapse_nr,
+                                    syn_dict,
+                                    source_pop,
+                                    target_pop,
+                                    self.spe_dict,
+                                    bernoulli_prob=p)
+                verify_collect('{} to {}: (w, w_sd, syn_dict) = {:.4f}, {:.4f}\n{}\n'.format(source_name, target_name, w, w_sd, syn_dict), 'lognormal')
 
 
     def connect_poisson(self):
