@@ -1,15 +1,15 @@
-PROP = 7
+PROP = range(8)
 
-VIP_START = 900
-VIP_END = 1100
+VIP_START = 0
+VIP_END = 0
 VIP_STEP = 100
 
-G_START = 4
-G_END = 10
+G_START = 8
+G_END = 8
 G_STEP = 1
 
-BG_START = 2
-BG_END = 8
+BG_START = 4
+BG_END = 4
 BG_STEP = 1
 
 localrules: all, create
@@ -40,11 +40,7 @@ rule create:
         '''
         python microcircuit/create_params.py {output}
         mkdir -p scans/microcircuit/
-        cp microcircuit/*.py scans/microcircuit/
-        mkdir -p scans/stp/
-        cp stp/*.py scans/stp/
-        mkdir -p scans/conn_probs/
-        cp conn_probs/* scans/conn_probs/
+        cp -r microcircuit/ scans/microcircuit/        
         '''
 
 rule simulate:

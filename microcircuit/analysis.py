@@ -358,9 +358,9 @@ def plot_raster(spikes, begin, end):
                 [gids_numpy_changed[9][1], gids_numpy_changed[7][0]],
                 [gids_numpy_changed[12][1], gids_numpy_changed[10][0]]]
     # print('ltc={}'.format(spikes.react_lines))
-    for i, t in enumerate(spikes.react_lines):
-        if begin < t < end:
-            ax.vlines(t, vline_ys[i][0], vline_ys[i][1], colors='r', linestyles='dashed', linewidth=3, zorder=10)
+    # for i, t in enumerate(spikes.react_lines):
+    #     if begin < t < end:
+    #         ax.vlines(t, vline_ys[i][0], vline_ys[i][1], colors='r', linestyles='dashed', linewidth=3, zorder=10)
 
     # legend handling
     legend = plt.legend(loc='upper center', ncol=4)

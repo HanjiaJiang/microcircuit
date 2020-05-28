@@ -16,20 +16,20 @@ if __name__ == "__main__":
 
     #  settings
     do_ai = True
-    do_response = False
+    do_response = True
     do_selectivity = False
 
     # set ai segments
     n_seg_ai = 1
     start_ai = 2000.0
-    seg_ai = 2000.0
+    seg_ai = 10000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 0
+    n_stim = 10
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    th_rate = 120.0
+    th_rate = 200.0
     interval_stim = 1000.0
     ana_win = 40.0
     orient = False
@@ -49,24 +49,20 @@ if __name__ == "__main__":
     try:
         pickle_path = sys.argv[1]    # path to pickle file
     except IndexError:  # single-run if no path input
-        print('No argv[1]; single-run.')
+        print('No scanning input; do single simulation')
         cwd = os.getcwd()
 
         # create pickle file
         pickle_path = os.path.join(cwd, 'para_dict.pickle')
         create.set_single(pickle_path)
 
-        # handle data path
+        # handle data path and copy files
         data_path = os.path.join(cwd, 'data')
         os.system('mkdir -p ' + data_path)
         os.system('cp run_network.py ' + data_path)
         os.system('cp config.yml ' + data_path)
-
-        # copy files
         os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit'))
-        os.system('mkdir -p ' + os.path.join(data_path, 'microcircuit/stp'))
-        os.system('cp microcircuit/*.py ' + os.path.join(data_path, 'microcircuit'))
-        os.system('cp microcircuit/stp/*.py ' + os.path.join(data_path, 'microcircuit/stp'))
+        os.system('cp -r microcircuit ' + os.path.join(data_path, 'microcircuit'))
 
     # assign parameters
     with open(pickle_path, 'rb') as handle:
@@ -84,8 +80,7 @@ if __name__ == "__main__":
 
     # set simulation condition
     create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
-    para_dict['sim_dict']['local_num_threads'] = \
-        int(mp.cpu_count() * cpu_ratio)
+    para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
     para_dict['sim_dict']['t_sim'] = start_ai + len_ai + len_stim
     print('start_ai = {}, len_ai = {}'.format(start_ai, len_ai))
     print('thalamic_input = {}'.format(para_dict['stim_dict']['thalamic_input']))

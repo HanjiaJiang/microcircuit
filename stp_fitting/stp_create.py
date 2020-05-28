@@ -1,12 +1,13 @@
 import sys
-import numpy as np
 import pickle
+import numpy as np
+# from microcircuit.functions import verify_collect, verify_print
 
 if __name__ == '__main__':
     # scanned parameters
-    Us = np.arange(0.05, 1.01, 0.05)
-    Fs = np.arange(0.0, 200.1, 10.0)
-    Ds = np.arange(0.0, 200.1, 10.0)
+    Us = np.arange(0.05, 1.01, 0.05)    # max 20 levels
+    Fs = np.arange(0.0, 1000.1, 10.0)   # max 101 levels
+    Ds = np.arange(0.0, 1000.1, 10.0)
     # constant parameters
     spk_n = 10
     pre_subtype = sys.argv[1]
@@ -32,8 +33,10 @@ if __name__ == '__main__':
                 'pprs': pprs,
                 'peaks': peaks,
                 'U': Us[int(params[0])],
-                'tau_fac': Fs[int(params[1])],
-                'tau_rec': Ds[int(params[2])]
+                'F': Fs[int(params[1])],
+                'D': Ds[int(params[2])]
             }
+        # verify_collect('{}\n'.format(out_dict), 'stp_create')
         with open(out_file, 'wb') as h:
             pickle.dump(out_dict, h)
+    # verify_print()

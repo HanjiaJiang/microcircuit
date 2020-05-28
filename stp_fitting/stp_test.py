@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from microcircuit.functions import verify_collect, verify_print
 matplotlib.rcParams['font.size'] = 20.0
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
@@ -25,6 +26,7 @@ class ConnTest:
         self.spk_n = spk_n
         self.spk_isi = spk_isi
         self.verify = verify
+        self.bisyn_delay = 4.0
         self.set_params()
         self.set_labels()
         self.set_neurons()
@@ -48,9 +50,11 @@ class ConnTest:
         self.subtypes = ['Exc', 'PV', 'SOM', 'VIP']
         self.ctsp = {
                 # Reset membrane potential of the neurons (in mV).
-                'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, # Neske, Patrick, Connors, 2015 (in vitro)
+                'E_L': {'default': 0.0, 'Exc': 0.0, 'PV': 0.0, 'SOM': 0.0, 'VIP': 0.0}, # Neske, Patrick, Connors, 2015 (in vitro)
+                # 'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, # Neske, Patrick, Connors, 2015 (in vitro)
                 # Threshold potential of the neurons (in mV).
-                'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
+                'V_th': {'default': 40.0, 'Exc': 40.0, 'PV': 40.0, 'SOM': 40.0, 'VIP': 40.0}, # Gentet, Petersen, 2012 (in vivo)
+                # 'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
                 # Membrane capacitance (in pF).
                 'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, # Neske, Patrick, Connors, 2015 (in vitro)
                 # Membrane time constant (in ms).
@@ -72,6 +76,7 @@ class ConnTest:
     def set_neurons(self, w=100.0):
         # set neurons
         self.pre_neuron = nest.Create(self.neuron_model)
+        # nest.SetStatus(self.pre_neuron, {'E_L': 0.0, 'V_reset': 0.0, 'V_th': 10.0})
         self.post_neuron = nest.Create(self.neuron_model)
         self.post_neuron_stat = nest.Create(self.neuron_model)
         self.post_neuron_Uis1 = nest.Create(self.neuron_model)
@@ -90,10 +95,9 @@ class ConnTest:
         # syn_dict handling
         syn_dict = self.syn_dict
         if self.pre_subtype == 'Exc':
-            syn_dict['weight'] = w
             tau_psc = params_dict['tau_syn_ex']
         else:
-            syn_dict['weight'] *= -w
+            w *= -1
             tau_psc = params_dict['tau_syn_in']
         syn_dict['tau_psc'] = tau_psc
         # static version
@@ -101,8 +105,10 @@ class ConnTest:
         syn_dict_stat['weight'] = w
         # U = 1 version
         syn_dict_Uis1 = copy.deepcopy(syn_dict)
+        syn_dict_Uis1['weight'] = w
         syn_dict_Uis1['U'] = 1.0
-        # make up for the release probability U
+        # tested version; adjust w for the release probability U
+        syn_dict['weight'] = w
         if syn_dict['U'] != 0.0:
             syn_dict['weight'] /= syn_dict['U']
         # connect
@@ -187,10 +193,10 @@ class ConnTest:
             axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype],label='postsynaptic')
             axes[1].plot(ts[2], Vms[2], color='black', label='postsynaptic_static')
             axes[1].plot(ts[3], Vms[3], color='grey', label='postsynaptic_U=1')
-            axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype], self.ctsp['E_L'][self.post_subtype]+2.0)
+            axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype]-2.0, self.ctsp['E_L'][self.post_subtype]+2.0)
             axes[0].legend()
             axes[1].legend()
-            plt.savefig('stp_test:run_analysis().png')
+            plt.savefig('stp_test:plot_analysis().png')
             plt.show()
             plt.close()
 
@@ -233,7 +239,7 @@ class ConnTest:
             # data from last round
             t_start = spk_ts[-1][i]
             # data of ith pulse
-            data_ith = data[(ts>=t_start)&(ts<t_start+isi)]
+            data_ith = data[(ts>=t_start+self.bisyn_delay)&(ts<t_start+isi+self.bisyn_delay)]
             # determine the peak by Exc/Inh
             if self.pre_subtype == 'Exc':
                 v_peak = np.max(data_ith[:, 1])
@@ -251,7 +257,10 @@ class ConnTest:
             self.result['peaks_norm'][i] = peaks[i]/peaks[0]
 
         if self.verify:
-            plt.scatter(spk_ts[-1], self.result['peaks'], color='g', label='peaks')
+            if self.pre_subtype == 'Exc':
+                plt.scatter(spk_ts[-1], self.result['peaks'] + baseline, color='g', label='peaks')
+            else:
+                plt.scatter(spk_ts[-1], -self.result['peaks'] + baseline, color='g', label='peaks')
 
         # PSPs: PSP(i) is obtained by subtracting the 1st to (i-1)th pulses
         vms_base = np.full(len(Vms), data[0, 1])
@@ -269,13 +278,13 @@ class ConnTest:
             # subtract baseline (1st to (i-1)th pulses)
             data_calc[:, 1] -= vms_base[:len(data_calc)]
             # truncate the data of ith pulse
-            data_calc = data_calc[(data_calc[:, 0]>=spk_ts[i][i]) & (data_calc[:, 0]<spk_ts[i][i]+isi)]
+            data_calc = data_calc[(data_calc[:, 0]>=spk_ts[i][i]) & (data_calc[:, 0]<spk_ts[i][i]+isi+self.bisyn_delay)]
             data_calc[:, 1] = np.abs(data_calc[:, 1])
             if self.verify:
                 if i == 0:
-                    plt.plot(data_calc[:, 0], data_calc[:, 1], color='r', label='PSPs')
+                    plt.plot(data_calc[:, 0], data_calc[:, 1] + self.ctsp['E_L'][self.post_subtype], color='r', label='PSPs')
                 else:
-                    plt.plot(data_calc[:, 0], data_calc[:, 1], color='r')
+                    plt.plot(data_calc[:, 0], data_calc[:, 1] + self.ctsp['E_L'][self.post_subtype], color='r')
             # psp = amplitude of the obtained pulse data
             psp = np.max(data_calc[:, 1]) - np.min(data_calc[:, 1])
             # save pulse data of this round for subtraction in the next round
@@ -299,7 +308,7 @@ class ConnTest:
         SumSqErr = 0.0
         fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
         plt.xlabel('pulse')
-        plt.ylim((0.0, 1.2))
+        # plt.ylim((0.0, 1.2))
         # when using PPRs
         if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
             cnt = 0
@@ -331,12 +340,9 @@ class ConnTest:
         plt.savefig(png_name)
 
 if __name__ == '__main__':
-    # simulation settings
-    verify = False
-
     # neuron parameters
     pre_subtype = 'Exc'
-    post_subtype = 'PV'
+    post_subtype = 'Exc'
 
     # stimulation parameters
     spk_n = 10
@@ -348,12 +354,13 @@ if __name__ == '__main__':
 
     # tsodyks Parameters
     U = 0.5
-    tau_fac = 0.0
-    tau_rec = 50.0
+    F = 50.0
+    D = 0.0
 
     # scanning input
     try:
         pickle_path = sys.argv[1]
+        single_verify = False
         with open(pickle_path, 'rb') as h:
             para_dict = pickle.load(h)
             pre_subtype = para_dict['pre_subtype']
@@ -363,21 +370,24 @@ if __name__ == '__main__':
             pprs = para_dict['pprs']
             peaks = para_dict['peaks']
             U = para_dict['U']
-            tau_fac = para_dict['tau_fac']
-            tau_rec = para_dict['tau_rec']
+            F = para_dict['F']
+            D = para_dict['D']
     except IndexError:
-        pickle_path = 'stp_test.pickle'
+        single_verify = True
+        pickle_path = 'test:calc_fitness()'
+        para_dict = [pre_subtype, post_subtype, spk_n, spk_isi, pprs, peaks, U, F, D]
         print('No scanning input. Run single simulation.')
-        pass
+
+    verify_collect('{}'.format(para_dict), pickle_path)
 
     # STP dictionary
-    if tau_rec == 0.0:
-        tau_rec = 0.01
+    if D == 0.0:
+        D = 0.01
     syn_dict = {
         'model': 'tsodyks_synapse',
         'U': U,
-        'tau_fac': tau_fac,
-        'tau_rec': tau_rec,
+        'tau_fac': F,
+        'tau_rec': D
     }
 
     # initiate and run
@@ -388,9 +398,10 @@ if __name__ == '__main__':
                         peaks=peaks,
                         spk_n=spk_n,
                         spk_isi=spk_isi,
-                        verify=verify)
+                        verify=single_verify)
     conntest.run_sim(spk_n*spk_isi*(spk_n*2+1))
     conntest.run_analysis('stp_' + pickle_path.replace('.pickle', '.png'))
+    verify_print()
 
     # write results to file
     try:
@@ -405,11 +416,11 @@ if __name__ == '__main__':
         f.write('{}\n'.format(pprs))
         f.write('{}\n'.format(peaks))
         f.write('{:.2f}\n'.format(U))
-        f.write(str(tau_fac) + '\n')
-        f.write(str(tau_rec) + '\n')
+        f.write(str(F) + '\n')
+        f.write(str(D) + '\n')
         f.write(str(conntest.result['fitness']))
         f.close()
-    if verify:
+    if single_verify:
         with open(dat_path.replace('.dat', '.txt'),'w') as f:
             f.write('exp_data:\n')
             for key, value in conntest.exp_data.items():

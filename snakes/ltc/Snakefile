@@ -24,11 +24,7 @@ rule create:
         '''
         python microcircuit/create_params.py {output}
         mkdir -p scans/microcircuit/
-        cp microcircuit/*.py scans/microcircuit/
-        mkdir -p scans/stp/
-        cp stp/*.py scans/stp/
-        mkdir -p scans/conn_probs/
-        cp conn_probs/* scans/conn_probs/
+        cp -r microcircuit/ scans/microcircuit/        
         '''
 
 rule simulate:

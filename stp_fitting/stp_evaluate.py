@@ -19,9 +19,6 @@ def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='
     vmin = v_range[0]
     vmax = v_range[1]
 
-    # plt.xlabel(xlbl)
-    # plt.ylabel(ylbl, va='center', rotation='vertical')
-    # plt.xticks(xs, rotation=30)
     plt.xlim((xs[0], xs[-1]))
     plt.ylim((ys[0], ys[-1]))
 
@@ -81,9 +78,6 @@ if __name__ == '__main__':
         if buff[2] not in idx_sets['D']:
             idx_sets['D'].append(buff[2])
     data = np.full((len(idx_sets['U']), len(idx_sets['D']), len(idx_sets['F'])), np.nan)
-    # minU = np.min(np.array(idx_sets['U']).astype(int))
-    # minF = np.min(np.array(idx_sets['F']).astype(int))
-    # minD = np.min(np.array(idx_sets['D']).astype(int))
     print('index set: U, F, D =\n{},\n{},\n{}'.format(idx_sets['U'], idx_sets['F'], idx_sets['D']))
 
     # get data
@@ -108,8 +102,6 @@ if __name__ == '__main__':
             U, F, D = z, x, y
         fits.append(fit)
         idxs = in_file.split('_')
-        # print(idxs)
-        # idxU, idxF, idxD = int(idxs[0]), int(idxs[1]), int(idxs[2])
         try:
             data[idx_sets['U'].index(idxs[0]), idx_sets['D'].index(idxs[2]), idx_sets['F'].index(idxs[1])] = fit
         except IndexError:
@@ -152,8 +144,8 @@ if __name__ == '__main__':
     fitted_dict = {
         'model': 'tsodyks_synapse',
         'U': U,
-        'F': F,
-        'D': D,
+        'tau_fac': F,
+        'tau_rec': D,
     }
     # read and add
     with open(fname, 'rb') as h:

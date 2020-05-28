@@ -115,7 +115,7 @@ net_dict = {
     # The order corresponds to the order in 'populations'.
     'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),
     # Mean amplitude of excitatory postsynaptic potential (in mV).
-    'PSP_e': 0.4,
+    'PSP_e': 0.5,
     # Relative standard deviation of the postsynaptic potential.
     'PSP_sd': 1.0,
     # Relative inhibitory synaptic strength (in relative units).
@@ -168,13 +168,13 @@ net_dict = {
             np.array([[0.7001, 0.7800, 0.4673, 0.3783],
                       [0.3433, 0.9500, 0.3767, 0.3783],
                       [0.7006, 0.6270, 0.6763, 0.2267],
-                      [0.5813, 2.2700, 0.4025, 0.5300]]),
+                      [0.5813, 0.7857, 0.4025, 0.5300]]),
             # np.full((4, 4), 0.5), # previous
         'stds':
             np.array([[0.8958, 1.2372, 0.7581, 1.3884],
                       [0.5243, 1.3421, 0.9566, 1.3884],
                       [1.0520, 0.9618, 1.2379, 1.3884],
-                      [0.8240, 1.3124, 0.8739, 1.3884]])
+                      [0.8240, 1.2062, 0.8739, 1.3884]])
             # np.full((4, 4), 1.0) # previous
         },
     # IPSPs from different interneurons: Ma et al., 2012, J. Neurosci.

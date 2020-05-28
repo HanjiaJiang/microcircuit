@@ -2,7 +2,6 @@ import os
 import nest
 import numpy as np
 import copy
-from microcircuit.stp.stp_dicts import doiron_stp_weak
 from microcircuit.conn import conn_barrel_integrate
 import microcircuit.raw_data as raw
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
@@ -31,7 +30,7 @@ special_dict = {
     # cell-type specific parameters
     'ctsp': True,
     # STP
-    'stp_dict': doiron_stp_weak,
+    'stp_dict': {},
     # selectivity
     'orient_tuning': False,
     'sel_inh_src': ['PV', 'SOM'],
@@ -53,14 +52,10 @@ def verify_collect(in_str, tag):
         verify_dict[tag] = in_str
 
 def verify_print(path=None):
-    if os.path.isdir(path):
-        path_flg = True
-    else:
-        path_flg = False
     for key, value in verify_dict.items():
-        if path_flg:
+        try:
             fpath = os.path.join(path, 'verify-{}.txt'.format(key))
-        else:
+        except TypeError:
             fpath = 'verify-{}.txt'.format(key)
         with open(fpath, 'w') as f:
             f.write(value)
