@@ -60,9 +60,9 @@ class ConnTest:
                 # Membrane time constant (in ms).
                 'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, # Neske, Patrick, Connors, 2015 (in vitro)
                 # Time constant of postsynaptic excitatory currents (in ms).
-                'tau_syn_ex': 2.0, #2.1, # Allen Institue,
+                'tau_syn_ex': 2.0,
                 # Time constant of postsynaptic inhibitory currents (in ms).
-                'tau_syn_in': 4.0, #3.2, # Allen Institue,
+                'tau_syn_in': 4.0
             }
 
     def set_labels(self):
@@ -75,11 +75,11 @@ class ConnTest:
 
     def set_neurons(self, w=100.0):
         # set neurons
-        self.pre_neuron = nest.Create(self.neuron_model)
-        # nest.SetStatus(self.pre_neuron, {'E_L': 0.0, 'V_reset': 0.0, 'V_th': 10.0})
-        self.post_neuron = nest.Create(self.neuron_model)
-        self.post_neuron_stat = nest.Create(self.neuron_model)
-        self.post_neuron_Uis1 = nest.Create(self.neuron_model)
+        self.pre_pop = nest.Create(self.neuron_model, self.spk_n)
+        nest.SetStatus(self.pre_pop, {'E_L': 0.0, 'V_reset': 0.0, 'V_th': 5.0, 'V_m': 0.0})
+        self.post_pop = nest.Create(self.neuron_model, self.spk_n)
+        self.post_static = nest.Create(self.neuron_model)
+        self.post_Uis1 = nest.Create(self.neuron_model)
         params_dict = {
                 'E_L': self.ctsp['E_L'][self.post_subtype],
                 'V_th': self.ctsp['V_th'][self.post_subtype],
@@ -89,9 +89,9 @@ class ConnTest:
                 'tau_syn_in': self.ctsp['tau_syn_in'],
                 'V_m': self.ctsp['E_L'][self.post_subtype],
             }
-        nest.SetStatus(self.post_neuron, params_dict)
-        nest.SetStatus(self.post_neuron_stat, params_dict)
-        nest.SetStatus(self.post_neuron_Uis1, params_dict)
+        nest.SetStatus(self.post_pop, params_dict)
+        nest.SetStatus(self.post_static, params_dict)
+        nest.SetStatus(self.post_Uis1, params_dict)
         # syn_dict handling
         syn_dict = self.syn_dict
         if self.pre_subtype == 'Exc':
@@ -112,31 +112,35 @@ class ConnTest:
         if syn_dict['U'] != 0.0:
             syn_dict['weight'] /= syn_dict['U']
         # connect
-        nest.Connect(self.pre_neuron, self.post_neuron, syn_spec=syn_dict)
-        nest.Connect(self.pre_neuron, self.post_neuron_stat, syn_spec=syn_dict_stat)
-        nest.Connect(self.pre_neuron, self.post_neuron_Uis1, syn_spec=syn_dict_Uis1)
+        nest.Connect(self.pre_pop, self.post_pop, conn_spec={'rule': 'one_to_one'}, syn_spec=syn_dict)
+        nest.Connect([self.pre_pop[-1]], self.post_static, syn_spec=syn_dict_stat)
+        nest.Connect([self.pre_pop[-1]], self.post_Uis1,  syn_spec=syn_dict_Uis1)
 
-    def set_spkgen(self, spk_w=3000.0):
-        self.spks = nest.Create('spike_generator')
+    def set_spkgen(self, spk_w=1000.0):
         isi = self.spk_isi
         n = self.spk_n
+        self.spks = nest.Create('spike_generator', n)
         block = isi*n
         self.spk_ts = []
-        spk_ts = np.array([])
+        # spk_ts = np.array([])
         for i in range(n):
-            self.spk_ts.append(np.arange((2*i+1)*block, (2*i+1)*block+(i+1)*isi, isi))
-            spk_ts = np.concatenate((spk_ts, np.arange((2*i+1)*block, (2*i+1)*block+(i+1)*isi, isi)))
-        # print(self.spk_ts)
-        nest.SetStatus(self.spks, {'spike_times': spk_ts})
-        nest.Connect(self.spks, self.pre_neuron, syn_spec={'weight': spk_w})
+            self.spk_ts.append(np.arange(block, block+(i+1)*isi, isi))
+            # spk_ts = np.concatenate((spk_ts, np.arange((2*i+1)*block, (2*i+1)*block+(i+1)*isi, isi)))
+            nest.SetStatus([self.spks[i]], {'spike_times': self.spk_ts[i]})
+        nest.Connect(self.spks, self.pre_pop, conn_spec={'rule': 'one_to_one'}, syn_spec={'weight': spk_w})
 
     def set_mm(self, resol=0.1):
+        # for post-synaptic neurons
         self.mm = nest.Create('multimeter')
         nest.SetStatus(self.mm, {"withtime": True, "record_from": ["V_m"], 'interval': resol})
-        nest.Connect(self.mm, self.pre_neuron)
-        nest.Connect(self.mm, self.post_neuron)
-        nest.Connect(self.mm, self.post_neuron_stat)
-        nest.Connect(self.mm, self.post_neuron_Uis1)
+        nest.Connect(self.mm, self.pre_pop)
+        nest.Connect(self.mm, self.post_pop)
+        #
+        self.mm_extra = nest.Create('multimeter')
+        nest.SetStatus(self.mm_extra, {"withtime": True, "record_from": ["V_m"], 'interval': resol})
+        nest.Connect(self.mm_extra, self.post_static)
+        nest.Connect(self.mm_extra, self.post_Uis1)
+
 
     def reshape_mm(self, Vms, ts, cell_n, resolution=0.1):
         print('len(Vms)={}'.format(len(Vms)))
@@ -185,29 +189,42 @@ class ConnTest:
     def run_sim(self, time):
         nest.Simulate(time)
 
-    def plot_analysis(self, Vms, ts):
+    def plot_analysis(self, vs, ts, vs_extra=None):
         # plot for viewing
-        if self.verify:
-            fig, axes = plt.subplots(2, 1, figsize=(16, 12), constrained_layout=True)
-            axes[0].plot(ts[0], Vms[0], color=self.color_labels[self.pre_subtype], label='presynaptic')
-            axes[1].plot(ts[1], Vms[1], color=self.color_labels[self.post_subtype],label='postsynaptic')
-            axes[1].plot(ts[2], Vms[2], color='black', label='postsynaptic_static')
-            axes[1].plot(ts[3], Vms[3], color='grey', label='postsynaptic_U=1')
-            axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype]-2.0, self.ctsp['E_L'][self.post_subtype]+2.0)
-            axes[0].legend()
-            axes[1].legend()
-            plt.savefig('stp_test:plot_analysis().png')
-            plt.show()
-            plt.close()
+        len_pre = len(self.pre_pop)
+        len_post = len(self.post_pop)
+        fig, axes = plt.subplots(2, 1, figsize=(16, 12), constrained_layout=True)
+        # presynaptic
+        axes[0].plot(ts[len_pre-1], vs[len_pre-1], color=self.color_labels[self.pre_subtype], label='presynaptic')
+        # postsynaptic
+        axes[1].plot(ts[len_pre+len_post-1], vs[len_pre+len_post-1], color=self.color_labels[self.post_subtype],label='postsynaptic')
+        axes[1].plot(ts[0], vs_extra[0], color='black', label='postsynaptic_static')
+        axes[1].plot(ts[0], vs_extra[1], color='grey', label='postsynaptic_U=1')
+        axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype]-2.0, self.ctsp['E_L'][self.post_subtype]+2.0)
+        axes[0].legend()
+        axes[1].legend()
+        plt.savefig('stp_test:plot_analysis().png')
+        plt.show()
+        plt.close()
 
     def run_analysis(self, png_name):
-        # get data
+        # data for principle STP evaluation
         dmm = nest.GetStatus(self.mm)[0]
-        Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], 4)
-        self.plot_analysis(Vms, ts)
+        Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], len(self.pre_pop)+len(self.post_pop))
+        Vms_post = Vms[len(self.pre_pop):len(self.pre_pop)+len(self.post_pop)]
+        ts_post = ts[len(self.pre_pop):len(self.pre_pop)+len(self.post_pop)]
+
+        # data for static and U=1 synapse
+        dmm_extra = nest.GetStatus(self.mm_extra)[0]
+        Vms_extra = self.reshape_mm(dmm_extra['events']['V_m'], dmm_extra['events']['times'], 2)[0]
+
+        # plot
+        if self.verify:
+            self.plot_analysis(Vms, ts, Vms_extra)
 
         # calculate results
-        self.calc_psp(Vms[1], ts[1])
+        self.calc_psp(Vms_post, ts_post)
+        self.calc_peaks(Vms_post[-1], ts_post[-1])
         self.calc_fitness(png_name)
 
         # print experimental data and results
@@ -219,83 +236,90 @@ class ConnTest:
         for key, value in self.result.items():
             print('{} = {}'.format(key, value))
 
-    def calc_psp(self, Vms, ts):
-        # transpose data for calculation
-        # [[t, Vm], ...]
-        data = np.array([ts, Vms]).T
-
+    # peaks: (de)polarizations
+    def calc_peaks(self, vs, ts):
         # get parameters
         spk_n = self.spk_n
         isi = self.spk_isi
-        spk_ts = self.spk_ts
-
+        spk_ts = self.spk_ts[-1]
+        # plot
         if self.verify:
-            plt.plot(data[:, 0], data[:, 1], color='grey', label='raw')
-
-        # peaks: (de)polarizations
-        # baseline = Vms at the first stimulation
-        baseline = Vms[ts==spk_ts[-1][0]]
+            fig = plt.figure(figsize=(16, 12))
+        # calculation
+        baseline = vs[ts==spk_ts[0]]
         for i in range(spk_n):
-            # data from last round
-            t_start = spk_ts[-1][i]
+            # data with spk_n stimulations (the last one)
+            t_start = spk_ts[i]
             # data of ith pulse
-            data_ith = data[(ts>=t_start+self.bisyn_delay)&(ts<t_start+isi+self.bisyn_delay)]
+            vs_ith = vs[(ts>=t_start+self.bisyn_delay)&(ts<t_start+isi+self.bisyn_delay)]
             # determine the peak by Exc/Inh
             if self.pre_subtype == 'Exc':
-                v_peak = np.max(data_ith[:, 1])
+                v_peak = np.max(vs_ith)
             else:
-                v_peak = np.min(data_ith[:, 1])
+                v_peak = np.min(vs_ith)
             # print('baseline,peak={},{}'.format(baseline, v_peak))
-            peak = np.abs(v_peak - baseline)
+            peak = float(np.abs(v_peak - baseline))
             self.result['peaks'][i] = peak
-
-        # normalized peaks
-        # peak_mean = np.mean(self.result['peaks'])
-        # peak_std = np.std(self.result['peaks'])
-        peaks = self.result['peaks']
-        for i in range(spk_n):
-            self.result['peaks_norm'][i] = peaks[i]/peaks[0]
+            self.result['peaks_norm'][i] = self.result['peaks'][i]/self.result['peaks'][0]
+            if self.pre_subtype == 'Exc':
+                plt.text(t_start+self.bisyn_delay, peak, '{:.4f}'.format(peak))
+            else:
+                plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
 
         if self.verify:
-            if self.pre_subtype == 'Exc':
-                plt.scatter(spk_ts[-1], self.result['peaks'] + baseline, color='g', label='peaks')
+            plt.plot(ts, vs, color='b')
+            if self.post_subtype == 'Exc':
+                plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
             else:
-                plt.scatter(spk_ts[-1], -self.result['peaks'] + baseline, color='g', label='peaks')
+                plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
+            plt.savefig('stp_test:calc_peaks()')
 
-        # PSPs: PSP(i) is obtained by subtracting the 1st to (i-1)th pulses
-        vms_base = np.full(len(Vms), data[0, 1])
-        for i in range(spk_n):
-            t_start = spk_ts[i][0]
-            # data of ith round (one round is 1~10 pulses)
-            data_ith = data[(ts>=t_start) & (ts<t_start+spk_n*isi)]
+
+    def calc_psp(self, vs_raw, ts_raw):
+        # get parameters
+        isi = self.spk_isi
+        spk_ts = self.spk_ts
+
+        # plot raw data
+        if self.verify:
+            fig = plt.figure(figsize=(16, 12))
+            for i in range(self.spk_n):
+                if i == 0:
+                    plt.plot(ts_raw[i], vs_raw[i], color='grey', label='raw')
+                else:
+                    plt.plot(ts_raw[i], vs_raw[i], color='grey')
+
+        # to numpy
+        # print(np.array([vs_raw[0]]))
+        # print(np.diff(np.array(vs_raw), axis=0))
+        vs = np.concatenate((np.array([vs_raw[0]]), np.diff(vs_raw, axis=0)), axis=0)
+        ts = np.array(ts_raw)
+        if vs.shape != ts.shape:
+            print('calc_psp(): error in data shape!')
+            return
+
+        # calculation
+        for i in range(self.spk_n):
+            vs_calc = vs[i][(ts[i]>=spk_ts[i][i])&(ts[i]<spk_ts[i][i]+isi+self.bisyn_delay)]
+            ts_tmp = ts[i][(ts[i]>=spk_ts[i][i])&(ts[i]<spk_ts[i][i]+isi+self.bisyn_delay)]
+            if self.pre_subtype == 'Exc':
+                psp = np.max(vs_calc) - vs_calc[0] # vs_calc[0] is baseline
+            else:
+                psp = vs_calc[0] - np.min(vs_calc)
             if self.verify:
                 if i == 0:
-                    plt.plot(data_ith[:, 0], data_ith[:, 1], color='b', label='raw (pulse)')
+                    plt.plot(ts_tmp, vs_calc, color='r', label='PSPs')
                 else:
-                    plt.plot(data_ith[:, 0], data_ith[:, 1], color='b')
-            # copy data to keep the original
-            data_calc = copy.deepcopy(data_ith)
-            # subtract baseline (1st to (i-1)th pulses)
-            data_calc[:, 1] -= vms_base[:len(data_calc)]
-            # truncate the data of ith pulse
-            data_calc = data_calc[(data_calc[:, 0]>=spk_ts[i][i]) & (data_calc[:, 0]<spk_ts[i][i]+isi+self.bisyn_delay)]
-            data_calc[:, 1] = np.abs(data_calc[:, 1])
-            if self.verify:
-                if i == 0:
-                    plt.plot(data_calc[:, 0], data_calc[:, 1] + self.ctsp['E_L'][self.post_subtype], color='r', label='PSPs')
-                else:
-                    plt.plot(data_calc[:, 0], data_calc[:, 1] + self.ctsp['E_L'][self.post_subtype], color='r')
-            # psp = amplitude of the obtained pulse data
-            psp = np.max(data_calc[:, 1]) - np.min(data_calc[:, 1])
-            # save pulse data of this round for subtraction in the next round
-            vms_base = data_ith[:, 1]
+                    plt.plot(ts_tmp, vs_calc, color='r')
+                plt.text(self.spk_ts[-1][i]+self.bisyn_delay, psp, '{:.4f}'.format(psp))
             # save result
             self.result['PSPs'][i] = psp
             # paired-pulse ratios
             self.result['PPRs'][i] = psp/self.result['PSPs'][0]
 
-        # verify
+        # verify plot
         if self.verify:
+            plt.scatter(self.spk_ts[-1]+self.bisyn_delay, self.result['PSPs'], color='green', label='PSP amplitudes')
             plt.legend()
             plt.savefig('stp_test:calc_psp()')
             plt.show()
@@ -308,7 +332,6 @@ class ConnTest:
         SumSqErr = 0.0
         fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
         plt.xlabel('pulse')
-        # plt.ylim((0.0, 1.2))
         # when using PPRs
         if isinstance(exp_pprs, np.ndarray) and exp_pprs.ndim == 1:
             cnt = 0
@@ -336,13 +359,14 @@ class ConnTest:
             plt.ylabel('normalized (de)polarization')
             axs.plot(exp_peaks_norm, marker='.', linestyle='solid', color='b', label='exp.')
             axs.plot(self.result['peaks_norm'][:len(exp_peaks_norm)], marker='.', linestyle='solid', color='r', label='sim.')
+        plt.ylim(bottom=0.0)
         plt.legend()
         plt.savefig(png_name)
 
 if __name__ == '__main__':
     # neuron parameters
     pre_subtype = 'Exc'
-    post_subtype = 'Exc'
+    post_subtype = 'PV'
 
     # stimulation parameters
     spk_n = 10
@@ -354,8 +378,8 @@ if __name__ == '__main__':
 
     # tsodyks Parameters
     U = 0.5
-    F = 50.0
-    D = 0.0
+    F = 0.0
+    D = 50.0
 
     # scanning input
     try:
@@ -399,7 +423,7 @@ if __name__ == '__main__':
                         spk_n=spk_n,
                         spk_isi=spk_isi,
                         verify=single_verify)
-    conntest.run_sim(spk_n*spk_isi*(spk_n*2+1))
+    conntest.run_sim(spk_n*spk_isi*3)
     conntest.run_analysis('stp_' + pickle_path.replace('.pickle', '.png'))
     verify_print()
 
