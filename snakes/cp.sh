@@ -3,7 +3,6 @@
 mkdir -p ~/hambach/copy
 
 cp -r ~/git/microcircuit/microcircuit/ \
-      ~/git/microcircuit/conn_probs/ \
       ~/git/microcircuit/run_network.py \
       ~/git/microcircuit/snake-*.sh \
       ~/git/microcircuit/cluster.json \

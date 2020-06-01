@@ -3,7 +3,7 @@
 #SBATCH -e ./err-stp.txt
 #SBATCH --job-name hj-stp
 #SBATCH --mem=4G
-#SBATCH --time=48:00:0
+#SBATCH --time=24:00:0
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
 #SBATCH --partition=hambach,blaustein,hamstein

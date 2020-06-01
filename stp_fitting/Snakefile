@@ -1,39 +1,40 @@
-article = 'Lefort-Petersen-2017'
-pretype = 'L4-Exc'
-posttype = 'L4-Exc'
-spk_isi = 10
-pprs = '1.0-0.69'
-peaks = 'None'
-U = range(10, 12, 1) # max 20 levels (0.05:1.0:0.05)
-F = range(10, 12, 1) # max 101 levels (0:1000:10)
-D = range(10, 12, 1)
-
-localrules: all
+Us = '0.05-0.1-0.05'
+Fs = '0.0-1000.0-20.0'
+Ds = '0.0-1000.0-20.0'
+n_bestpoints = 20
+n_dataset = 32
+exp_data = 'exp-data_04.json'
 
 rule all:
     input:
-        expand('{a}_{b}_{c}_.dat', a = U, b = F, c = D)
+        expand('stp-data/done_{a}', a=range(n_dataset))
+    output:
+        'stp_fitted.pickle'
     shell:
         '''
-        python -W ignore stp_evaluate.py {article} {input}
-        rm {input}
+        python -W ignore stp_save.py
+        mv stp:*.csv stp:*.png stp-results/
+        mv stp:*.pickle prog.*.txt stp-data/
         '''
 
-rule create:
+rule get:
+    input:
+        exp_data
     output:
-        expand('{a}_{b}_{c}_.pickle', a = U, b = F, c = D)
+        expand('stp-data/exp-dict_{a}.pickle', a=range(n_dataset))
     shell:
         '''
-        python -W ignore stp_create.py {pretype} {posttype} {spk_isi} {pprs} {peaks} {output}
+        mkdir -p stp-data/ stp-results/
+        python -W ignore stp_get.py {input} {output}
         '''
 
 rule run:
     input:
-        '{a}_{b}_{c}_.pickle'
+        'stp-data/exp-dict_{a}.pickle'
     output:
-        '{a}_{b}_{c}_.dat'
+        'stp-data/done_{a}'
     shell:
         '''
-        python -W ignore stp_test.py {input} {output}
-        rm {input}
+        python -W ignore stp_fitting.py {input} {Us} {Fs} {Ds} {n_bestpoints}
+        > {output}
         '''

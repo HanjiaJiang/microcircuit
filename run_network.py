@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     #  settings
     do_ai = True
-    do_response = True
+    do_response = False
     do_selectivity = False
 
     # set ai segments
@@ -26,10 +26,10 @@ if __name__ == "__main__":
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
-    n_stim = 10
+    n_stim = 0
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    th_rate = 200.0
+    th_rate = 70.0
     interval_stim = 1000.0
     ana_win = 40.0
     orient = False

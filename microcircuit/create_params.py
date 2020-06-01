@@ -15,7 +15,7 @@ np.set_printoptions(suppress=True, precision=4)
 '''
 objects
 '''
-stp = stps.bbp_stp
+stp = stps.fitted_stp
 class ScanParams:
     def __init__(self, n_dict, si_dict, st_dict, sp_dict):
         self.net_dict = copy.deepcopy(n_dict)
@@ -49,7 +49,7 @@ def set_constant():
     net_dict['g'] = -8
     net_dict['bg_rate'] = 4.0
     special_dict['stp_dict'] = stp
-    exc, pv, som, vip = 1000, 2000, 0, 1000
+    exc, pv, som, vip = 1000, 2000, 1000, 1000
     net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
 
     # 20-04-26
@@ -182,10 +182,10 @@ def set_main(out_list, scanparams, f1, f2, f3=None, f4=None):
     for i, out in enumerate(out_list):
         lvls_list = read_levels(out)[1]
         print('lvls_list={}'.format(lvls_list))
-        f1(all_dict, lvls_list[0])
-        f2(all_dict, lvls_list[1])
-        if f3 is not None:
-            f3(all_dict, lvls_list[2:])
+        f1(all_dict, lvls_list[:])
+        # f2(all_dict, lvls_list[1])
+        # if f3 is not None:
+        #     f3(all_dict, lvls_list[2:])
         save_pickle(out, all_dict)
 
 
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     scanparams = ScanParams(net_dict, sim_dict, stim_dict, special_dict)
 
     # set the network with parameters
-    set_main(output_list, scanparams, set_properties, set_indg_vip, set_g_bg)
-    # set_main(output_list, set_indg_all, f2=None)
-    # set_main(output_list, set_indg_somvip, set_g_bg)
-    # set_main(output_list, set_stp_config, set_seed, set_g_bg)
+    # set_main(output_list, scanparams, set_properties, set_indg_vip, set_g_bg)
+    set_main(output_list, scanparams, set_indg_all, f2=None)
+    # set_main(output_list, scanparams, set_indg_somvip, set_g_bg)
+    # set_main(output_list, scanparams, set_stp_config, set_seed, set_g_bg)

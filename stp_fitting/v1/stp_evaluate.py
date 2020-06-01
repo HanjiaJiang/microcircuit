@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 20.0
 np.set_printoptions(precision=4, linewidth=500, suppress=True)
 
-def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='Blues_r'):
+def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='Blues_r', points=None):
     # set plotting variables
     xs = np.array(xs)
     ys = np.array(ys)
@@ -44,7 +44,12 @@ def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='
             axs[r, c].set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
 
             # title
-            axs[r, c].set_title('U = {:.2f}'.format(float(zs[idx])))
+            U = float(zs[idx])
+            axs[r, c].set_title('U = {:.2f}'.format(U))
+
+            # best-fit points
+            if isinstance(points, np.ndarray):
+                axs[r, c].scatter(points[points[:, 0]==U][:, 1], points[points[:, 0]==U][:, 2], color='r')
 
     # x, y labels
     fig.add_subplot(111, frameon=False)

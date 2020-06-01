@@ -1,10 +1,16 @@
+import os
 import copy
 import pickle
 
 # load fitted STPs
 fitted_stp = {}
+stp_fname = ''
+for fname in os.listdir('microcircuit/stp/'):
+    if fname.startswith('stp_fitted'):
+        print('fitted stp: {}'.format(fname))
+        stp_fname = os.path.join('microcircuit/stp/', fname)
 try:
-    with open('microcircuit/stp/stp_fitted.pickle', 'rb') as h:
+    with open(stp_fname, 'rb') as h:
         fitted_stp = pickle.load(h)
 except FileNotFoundError:
     print('stp_dicts.py: stp_fitted.pickle not found')

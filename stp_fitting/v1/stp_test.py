@@ -20,8 +20,6 @@ class ConnTest:
                     spk_isi=50.0,
                     verify=False):
         self.setup(syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify)
-        self.init_flg = True
-        os.system('mkdir -p stp-data/')
 
     def setup(self, syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify):
         nest.ResetKernel()
@@ -33,7 +31,6 @@ class ConnTest:
         self.spk_isi = spk_isi
         self.verify = verify
         self.bisyn_delay = 4.0
-        self.conn_name = '-'.join([pre_subtype, post_subtype])
         self.set_params()
         self.set_labels()
         self.set_neurons()
@@ -127,10 +124,12 @@ class ConnTest:
         isi = self.spk_isi
         n = self.spk_n
         self.spks = nest.Create('spike_generator', n)
+        block = isi*n
         self.spk_ts = []
         # spk_ts = np.array([])
         for i in range(n):
-            self.spk_ts.append(np.arange(isi, isi+(i+1)*isi, isi))
+            self.spk_ts.append(np.arange(block, block+(i+1)*isi, isi))
+            # spk_ts = np.concatenate((spk_ts, np.arange((2*i+1)*block, (2*i+1)*block+(i+1)*isi, isi)))
             nest.SetStatus([self.spks[i]], {'spike_times': self.spk_ts[i]})
         nest.Connect(self.spks, self.pre_pop, conn_spec={'rule': 'one_to_one'}, syn_spec={'weight': spk_w})
 
@@ -208,11 +207,11 @@ class ConnTest:
         axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype]-2.0, self.ctsp['E_L'][self.post_subtype]+2.0)
         axes[0].legend()
         axes[1].legend()
-        plt.savefig('stp-data/stp:plot_analysis():{}.png'.format(self.conn_name))
-        # plt.show()
+        plt.savefig('stp_test:plot_analysis().png')
+        plt.show()
         plt.close()
 
-    def run_analysis(self):
+    def run_analysis(self, png_name):
         # data for principle STP evaluation
         dmm = nest.GetStatus(self.mm)[0]
         Vms, ts = self.reshape_mm(dmm['events']['V_m'], dmm['events']['times'], len(self.pre_pop)+len(self.post_pop))
@@ -224,22 +223,23 @@ class ConnTest:
         Vms_extra = self.reshape_mm(dmm_extra['events']['V_m'], dmm_extra['events']['times'], 2)[0]
 
         # plot
-        if self.verify or self.init_flg:
+        if self.verify:
             self.plot_analysis(Vms, ts, Vms_extra)
 
         # calculate results
         self.calc_psp(Vms_post, ts_post)
         self.calc_peaks(Vms_post[-1], ts_post[-1])
-        self.calc_fitness()
+        self.calc_fitness(png_name)
 
         # print experimental data and results
         print('exp_data:')
         for key, value in self.exp_data.items():
             print('{} = {}'.format(key, value))
+        print()
         print('result:')
         for key, value in self.result.items():
             print('{} = {}'.format(key, value))
-        self.init_flg = False
+        print()
         return self.result['fitness']
 
     # peaks: (de)polarizations
@@ -249,7 +249,7 @@ class ConnTest:
         isi = self.spk_isi
         spk_ts = self.spk_ts[-1]
         # plot
-        if self.verify or self.init_flg:
+        if self.verify:
             fig = plt.figure(figsize=(16, 12))
         # calculation
         baseline = vs[ts==spk_ts[0]]
@@ -272,14 +272,13 @@ class ConnTest:
             else:
                 plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
 
-        if self.verify or self.init_flg:
+        if self.verify:
             plt.plot(ts, vs, color='b')
-            if self.pre_subtype == 'Exc':
+            if self.post_subtype == 'Exc':
                 plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
             else:
-                plt.scatter(spk_ts+self.bisyn_delay, -self.result['peaks'], color='green', label='peak amplitudes')
-            plt.savefig('stp-data/stp:calc_peaks():{}.png'.format(self.conn_name))
-            # plt.show()
+                plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
+            plt.savefig('stp_test:calc_peaks()')
 
 
     def calc_psp(self, vs_raw, ts_raw):
@@ -288,7 +287,7 @@ class ConnTest:
         spk_ts = self.spk_ts
 
         # plot raw data
-        if self.verify or self.init_flg:
+        if self.verify:
             fig = plt.figure(figsize=(16, 12))
             for i in range(self.spk_n):
                 if i == 0:
@@ -313,38 +312,31 @@ class ConnTest:
                 psp = np.max(vs_calc) - vs_calc[0] # vs_calc[0] is baseline
             else:
                 psp = vs_calc[0] - np.min(vs_calc)
-            if self.verify or self.init_flg:
+            if self.verify:
                 if i == 0:
                     plt.plot(ts_tmp, vs_calc, color='r', label='PSPs')
                 else:
                     plt.plot(ts_tmp, vs_calc, color='r')
-                if self.pre_subtype == 'Exc':
-                    plt.text(self.spk_ts[-1][i]+self.bisyn_delay, psp, '{:.4f}'.format(psp))
-                else:
-                    plt.text(self.spk_ts[-1][i]+self.bisyn_delay, -psp, '{:.4f}'.format(psp))
-
+                plt.text(self.spk_ts[-1][i]+self.bisyn_delay, psp, '{:.4f}'.format(psp))
             # save result
             self.result['PSPs'][i] = psp
             # paired-pulse ratios
             self.result['PPRs'][i] = psp/self.result['PSPs'][0]
 
         # verify plot
-        if self.verify or self.init_flg:
-            if self.pre_subtype == 'Exc':
-                plt.scatter(self.spk_ts[-1]+self.bisyn_delay, self.result['PSPs'], color='green', label='PSP amplitudes')
-            else:
-                plt.scatter(self.spk_ts[-1]+self.bisyn_delay, -self.result['PSPs'], color='green', label='PSP amplitudes')
+        if self.verify:
+            plt.scatter(self.spk_ts[-1]+self.bisyn_delay, self.result['PSPs'], color='green', label='PSP amplitudes')
             plt.legend()
-            plt.savefig('stp-data/stp:calc_psp():{}.png'.format(self.conn_name))
-            # plt.show()
+            plt.savefig('stp_test:calc_psp()')
+            plt.show()
             plt.close()
 
 
-    def calc_fitness(self):
+    def calc_fitness(self, png_name):
         exp_pprs = self.exp_data['PPRs']
         exp_peaks_norm = self.exp_data['peaks_norm']
         SumSqErr = 0.0
-        if self.verify or self.init_flg:
+        if self.verify:
             fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
             plt.xlabel('pulse')
         # when using PPRs
@@ -358,7 +350,7 @@ class ConnTest:
                 cnt += 1
                 # print('fitness={:.2f}'.format(fitness))
             self.result['fitness'] = np.sqrt(SumSqErr/cnt)  # RMSE
-            if self.verify or self.init_flg:
+            if self.verify:
                 plt.ylabel('paired-pulse ratio')
                 axs.plot(exp_pprs, marker='.', linestyle='solid', color='b', label='exp.')
                 axs.plot(self.result['PPRs'][:len(exp_pprs)], marker='.', linestyle='solid', color='r', label='sim.')
@@ -372,19 +364,19 @@ class ConnTest:
                 SumSqErr += (self.result['peaks_norm'][i] - peak)**2
                 cnt += 1
             self.result['fitness'] = np.sqrt(SumSqErr/cnt)  # RMSE
-            if self.verify or self.init_flg:
+            if self.verify:
                 plt.ylabel('normalized (de)polarization')
                 axs.plot(exp_peaks_norm, marker='.', linestyle='solid', color='b', label='exp.')
                 axs.plot(self.result['peaks_norm'][:len(exp_peaks_norm)], marker='.', linestyle='solid', color='r', label='sim.')
-        if self.verify or self.init_flg:
+        if self.verify:
             plt.ylim(bottom=0.0)
             plt.legend()
-            plt.savefig('stp-data/stp:calc_fitness():{}-{:.2f}-{:.1f}-{:.1f}.png'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']))
+            plt.savefig(png_name)
 
 if __name__ == '__main__':
     # neuron parameters
-    pre_subtype = 'PV'
-    post_subtype = 'Exc'
+    pre_subtype = 'Exc'
+    post_subtype = 'PV'
 
     # stimulation parameters
     spk_n = 10
@@ -441,8 +433,8 @@ if __name__ == '__main__':
                         spk_n=spk_n,
                         spk_isi=spk_isi,
                         verify=single_verify)
-    conntest.run_sim(spk_n*spk_isi*1.5)
-    conntest.run_analysis()
+    conntest.run_sim(spk_n*spk_isi*3)
+    conntest.run_analysis('stp_' + pickle_path.replace('.pickle', '.png'))
     # verify_print()
 
     # write results to file
