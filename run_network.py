@@ -21,8 +21,8 @@ if __name__ == "__main__":
 
     # set ai segments
     n_seg_ai = 1
-    start_ai = 2000.0
-    seg_ai = 10000.0
+    start_ai = 100.0
+    seg_ai = 500.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input

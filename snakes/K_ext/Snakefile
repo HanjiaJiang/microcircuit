@@ -1,48 +1,36 @@
-EXC_START = 200
-EXC_END = 2000
-EXC_STEP = 200
-
-PV_START = 200
-PV_END = 2000
-PV_STEP = 200
-
-SOM_START = 200
-SOM_END = 2000
-SOM_STEP = 200
-
-VIP_START = 1000
-VIP_END = 1000
-VIP_STEP = 100
+F1 = range(800, 1201, 200)
+F2 = range(1000, 1401, 200)
+F3 = range(1000, 1201, 200)
+F4 = range(1000, 1201, 200)
 
 localrules: all, create
 
 rule all:
     input:
         expand('scans/{a}_{b}_{c}_{d}/ai.dat',
-            a=range(EXC_START, EXC_END + EXC_STEP, EXC_STEP),
-            b=range(PV_START, PV_END + PV_STEP, PV_STEP),
-            c=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
-            d=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP))
+            a=F1,
+            b=F2,
+            c=F3,
+            d=F4)
     shell:
         '''
-        python analysis_gs.py {input}
-        mkdir -p png
-        mv *.png png
-        cp * scans/
+        python scans/scan_data.py {input}
+        mkdir -p scans/png
+        mv scans/*.png scans/png
         '''
 
 rule create:
     output:
         expand('scans/{a}_{b}_{c}_{d}.pickle',
-            a=range(EXC_START, EXC_END + EXC_STEP, EXC_STEP),
-            b=range(PV_START, PV_END + PV_STEP, PV_STEP),
-            c=range(SOM_START, SOM_END + SOM_STEP, SOM_STEP),
-            d=range(VIP_START, VIP_END + VIP_STEP, VIP_STEP))
+            a=F1,
+            b=F2,
+            c=F3,
+            d=F4)
     shell:
         '''
         python microcircuit/create_params.py {output}
-        mkdir -p scans/microcircuit/
-        cp -r microcircuit/ scans/microcircuit/        
+        mkdir -p scans/
+        cp -r microcircuit/ scans/
         '''
 
 rule simulate:

@@ -444,31 +444,3 @@ if __name__ == '__main__':
     conntest.run_sim(spk_n*spk_isi*1.5)
     conntest.run_analysis()
     # verify_print()
-
-    # write results to file
-    try:
-        dat_path = sys.argv[2]
-    except IndexError:
-        dat_path = 'stp_test.dat'
-    with open(dat_path, 'w') as f:
-        f.write(pre_subtype + '\n')
-        f.write(post_subtype + '\n')
-        f.write(str(spk_n) + '\n')
-        f.write(str(spk_isi) + '\n')
-        f.write('{}\n'.format(pprs))
-        f.write('{}\n'.format(peaks))
-        f.write('{:.2f}\n'.format(U))
-        f.write(str(F) + '\n')
-        f.write(str(D) + '\n')
-        f.write(str(conntest.result['fitness']))
-        f.close()
-    if single_verify:
-        with open(dat_path.replace('.dat', '.txt'),'w') as f:
-            f.write('exp_data:\n')
-            for key, value in conntest.exp_data.items():
-                f.write('{} = {}\n'.format(key, value))
-            f.write('\n')
-            f.write('result:\n')
-            for key, value in conntest.result.items():
-                f.write('{} = {}\n'.format(key, value))
-            f.close()
