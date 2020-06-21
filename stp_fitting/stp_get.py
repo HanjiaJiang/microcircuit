@@ -1,3 +1,6 @@
+'''
+get exp data to be fitted and dump to pickle
+'''
 import sys
 import json
 import pickle

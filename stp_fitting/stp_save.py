@@ -1,3 +1,6 @@
+'''
+save each fitting result to a common pickle file
+'''
 import os
 import pickle
 
@@ -6,6 +9,7 @@ if __name__ == '__main__':
     for f in os.listdir():
         if f.startswith('stp') and f.endswith('.pickle'):
             with open(f, 'rb') as p:
+                # the individual stp fitting result
                 tmp_dict = pickle.load(p)
                 pre_subtype = tmp_dict['pre_subtype'].replace('-', '_')
                 post_subtype = tmp_dict['post_subtype'].replace('-', '_')

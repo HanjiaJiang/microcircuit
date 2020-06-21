@@ -1,3 +1,6 @@
+'''
+the fitting loop is here
+'''
 import os
 import sys
 import json

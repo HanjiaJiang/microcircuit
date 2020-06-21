@@ -115,9 +115,9 @@ net_dict = {
     # The order corresponds to the order in 'populations'.
     'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),
     # Mean amplitude of excitatory postsynaptic potential (in mV).
-    'PSP_e': 0.5,
+    'PSP_e': 0.49,
     # Relative standard deviation of the postsynaptic potential.
-    'PSP_sd': 1.0,
+    'PSP_sd': 0.27,
     # Relative inhibitory synaptic strength (in relative units).
     'g': -4,
     # Rate of the Poissonian spike generator (in Hz).
@@ -159,8 +159,6 @@ net_dict = {
         'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
-    'animal': 'mouse',
-    'renew_conn': False,
     'ctsp_dependent_psc': True,
     # EPSPs: Lefort et al., 2009, Neuron
     'epsp': {

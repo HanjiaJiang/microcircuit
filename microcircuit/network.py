@@ -234,7 +234,7 @@ class Network:
     def create_connections(self):
         if nest.Rank() == 0:
             print('Recurrent connections are established')
-        renew_conn(self.net_dict)        
+        # renew_conn(self.net_dict)
         verify_collect('weight_mat=\n{}\n'.format(self.weight_mat), 'lognormal')
         verify_collect('weight_mat_std=\n{}\n'.format(self.weight_mat_std), 'lognormal')
         for i, target_pop in enumerate(self.pops):
@@ -394,13 +394,14 @@ class Network:
         self.setup_nest()
         self.create_populations()
         self.create_devices()
-        self.create_thalamic_input()
+        # self.create_thalamic_input()
         self.create_poisson()
         self.create_dc_generator()
         self.create_connections()
         if self.net_dict['poisson_input']:
             self.connect_poisson()
         if self.stim_dict['thalamic_input']:
+            self.create_thalamic_input()
             self.connect_thalamus()
         if self.stim_dict['dc_input']:
             self.connect_dc_generator()

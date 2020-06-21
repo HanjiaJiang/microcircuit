@@ -389,7 +389,6 @@ def plot_raster(spikes, begin, end):
 
 def do_boxplot(data, path, title, xlbls, ylbls, clr_list, xlims):
     label_pos = list(range(len(data), 0, -1))
-
     clr_list = clr_list[::-1]
     medianprops = dict(linestyle='-', linewidth=2.5, color='black')
     fig, ax = plt.subplots(figsize=(12, 12))

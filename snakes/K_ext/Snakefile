@@ -15,8 +15,8 @@ rule all:
     shell:
         '''
         python scans/scan_data.py {input}
-        mkdir -p scans/png
-        mv scans/*.png scans/png
+        mkdir -p png/
+        mv scans/*.png png/
         '''
 
 rule create:

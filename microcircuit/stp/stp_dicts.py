@@ -3,17 +3,14 @@ import copy
 import pickle
 
 # load fitted STPs
-fitted_stp = {}
-stp_fname = ''
-for fname in os.listdir('microcircuit/stp/'):
-    if fname.startswith('stp_fitted'):
-        print('fitted stp: {}'.format(fname))
-        stp_fname = os.path.join('microcircuit/stp/', fname)
-try:
-    with open(stp_fname, 'rb') as h:
-        fitted_stp = pickle.load(h)
-except FileNotFoundError:
-    print('stp_dicts.py: stp_fitted.pickle not found')
+stp_fns, stps = [], {}
+for fn in os.listdir('microcircuit/stp/'):
+    if fn.startswith('stp_fitted') and fn.endswith('.pickle'):
+        stp_fns.append(fn)
+stp_fns = sorted(stp_fns)
+for fn in stp_fns:
+    with open(os.path.join('microcircuit/stp/', fn), 'rb') as p:
+        stps[fn] = pickle.load(p)
 
 '''
 Doiron data
@@ -53,7 +50,7 @@ doiron_e2som = {
     'tau_rec': 0.01,
 }
 
-doiron_stp = {
+stps['doiron'] = {
     'Exc': {
         'Exc': doiron_e,
         'PV': doiron_e,
@@ -67,7 +64,7 @@ doiron_stp = {
     }
 }
 
-doiron_stp_weak = {
+stps['doiron-w'] = {
     'Exc': {
         'Exc': doiron_e_weak,
         'PV': doiron_e_weak,
@@ -120,7 +117,7 @@ i3 = {
     'tau_rec': 144.0,
     'tau_fac': 62.0
 }
-bbp_stp = {
+stps['bbp'] = {
     'Exc': {
         'Exc': e2,
         'PV': e2,
@@ -137,3 +134,5 @@ bbp_stp = {
         'Exc': i2
     },
 }
+
+print('stps = {}'.format(list(stps)))

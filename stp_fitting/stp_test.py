@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 # from microcircuit.functions import verify_collect, verify_print
-matplotlib.rcParams['font.size'] = 20.0
+matplotlib.rcParams['font.size'] = 15.0
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 class ConnTest:
@@ -26,6 +26,7 @@ class ConnTest:
     def setup(self, syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify):
         nest.ResetKernel()
         self.syn_dict = syn_dict
+        self.conn_name = '-'.join([pre_subtype, post_subtype])
         pre_subtype, post_subtype = self.set_subtype(pre_subtype, post_subtype)
         self.pre_subtype = pre_subtype
         self.post_subtype = post_subtype
@@ -33,7 +34,6 @@ class ConnTest:
         self.spk_isi = spk_isi
         self.verify = verify
         self.bisyn_delay = 4.0
-        self.conn_name = '-'.join([pre_subtype, post_subtype])
         self.set_params()
         self.set_labels()
         self.set_neurons()
@@ -208,6 +208,7 @@ class ConnTest:
         axes[1].set_ylim(self.ctsp['E_L'][self.post_subtype]-2.0, self.ctsp['E_L'][self.post_subtype]+2.0)
         axes[0].legend()
         axes[1].legend()
+        plt.suptitle('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
         plt.savefig('stp-data/stp:plot_analysis():{}.png'.format(self.conn_name))
         # plt.show()
         plt.close()
@@ -250,7 +251,7 @@ class ConnTest:
         spk_ts = self.spk_ts[-1]
         # plot
         if self.verify or self.init_flg:
-            fig = plt.figure(figsize=(16, 12))
+            fig = plt.figure(figsize=(8, 6))
         # calculation
         baseline = vs[ts==spk_ts[0]]
         for i in range(spk_n):
@@ -278,6 +279,7 @@ class ConnTest:
                 plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
             else:
                 plt.scatter(spk_ts+self.bisyn_delay, -self.result['peaks'], color='green', label='peak amplitudes')
+            plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
             plt.savefig('stp-data/stp:calc_peaks():{}.png'.format(self.conn_name))
             # plt.show()
 
@@ -289,7 +291,7 @@ class ConnTest:
 
         # plot raw data
         if self.verify or self.init_flg:
-            fig = plt.figure(figsize=(16, 12))
+            fig = plt.figure(figsize=(8, 6))
             for i in range(self.spk_n):
                 if i == 0:
                     plt.plot(ts_raw[i], vs_raw[i], color='grey', label='raw')
@@ -335,6 +337,7 @@ class ConnTest:
             else:
                 plt.scatter(self.spk_ts[-1]+self.bisyn_delay, -self.result['PSPs'], color='green', label='PSP amplitudes')
             plt.legend()
+            plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
             plt.savefig('stp-data/stp:calc_psp():{}.png'.format(self.conn_name))
             # plt.show()
             plt.close()
@@ -342,7 +345,11 @@ class ConnTest:
 
     def calc_fitness(self):
         exp_pprs = self.exp_data['PPRs']
+        if isinstance(exp_pprs, np.ndarray):
+            exp_pprs[exp_pprs==0] = np.nan
         exp_peaks_norm = self.exp_data['peaks_norm']
+        if isinstance(exp_peaks_norm, np.ndarray):
+            exp_peaks_norm[exp_peaks_norm==0] = np.nan
         SumSqErr = 0.0
         if self.verify or self.init_flg:
             fig, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
@@ -362,6 +369,8 @@ class ConnTest:
                 plt.ylabel('paired-pulse ratio')
                 axs.plot(exp_pprs, marker='.', linestyle='solid', color='b', label='exp.')
                 axs.plot(self.result['PPRs'][:len(exp_pprs)], marker='.', linestyle='solid', color='r', label='sim.')
+                if np.max(exp_pprs) <= 1.2:
+                    plt.ylim(top=1.2)
 
         # when using peaks (depolarization/polarization)
         elif isinstance(exp_peaks_norm, np.ndarray) and exp_peaks_norm.ndim == 1:
@@ -376,14 +385,17 @@ class ConnTest:
                 plt.ylabel('normalized (de)polarization')
                 axs.plot(exp_peaks_norm, marker='.', linestyle='solid', color='b', label='exp.')
                 axs.plot(self.result['peaks_norm'][:len(exp_peaks_norm)], marker='.', linestyle='solid', color='r', label='sim.')
+                if np.max(exp_peaks_norm) <= 1.2:
+                    plt.ylim(top=1.2)
         if self.verify or self.init_flg:
             plt.ylim(bottom=0.0)
             plt.legend()
+            plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms\nRMSE={:.4f}'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec'], self.result['fitness']))
             plt.savefig('stp-data/stp:calc_fitness():{}-{:.2f}-{:.1f}-{:.1f}.png'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']))
 
 if __name__ == '__main__':
     # neuron parameters
-    pre_subtype = 'PV'
+    pre_subtype = 'Exc'
     post_subtype = 'Exc'
 
     # stimulation parameters
@@ -391,13 +403,13 @@ if __name__ == '__main__':
     spk_isi = 10.0
 
     # experimental data
-    pprs = None
-    peaks = np.array([0.88, 0.83, 0.68, 0.57, 0.54, 0.46, 0.41, 0.38, 0.34, 0.34])
+    pprs = np.array([1.0, 0.69])
+    peaks = None
 
     # tsodyks Parameters
-    U = 0.5
-    F = 0.0
-    D = 50.0
+    U = 0.55
+    F = 560.0
+    D = 140.0
 
     # scanning input
     try:

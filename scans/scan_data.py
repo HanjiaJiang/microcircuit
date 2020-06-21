@@ -200,7 +200,7 @@ class ScanData:
         #
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         fig.suptitle(plot_name)
-        fig.savefig(os.path.join('scans/', plot_name) + '.png')
+        fig.savefig(plot_name + '.png')
         plt.close()
 
 if __name__ == '__main__':

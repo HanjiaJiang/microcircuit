@@ -1,9 +1,8 @@
+import os
 import numpy as np
 from scipy import integrate
-import os
 from multiprocessing import Process
 from multiprocessing import Manager
-import microcircuit.raw_data as raw
 
 exp_r = 50.0
 bbp_r = 210.0 # Markram et al., 2015, Cell
@@ -79,11 +78,10 @@ def conn_barrel_integrate(animal_dict, conn_0, conn_1, conn_2, flg_mtx):
                 print('pre={}, post={}: f = 0.0'.format(j, i))
 
     np.set_printoptions(precision=4, suppress=True, linewidth=200)
-    print('flg_mtx = \n{0}'.format(repr(flg_mtx)))
+    print('flag matrix = \n{0}'.format(repr(flg_mtx)))
     print('exp. conn. = \n{0}'.format(repr(conn_1)))
     print('bbp conn. = \n{0}'.format(repr(conn_0)))
-    print('combined conn. = \n{0}'.format(repr(conn_arr_out)))
-    np.save('conn_probs.npy', conn_arr_out)
+    print('integrated conn. = \n{0}'.format(repr(conn_arr_out)))
     return conn_arr_out
 
 

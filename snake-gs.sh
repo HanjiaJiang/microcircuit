@@ -15,7 +15,7 @@ mkdir -p out
 
 snakemake --unlock\
 
-snakemake --jobs 20\
+snakemake --jobs 10\
           --cluster-config cluster.json\
           --cluster "sbatch -n {cluster.n} \
                             -o out/gs.{jobid}.out \
@@ -28,4 +28,5 @@ snakemake --jobs 20\
           --configfile config.yml\
           --use-conda\
           --rerun-incomplete\
+          --latency-wait 120\
           --jobname "gs.{jobid}"

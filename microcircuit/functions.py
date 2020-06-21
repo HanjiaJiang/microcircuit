@@ -481,14 +481,21 @@ def eq_inh_conn(n_full, conn, lyr_gps=None):
 
     return conn_out
 
-def renew_conn(net_dict):
-    # connectivity integration
-    if net_dict['renew_conn'] is True:
-        if net_dict['animal'] == 'mouse':
-            animal_dict = raw.mouse_dict
-        else:
-            animal_dict = raw.rat_dict
-        net_dict['conn_probs'] = conn_barrel_integrate(animal_dict, raw.bbp, raw.exp, raw.allen, raw.flg_mtx)
+# connectivity integration
+def renew_conn(conn_probs, exp_csv=None):
+    if exp_csv is None:
+        exp=raw.exp
+    else:
+        exp=np.loadtxt(exp_csv, delimiter=',')
+    print('conn. map before =\n{}'.format(conn_probs))
+    conn_probs = conn_barrel_integrate(raw.mouse_dict, raw.bbp, exp, raw.allen, (exp>0)*1)  # flags: use exp. data if > 0
+    # make up for the data where connectivity = 0.0 in Lefort, 2009; to be improved
+    conn_probs[10, 0] = 0.0
+    conn_probs[0, 10] = 0.0
+    conn_probs[4, 10] = 0.0
+    np.savetxt(exp_csv.replace('raw', 'conn'), conn_probs, fmt='%.4f', delimiter=',')
+    print('conn. map renewed =\n{}'.format(conn_probs))
+    return conn_probs
 
 
 '''

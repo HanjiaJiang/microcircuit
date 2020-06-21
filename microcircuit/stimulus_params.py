@@ -14,7 +14,7 @@ stim_dict = {
     # Standard deviation of the postsynaptic potential (in relative units).
     'PSP_sd': 0.27, #0.1,   # Bruno, 2006, Cortex Is Driven...
     # Start of the thalamic input (in ms).
-    'th_start': np.array([sim_dict['t_sim'] - 200.0]),
+    'th_start': np.array([np.nan]),
     # 'th_start': np.arange(2000.0, sim_dict['t_sim'], stim_duration*2),
     # Duration of the thalamic input (in ms).
     'th_duration': 10.0,
