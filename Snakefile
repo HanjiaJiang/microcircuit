@@ -1,23 +1,23 @@
-conn = ['6-6', '6-7']
-ctsp = [1]
+conn = ['5', '6-6']
 stp = [2]
-g = [6, 8]
+lyr_epsp = [0, 1]
+lyr_ipsp = [0]
 
 localrules: all, create
 
 rule all:
     input:
-        expand('{a}_{b}_{c}_{d}_done', a=conn, b=ctsp, c=stp, d=g)
+        expand('done_{a}_{b}_{c}_{d}', a=conn, b=stp, c=lyr_epsp, d=lyr_ipsp)
     shell:
         '''
-        > all-done
+        > done_all
         '''
 
 rule snakes:
     input:
         '{a}_{b}_{c}_{d}/'
     output:
-        '{a}_{b}_{c}_{d}_done'
+        'done_{a}_{b}_{c}_{d}'
     shell:
         '''
         cp -r microcircuit/ scans/ snake-gs.sh cluster.json config.yml run_network.py {input}
@@ -29,7 +29,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=ctsp, c=stp, d=g))
+        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=stp, c=lyr_epsp, d=lyr_ipsp))
     shell:
         '''
         python create_snakes.py {output}

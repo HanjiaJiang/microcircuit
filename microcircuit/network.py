@@ -92,7 +92,7 @@ class Network:
             population = nest.Create(
                 self.net_dict['neuron_model'], int(self.nr_neurons[i])
                 )
-            E_L, V_th, C_m, tau_m = ctsp_assign(pop, self.net_dict, self.spe_dict)
+            E_L, V_th, C_m, tau_m, V_reset = ctsp_assign(pop, self.net_dict, self.spe_dict)
             nest.SetStatus(
                 population, {
                     'tau_syn_ex': self.net_dict['neuron_params']['tau_syn_ex'],
@@ -101,7 +101,7 @@ class Network:
                     'V_th': V_th,
                     'C_m': C_m,
                     'tau_m': tau_m,
-                    'V_reset':  self.net_dict['neuron_params']['V_reset'],
+                    'V_reset': self.net_dict['neuron_params']['V_reset']['default'],
                     't_ref': self.net_dict['neuron_params']['t_ref'],
                     # 'I_e': self.DC_amp_e[i]
                     }

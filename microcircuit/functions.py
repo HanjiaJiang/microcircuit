@@ -367,6 +367,7 @@ def ctsp_assign(pop, net_dict, spe_dict):
     V_th = net_dict['neuron_params']['V_th']['default']
     C_m = net_dict['neuron_params']['C_m']['default']
     tau_m = net_dict['neuron_params']['tau_m']['default']
+    V_reset = net_dict['neuron_params']['V_reset']['default']
     if spe_dict['ctsp'] is True:
         for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
             if celltype in pop:
@@ -374,9 +375,10 @@ def ctsp_assign(pop, net_dict, spe_dict):
                 V_th = net_dict['neuron_params']['V_th'][celltype]
                 C_m = net_dict['neuron_params']['C_m'][celltype]
                 tau_m = net_dict['neuron_params']['tau_m'][celltype]
+                V_reset = net_dict['neuron_params']['V_reset'][celltype]
                 break
     # print('pop={}, E_L={}, V_th={}, C_m={}, tau_m={}'.format(pop, E_L, V_th, C_m, tau_m))
-    return E_L, V_th, C_m, tau_m
+    return E_L, V_th, C_m, tau_m, V_reset
 
 
 # calculate celltype-specific psc

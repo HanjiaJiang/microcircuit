@@ -40,16 +40,22 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
 # set constant parameters
 def set_constant(constants=None):
     if constants is None:
-        constants = ['6-6', '1', '2', '8']  # conn, ctsp, stp, g
-    net_dict['epsp']['means'] = np.full((4, 4), 0.5)
-    net_dict['epsp']['stds'] = np.full((4, 4), 1.0)
-    net_dict['g'] = -float(constants[3])
+        constants = ['6-6', '2', '1', '0']  # conn, stp, layer-specific epsp and ipsp
+
+    net_dict['g'] = -8
     net_dict['bg_rate'] = 4.0
-    special_dict['ctsp'] = bool(int(constants[1]))
+
+    # psps
+    if int(constants[2]) == 1:
+        if int(constants[3]) == 1:
+            net_dict['ipsp']['use'] = True
+    else:
+        net_dict['epsp']['means'] = np.full((4, 4), 0.5)
+        net_dict['epsp']['stds'] = np.full((4, 4), 1.0)
 
     # stp
-    if 0 < int(constants[2]) < len(stps):
-        stp_name = list(stps)[int(constants[2])]
+    if 0 < int(constants[1]) < len(stps):
+        stp_name = list(stps)[int(constants[1])]
         special_dict['stp_dict'] = stps[stp_name]
         print('stp used = {}'.format(stp_name))
     else:

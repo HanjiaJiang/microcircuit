@@ -87,7 +87,8 @@ net_dict = {
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
     'N_full': np.array(
-        [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column (rounded)
+        [1691, 136, 47, 64, 1656, 89, 44, 1095, 114, 100, 1288, 67, 56]), # mouse column (VIP summed across all layers)
+        # [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column (rounded)
         # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column (rounded)
     # rat C2 barrel column totally 18976 cells
     # 'N_full': np.array([5099, 521, 67, 88, 4089, 287, 61, 3267, 540, 140, 4425, 290, 102]),
@@ -143,10 +144,10 @@ net_dict = {
         # Reset membrane potential of the neurons (in mV).
         'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Threshold potential of the neurons (in mV).
-        'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
-        # 'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
+        # 'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
+        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane potential after a spike (in mV).
-        'V_reset': -67.0, #-65.0,
+        'V_reset': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7},
         # Membrane capacitance (in pF).
         'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, # Neske, Patrick, Connors, 2015 (in vitro)
         # Membrane time constant (in ms).

@@ -1,6 +1,6 @@
 F1 = range(1000, 2001, 250)
 F2 = range(1000, 2001, 250)
-F3 = range(1000, 2001, 250)
+F3 = range(1000, 1501, 250)
 F4 = range(1000, 1501, 500)
 
 localrules: all, create
@@ -11,8 +11,8 @@ rule all:
     shell:
         '''
         python scans/scan_data.py {input}
-        mkdir -p png/
-        mv *.png png/
+        mkdir -p ../png_{f1}_{f2}_{f3}_{f4}/
+        mv *.png ../png_{f1}_{f2}_{f3}_{f4}/
         '''
 
 rule create:
@@ -20,7 +20,7 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python microcircuit/create_params.py {conn} {ctsp} {stp} {g} {output}
+        python microcircuit/create_params.py {f1} {f2} {f3} {f4} {output}
         '''
 
 rule simulate:

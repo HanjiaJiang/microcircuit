@@ -10,24 +10,43 @@ matplotlib.rcParams['font.size'] = 15.0
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None):
-        self.lyrs = ['l23', 'l4', 'l5', 'l6']
+    def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 8)):
+        self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
+        self.figsize = figsize
         if plotvars is None:
             self.plotvars = ['fr-exc', 'corr', 'cvisi', 'fr-pv', 'fr-som', 'fr-vip']
         else:
             self.plotvars = plotvars
         self.mtxs = {}
         self.fits = {}
-        self.vbounds = {'fr-exc': [0.0, 20.0],
-                        'corr': [-0.02, 0.02],
-                        'cvisi': [0.0, 1.5],
-                        'fr-pv': [0.0, 40.0],
-                        'fr-som': [0.0, 40.0],
-                        'fr-vip': [0.0, 40.0]}
+        # self.vbounds = {'fr-exc': [0.0, 20.0],
+        #                 'corr': [-0.02, 0.02],
+        #                 'cvisi': [0.0, 1.5],
+        #                 'fr-pv': [0.0, 40.0],
+        #                 'fr-som': [0.0, 40.0],
+        #                 'fr-vip': [0.0, 40.0]}
         self.criteria = {'fr-exc': [0.0, 10.0],
                             'corr': [0.0001, 0.008],
                             'cvisi': [0.76, 1.2]
                             }
+        self.cmaps = {'fr-exc': 'Blues',
+                        'corr': 'RdBu',
+                        'cvisi': 'Blues',
+                        'fr-pv': 'Blues',
+                        'fr-som': 'Blues',
+                        'fr-vip': 'Blues'}
+        self.fmt = {'fr-exc': '%1.1f',
+                        'corr': '%1.4f',
+                        'cvisi': '%1.2f',
+                        'fr-pv': '%1.1f',
+                        'fr-som': '%1.1f',
+                        'fr-vip': '%1.1f'}
+        self.units = {'fr-exc': '(spikes/s)',
+                        'corr': '',
+                        'cvisi': '',
+                        'fr-pv': '(spikes/s)',
+                        'fr-som': '(spikes/s)',
+                        'fr-vip': '(spikes/s)'}
         self.setup(inputs, dims)
 
     def setup(self, inputs, dims):
@@ -138,7 +157,7 @@ class ScanData:
 
     def colormap(self, za, zb):
         # set plotting variables
-        fig, axs = plt.subplots(4, len(self.plotvars), figsize=(16, 8), sharex=True, sharey=True, constrained_layout=True)
+        fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True, constrained_layout=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
         plt.xlim((xs[0], xs[-1]))
         plt.ylim((ys[0], ys[-1]))
@@ -153,14 +172,23 @@ class ScanData:
                     ax.axis('off')
                     continue
 
+                # plot data
                 data = self.mtxs[str(zb)][str(za)][plotvar][r].T
-                # print(data)
+                vmin, vmax = 0.0, np.max(np.abs(data))
+                if plotvar == 'corr':
+                    vmin = -vmax
                 cs = ax.imshow(data, interpolation='none',
-                                        cmap='Blues',
+                                        cmap=self.cmaps[plotvar],
                                         origin='lower',
                                         extent=self.extent,
-                                        vmin=self.vbounds[plotvar][0],
-                                        vmax=self.vbounds[plotvar][1])
+                                        vmin=vmin,
+                                        vmax=vmax)
+
+                # fitness contour
+                if plotvar in self.criteria:
+                    contour = ax.contour(data, levels=[self.criteria[plotvar][0], self.criteria[plotvar][1]],
+                    colors='black', extent=self.extent, linewidths=1, hatches=[None, '\\', None])
+                    ax.clabel(contour, contour.levels, fmt=self.fmt[plotvar], inline=True, fontsize=10)
 
                 # fitness points
                 if plotvar in self.criteria:
@@ -168,26 +196,24 @@ class ScanData:
                     for k, v in self.criteria.items():
                         fits_k = self.fits[str(zb)][str(za)][k][r].T
                         fits = np.multiply(fits, fits_k)
-                        # individual criteria
-                        if plotvar == k:
-                            idxs_y, idxs_x = np.where(fits_k == 1)
-                            xs_fit, ys_fit = xs[idxs_x], ys[idxs_y]
-                            ax.scatter(xs_fit, ys_fit, s=20, color='y', zorder=9)
+                        # # individual criteria
+                        # if plotvar == k:
+                        #     idxs_y, idxs_x = np.where(fits_k == 1)
+                        #     xs_fit, ys_fit = xs[idxs_x], ys[idxs_y]
+                        #     ax.scatter(xs_fit, ys_fit, s=20, color='y', zorder=9)
                     # all criteria together
                     idxs_y, idxs_x = np.where(fits == 1)
                     xs_fit, ys_fit = xs[idxs_x], ys[idxs_y]
-                    ax.scatter(xs_fit, ys_fit, s=20, color='r', zorder=10)
+                    ax.scatter(xs_fit, ys_fit, s=60, marker='*', color='y', edgecolor='black', zorder=10)
 
-                # set off-limit colors
-                cs.cmap.set_over('purple')
-                cs.cmap.set_under('magenta')
-
-                # set plot aspect ratio
+                # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
+                ax.set_xticklabels(xs, rotation=30)
+                #ax.set_yticklabels(ys, rotation=30)
 
                 # title
                 if r == 0:
-                    ax.set_title(plotvar)
+                    ax.set_title(plotvar + self.units[plotvar])
                     cbar = fig.colorbar(cs, ax=axs[:, c], orientation='horizontal', shrink=0.6, aspect=5)
 
                 # xlabel
@@ -197,12 +223,14 @@ class ScanData:
                 # ylabel
                 if c == 0:
                     ax.set_ylabel(ylbl)
+                    # ax.text(0.5, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
         #
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
-        fig.suptitle(plot_name)
+        # fig.suptitle('ai state and firint rates')
         fig.savefig(plot_name + '.png')
         plt.close()
 
 if __name__ == '__main__':
     inputs = sys.argv[1:]
     scandata = ScanData(inputs)
+    # scandata = ScanData(inputs, plotvars=['fr-exc', 'corr', 'cvisi'], figsize=(10, 8))
