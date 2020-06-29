@@ -3,7 +3,7 @@ import copy
 import pickle
 
 # load fitted STPs
-stp_fns, stps = [], {}
+stp_fns, stps = [], {'no-stp': {}}
 for fn in os.listdir('microcircuit/stp/'):
     if fn.startswith('stp_fitted') and fn.endswith('.pickle'):
         stp_fns.append(fn)

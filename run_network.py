@@ -45,6 +45,9 @@ if __name__ == "__main__":
     else:
         plot_center = stims[-1]
 
+    # initiate ScanParams
+    scanparams = create.ScanParams()
+
     # check for: parameter scan or single-run
     try:
         pickle_path = sys.argv[1]    # path to pickle file
@@ -52,16 +55,16 @@ if __name__ == "__main__":
         print('No scanning input; do single simulation')
         cwd = os.getcwd()
 
-        # create pickle file
-        pickle_path = os.path.join(cwd, 'para_dict.pickle')
-        create.set_single(pickle_path)
-
         # handle data path and copy files
         dpath = os.path.join(cwd, 'data')
         os.system('mkdir -p ' + dpath)
         os.system('cp run_network.py ' + dpath)
         os.system('cp config.yml ' + dpath)
         os.system('cp -r microcircuit/ ' + dpath)
+
+        # create pickle file
+        pickle_path = os.path.join(dpath, 'para_dict.pickle')
+        scanparams.do_single(pickle_path)
 
     # assign parameters
     with open(pickle_path, 'rb') as handle:
@@ -86,7 +89,7 @@ if __name__ == "__main__":
     print('thalamic_input = {}'.format(para_dict['stim_dict']['thalamic_input']))
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
-    # run simulation
+    # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
                           para_dict['stim_dict'], para_dict['special_dict'])
     net.setup()
@@ -116,8 +119,8 @@ if __name__ == "__main__":
             print('response() runing time = {}'.format(t2 - t1))
             print('selectivity() runing time = {}'.format(t3 - t2))
             # move hist-ltc.png to root folder
-            if on_server:
-                os.system('mv {} {}'.format(os.path.join(data_path, 'hist-ltc.png'), 'ltc_{}.png'.format(data_path.split('/')[-2])))
+            # if on_server:
+            #     os.system('mv {} {}'.format(os.path.join(data_path, 'hist-ltc.png'), 'hist-ltc_{}.png'.format(data_path.split('/')[-2])))
 
         if not on_server:
             analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)

@@ -1,16 +1,16 @@
-conn = ['5', '6-6']
-stp = [2]
-lyr_epsp = [0, 1]
-lyr_ipsp = [0]
+conn = ['5', '6-6']     # connectivity
+vip_conn = [0, 1]      # adjust vip-to-som connectivity
+lyr_epsp = [0, 1]      # layer-sepcific epsp
+lyr_ipsp = [0, 1]      # layer-specific ipsp
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=conn, b=stp, c=lyr_epsp, d=lyr_ipsp)
+        expand('done_{a}_{b}_{c}_{d}', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp)
     shell:
         '''
-        > done_all
+        rm done*
         '''
 
 rule snakes:
@@ -22,14 +22,15 @@ rule snakes:
         '''
         cp -r microcircuit/ scans/ snake-gs.sh cluster.json config.yml run_network.py {input}
         cd {input}
-        sbatch snake-gs.sh
+        snakemake
+        # sbatch snake-gs.sh
         cd ..
         > {output}
         '''
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=stp, c=lyr_epsp, d=lyr_ipsp))
+        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp))
     shell:
         '''
         python create_snakes.py {output}

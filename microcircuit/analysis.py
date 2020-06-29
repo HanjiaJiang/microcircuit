@@ -145,7 +145,7 @@ class Spikes:
 '''
 Plots
 '''
-def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
+def nxn_bars(arr, y_bottom, y_top, labels=None, ylabel=None):
     arr_len = len(arr)
     arr_shape = np.array(arr).shape
     if len(arr_shape) is not 2:
@@ -179,7 +179,7 @@ def interaction_barplot(arr, y_bottom, y_top, labels=None, ylabel=None):
     # ax.legend()
     plt.ylim((y_bottom, y_top))
     fig.tight_layout()
-    plt.savefig('interaction_barplot.png')
+    plt.savefig('nxn_bars.png')
     plt.show()
 
 '''

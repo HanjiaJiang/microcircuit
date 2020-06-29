@@ -2,7 +2,6 @@ import os
 import sys
 
 if __name__ == '__main__':
-    params
     inputs = sys.argv[1:]
     with open('Snakefile_template', 'r') as f:
         snake_template = f.read()

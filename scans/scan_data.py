@@ -6,11 +6,12 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 15.0
+np.set_printoptions(precision=3, linewidth=500, suppress=True)
 # from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 8)):
+    def __init__(self, inputs, dims=None, plotvars=None, figsize=(20, 10)):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
@@ -19,15 +20,9 @@ class ScanData:
             self.plotvars = plotvars
         self.mtxs = {}
         self.fits = {}
-        # self.vbounds = {'fr-exc': [0.0, 20.0],
-        #                 'corr': [-0.02, 0.02],
-        #                 'cvisi': [0.0, 1.5],
-        #                 'fr-pv': [0.0, 40.0],
-        #                 'fr-som': [0.0, 40.0],
-        #                 'fr-vip': [0.0, 40.0]}
-        self.criteria = {'fr-exc': [0.0, 10.0],
-                            'corr': [0.0001, 0.008],
-                            'cvisi': [0.76, 1.2]
+        self.criteria = {'fr-exc': [0.0, 2.0],
+                            'corr': [0.0001, 0.1],
+                            'cvisi': [0.6, 0.76]
                             }
         self.cmaps = {'fr-exc': 'Blues',
                         'corr': 'RdBu',
@@ -51,17 +46,18 @@ class ScanData:
 
     def setup(self, inputs, dims):
         # determine the order of plot dimenstions
-        if isinstance(dims, dict) and 'x' in dims and 'y' in dims and 'za' in dims and 'zb' in dims:
-            self.dims = copy.deepcopy(dims)
+        if isinstance(dims, list) and len(dims) == 4:
+            pass
         else:
-            print('\'dims\' input not a good dictionary, using:')
-            self.dims = {
-                'x': 'exc',
-                'y': 'pv',
-                'za': 'som',
-                'zb': 'vip',
-            }
-            print(self.dims)
+            print('using default dimension items: exc, pv, som, vip')
+            dims = ['exc', 'pv', 'som', 'vip']
+        self.dims = {
+            'x': dims[0],
+            'y': dims[1],
+            'za': dims[2],
+            'zb': dims[3],
+        }
+        print(self.dims)
         # make DataFrame object
         data_list = []
         excs, pvs, soms, vips = [0, 4, 7, 10], [1, 5, 8, 11], [2, 6, 9, 12], [3, 3, 3, 3]
@@ -101,7 +97,6 @@ class ScanData:
         x_intrv, y_intrv = (xlvls[1] - xlvls[0]), (ylvls[1] - ylvls[0])
         self.extent = [xlvls[0] - x_intrv/2, xlvls[-1] + x_intrv/2, ylvls[0] - y_intrv/2, ylvls[-1] + y_intrv/2]
         self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls = xlvls, ylvls, zalvls, zblvls
-        # print('extend={}'.format(self.extent))
         print('levels=')
         print(self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls)
         self.make_data()
@@ -157,80 +152,88 @@ class ScanData:
 
     def colormap(self, za, zb):
         # set plotting variables
-        fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True, constrained_layout=True)
+        fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
         plt.xlim((xs[0], xs[-1]))
         plt.ylim((ys[0], ys[-1]))
+        plt.yticks(ys, rotation=30)
         plt.xticks(xs, rotation=30)
         xlbl, ylbl = self.dims['x'], self.dims['y']
         # plot
         for c, plotvar in enumerate(self.plotvars):
+            vmin, vmax = 0.0, np.nanmax(np.abs(self.mtxs[str(zb)][str(za)][plotvar]))
+            if plotvar == 'corr':
+                vmin = -vmax
             for r in range(4):
                 ax = axs[r, c]
-                # vip
-                if plotvar == 'fr-vip' and r > 0:
-                    ax.axis('off')
-                    continue
 
                 # plot data
                 data = self.mtxs[str(zb)][str(za)][plotvar][r].T
-                vmin, vmax = 0.0, np.max(np.abs(data))
-                if plotvar == 'corr':
-                    vmin = -vmax
-                cs = ax.imshow(data, interpolation='none',
-                                        cmap=self.cmaps[plotvar],
-                                        origin='lower',
-                                        extent=self.extent,
-                                        vmin=vmin,
-                                        vmax=vmax)
+                if plotvar == 'fr-vip' and r > 0:
+                    ax.axis('off')
+                    data = np.full(data.shape, np.nan)
+                # cf = ax.contourf(data,
+                #     cmap=self.cmaps[plotvar],
+                #     origin='lower',
+                #     extent=self.extent,
+                #     vmin=vmin,
+                #     vmax=vmax)
+                cf = ax.imshow(data, interpolation='bilinear',
+                    cmap=self.cmaps[plotvar],
+                    origin='lower',
+                    extent=self.extent,
+                    vmin=vmin,
+                    vmax=vmax)
 
-                # fitness contour
+                # single- and triple-fit
                 if plotvar in self.criteria:
-                    contour = ax.contour(data, levels=[self.criteria[plotvar][0], self.criteria[plotvar][1]],
-                    colors='black', extent=self.extent, linewidths=1, hatches=[None, '\\', None])
-                    ax.clabel(contour, contour.levels, fmt=self.fmt[plotvar], inline=True, fontsize=10)
-
-                # fitness points
-                if plotvar in self.criteria:
-                    fits = np.ones(data.shape)
+                    tri_fit = np.ones(data.shape)
                     for k, v in self.criteria.items():
-                        fits_k = self.fits[str(zb)][str(za)][k][r].T
-                        fits = np.multiply(fits, fits_k)
-                        # # individual criteria
-                        # if plotvar == k:
-                        #     idxs_y, idxs_x = np.where(fits_k == 1)
-                        #     xs_fit, ys_fit = xs[idxs_x], ys[idxs_y]
-                        #     ax.scatter(xs_fit, ys_fit, s=20, color='y', zorder=9)
-                    # all criteria together
-                    idxs_y, idxs_x = np.where(fits == 1)
-                    xs_fit, ys_fit = xs[idxs_x], ys[idxs_y]
-                    ax.scatter(xs_fit, ys_fit, s=60, marker='*', color='y', edgecolor='black', zorder=10)
+                        fit = self.fits[str(zb)][str(za)][k][r].T
+                        tri_fit = np.multiply(tri_fit, fit)
+                    # data_fit = fitness
+                    data_fit = np.zeros(data.shape)
+                    # individual
+                    data_fit[np.where((data>self.criteria[plotvar][0])&(data<self.criteria[plotvar][1]))] = 10.0
+                    data_fit[np.where(tri_fit==1)] = 20.0
+                    print('L{}:\n{}\n{}'.format(r, data[::-1], data_fit[::-1]))
+                    cf_fit = ax.contourf(data_fit,
+                        levels=[5.0, 15.0, 25.0],
+                        origin='lower',
+                        colors='gray',
+                        extent=self.extent,
+                        hatches=['//', '++', '//'],
+                        alpha=0.0)
+                    # ax.clabel(cf_fit, cf_fit.levels, fmt=self.fmt[plotvar], inline=True, fontsize=10)
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
                 ax.set_xticklabels(xs, rotation=30)
-                #ax.set_yticklabels(ys, rotation=30)
+                ax.set_yticklabels(ys, rotation=30)
 
                 # title
                 if r == 0:
-                    ax.set_title(plotvar + self.units[plotvar])
-                    cbar = fig.colorbar(cs, ax=axs[:, c], orientation='horizontal', shrink=0.6, aspect=5)
+                    ax.set_title(plotvar + self.units[plotvar] + '\n ')
 
                 # xlabel
                 if r == 3:
                     ax.set_xlabel(xlbl)
+                    cbar = fig.colorbar(cf, ax=axs[:, c], orientation='horizontal', shrink=0.8, aspect=10)
+                    # cbar_xlbls = cbar.ax.get_xticklabels()
+                    # print('cbar_xlbls = {}'.format(cbar_xlbls))
+                    # cbar.ax.set_xticklabels(cbar_xlbls, rotation=30)
 
                 # ylabel
                 if c == 0:
                     ax.set_ylabel(ylbl)
                     # ax.text(0.5, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-        #
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         # fig.suptitle('ai state and firint rates')
-        fig.savefig(plot_name + '.png')
+        fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
 
 if __name__ == '__main__':
-    inputs = sys.argv[1:]
-    scandata = ScanData(inputs)
+    inputs = sys.argv[5:]
+    dims = sys.argv[1:5]
+    scandata = ScanData(inputs, dims=dims)
     # scandata = ScanData(inputs, plotvars=['fr-exc', 'corr', 'cvisi'], figsize=(10, 8))
