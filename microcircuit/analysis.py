@@ -23,6 +23,22 @@ class Spikes:
         self.data = []
         self.react_lines = []
         self.veri_dict = {}
+        self.fr_cri = [ (0.5, 0.6, 4.5),
+                        (7.5, 11.7, 23.3),
+                        (0.03, 0.4, 4.1),
+                        (8.5, 11.1, 21.0),
+
+                        (0.0, 0.1, 0.7),
+                        (4.3, 7.8, 14.7),
+                        (0.3, 0.6, 4.9),
+
+                        (2.7, 5.2, 11.2),
+                        (4.3, 7.6, 8.7),
+                        (0.2, 0.8, 3.6),
+
+                        (0.4, 2.6, 11.5),
+                        (4.6, 17.2, 22.0),
+                        (0.5, 1.7, 6.9)]
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
@@ -136,7 +152,7 @@ class Spikes:
 
         self.layer_labels = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
 
-        self.color_labels = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
+        self.colors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
@@ -346,26 +362,12 @@ def plot_raster(spikes, begin, end):
         if len(data[i]) > 0:
             times = data[i][:, 1]
             neurons = np.abs(data[i][:, 0] - highest_gid) + 1
-            if i < 4:
-                plt.plot(times, neurons, '.', color=spikes.color_labels[i],
-                         label=spikes.subtype_labels[i])
-            else:
-                plt.plot(times, neurons, '.', color=spikes.color_labels[i])
+            plt.plot(times, neurons, '.', color=spikes.colors[i])
 
-    #
-    vline_ys = [[gids_numpy_changed[3][1], gids_numpy_changed[0][0]],
-                [gids_numpy_changed[6][1], gids_numpy_changed[4][0]],
-                [gids_numpy_changed[9][1], gids_numpy_changed[7][0]],
-                [gids_numpy_changed[12][1], gids_numpy_changed[10][0]]]
-    # print('ltc={}'.format(spikes.react_lines))
-    # for i, t in enumerate(spikes.react_lines):
-    #     if begin < t < end:
-    #         ax.vlines(t, vline_ys[i][0], vline_ys[i][1], colors='r', linestyles='dashed', linewidth=3, zorder=10)
-
-    # legend handling
-    legend = plt.legend(loc='upper center', ncol=4)
-    for legend_handle in legend.legendHandles:
-        legend_handle._legmarker.set_markersize(30)
+    # legend
+    for i in range(4):
+        plt.scatter([], [], s=100, label=spikes.subtype_labels[i], color=spikes.colors[i])
+    plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1))
 
     # set top and right frames invisible
     ax.spines['right'].set_visible(False)
@@ -373,9 +375,7 @@ def plot_raster(spikes, begin, end):
 
     # reset y limits to contain legend
     bottom, top = ax.get_ylim()
-    ax.set_ylim((bottom, top + 1500.0))
 
-    # plt.title('(A) raster plot', fontsize=40.0)
     plt.xlabel('time (ms)')
     plt.xticks(np.arange(begin, end + 1.0, (end - begin)/4.0))
     plt.yticks(
@@ -387,47 +387,47 @@ def plot_raster(spikes, begin, end):
     plt.close()
 
 
-def do_boxplot(data, path, title, xlbls, ylbls, clr_list, xlims):
-    label_pos = list(range(len(data), 0, -1))
-    clr_list = clr_list[::-1]
-    medianprops = dict(linestyle='-', linewidth=2.5, color='black')
+def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
+    layers = ['L2/3', 'L4', 'L5', 'L6']
+    label_pos = list(range(1, len(data)+1))
+    medianprops = dict(linestyle='-', linewidth=5, color='red')
     fig, ax = plt.subplots(figsize=(12, 12))
-    bp = plt.boxplot(data, 0, 'k+', 0, medianprops=medianprops)
-    plt.xlim(xlims)
-    plt.setp(bp['boxes'], color='black')
-    plt.setp(bp['whiskers'], color='black')
-    for h in range(len(data)):
-        boxX = []
-        boxY = []
-        box = bp['boxes'][h]
-        for j in list(range(5)):
-            boxX.append(box.get_xdata()[j])
-            boxY.append(box.get_ydata()[j])
-        boxCoords = list(zip(boxX, boxY))
-        boxPolygon = Polygon(boxCoords, facecolor=clr_list[h])
-        ax.add_patch(boxPolygon)
-    # set top and right frames invisible
+    bp = plt.boxplot(data, 0, 'k+', 0, medianprops=medianprops, patch_artist=True,)
+    plt.setp(bp['boxes'], color='k')
+    plt.setp(bp['whiskers'], color='k')
+    if isinstance(xlims, tuple):
+        plt.xlim(xlims)
+    plt.ylim(label_pos[0]-0.5, label_pos[-1]+0.5)
+    # box filling color
+    for i, box in enumerate(bp['boxes']):
+        box.set_facecolor(colors[i])
+        # print(label_pos[i], cri[i])
+        ax.scatter(list(cri[i])[1], label_pos[i], s=400, marker='*', edgecolor='k', color='yellow', zorder=10)
+    for i in [3, 6, 9]:
+        ax.hlines(label_pos[i]-0.5, plt.xlim()[0], plt.xlim()[1], linestyles='solid')
+    for i in [0, 3, 6, 9]:
+        ax.text(plt.xlim()[1], label_pos[i] + 1.0, layers[3 - int(i/3)], horizontalalignment='center')
+    for i in range(12, 8, -1):
+        plt.scatter([], [], s=100, marker='s', label=ylbls[i], color=colors[i])
     ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
     ax.spines['top'].set_visible(False)
-
-    plt.xlabel(xlbls)
-    plt.yticks(label_pos, ylbls)
+    ax.yaxis.set_visible(False)
+    legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1))
+    # for legend_handle in legend.legendHandles:
+    #     legend_handle._legmarker.set_markersize(30)
+    plt.xlabel(xlbl)
     fig.tight_layout()
-    plt.savefig(os.path.join(path, 'box_plot_' + title + '.png'), dpi=300)
+    plt.savefig(os.path.join(path, 'boxplot_' + title + '.png'), dpi=300)
     plt.close()
 
-def fr_boxplot(spikes, net_dict, path):
-    pops = net_dict['N_full']
-    # list of population length e.g. [0, 1, ..., 12]
-    reversed_order_list = list(range(len(pops) - 1, -1, -1))
-    list_rates_rev = []
-    for h in reversed_order_list:
-        rate_filepath = os.path.join(path, ('rate' + str(h) + '.npy'))
-        if os.path.isfile(rate_filepath):
-            list_rates_rev.append(
-                np.load(rate_filepath)
-                )
-    do_boxplot(list_rates_rev, path, 'fr', 'firing rate (spikes/s)', spikes.populations, spikes.color_labels, (-1.0, 50.0))
+def fr_boxplot(spikes):
+    rates = []
+    for i in range(len(spikes.populations)):
+        fpath = os.path.join(spikes.path, ('rate' + str(i) + '.npy'))
+        if os.path.isfile(fpath):
+            rates.append(np.load(fpath))
+    do_boxplot(rates[::-1], spikes.fr_cri[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtype_labels[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
 
 
 '''
@@ -687,34 +687,34 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
             else:
                 SIs_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
             # main lines
-            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=spikes.color_labels[i], linewidth=2, label=spikes.subtype_labels[i])
+            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=spikes.colors[i], linewidth=2, label=spikes.subtype_labels[i])
             # boxplot
             if raw is True:
                 for k, SIs in enumerate(SIs_s1.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
                     positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
-                    boxprops=dict(color=spikes.color_labels[i], linewidth=2),
-                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=2),
-                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=2),
-                    medianprops=dict(color=spikes.color_labels[i], linewidth=2),
-                    capprops=dict(color=spikes.color_labels[i], linewidth=2))
+                    boxprops=dict(color=spikes.colors[i], linewidth=2),
+                    whiskerprops=dict(color=spikes.colors[i], linewidth=2),
+                    flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=2),
+                    medianprops=dict(color=spikes.colors[i], linewidth=2),
+                    capprops=dict(color=spikes.colors[i], linewidth=2))
                 for k, SIs in enumerate(SIs_s2.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
                     positions=[xs[k] + (2*spikes.pos_labels[i] + 1)*bin_w/10.0],
-                    boxprops=dict(color=spikes.color_labels[i], linewidth=1),
-                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=1),
-                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=1),
-                    medianprops=dict(color=spikes.color_labels[i], linewidth=1),
-                    capprops=dict(color=spikes.color_labels[i], linewidth=1))
+                    boxprops=dict(color=spikes.colors[i], linewidth=1),
+                    whiskerprops=dict(color=spikes.colors[i], linewidth=1),
+                    flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=1),
+                    medianprops=dict(color=spikes.colors[i], linewidth=1),
+                    capprops=dict(color=spikes.colors[i], linewidth=1))
             else:
                 for k, SIs in enumerate(SI_by_neuronbin.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
                     positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
-                    boxprops=dict(color=spikes.color_labels[i], linewidth=1.5),
-                    whiskerprops=dict(color=spikes.color_labels[i], linewidth=1.5),
-                    flierprops=dict(markeredgecolor=spikes.color_labels[i], marker='.', markersize=1.5),
-                    medianprops=dict(color=spikes.color_labels[i], linewidth=1.5),
-                    capprops=dict(color=spikes.color_labels[i], linewidth=1.5))
+                    boxprops=dict(color=spikes.colors[i], linewidth=1.5),
+                    whiskerprops=dict(color=spikes.colors[i], linewidth=1.5),
+                    flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=1.5),
+                    medianprops=dict(color=spikes.colors[i], linewidth=1.5),
+                    capprops=dict(color=spikes.colors[i], linewidth=1.5))
             axs[idx_lyr].spines['right'].set_visible(False)
             axs[idx_lyr].spines['top'].set_visible(False)
             if i == 0:

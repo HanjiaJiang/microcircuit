@@ -1,7 +1,7 @@
-conn = ['5', '6-6']     # connectivity
-vip_conn = [0, 1]      # adjust vip-to-som connectivity
-lyr_epsp = [0, 1]      # layer-sepcific epsp
-lyr_ipsp = [0, 1]      # layer-specific ipsp
+conn = ['6-6']     # connectivity
+vip_conn = [1]      # adjust vip-to-som connectivity
+lyr_epsp = [1]      # layer-sepcific epsp
+lyr_ipsp = [0]      # layer-specific ipsp
 
 localrules: all, create
 
@@ -30,7 +30,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp))
+        expand('{a}_{b}_{c}_{d}/', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp)
     shell:
         '''
         python create_snakes.py {output}

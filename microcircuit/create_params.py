@@ -46,7 +46,8 @@ class ScanParams:
         self.net_dict['epsp']['use'] = True
         self.net_dict['ipsp']['use'] = False
         self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
-        self.set_indgs([1000, 2000, 1000, 1000])
+        # self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
+        self.set_indgs([1000, 2000, 800, 1000])
         self.load_conn('6-6')
 
     def set_g(self, g):

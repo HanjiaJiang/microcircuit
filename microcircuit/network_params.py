@@ -111,7 +111,7 @@ net_dict = {
 
     # Number of external connections to the different populations.
     # The order corresponds to the order in 'populations'.
-    'K_ext': np.array([2000, 2000, 1500, 500, 2000, 2000, 1500, 2000, 2000, 1500, 2000, 2000, 1500]),
+    'K_ext': np.array([1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]),
     # Mean amplitude of excitatory postsynaptic potential (in mV).
     'PSP_e': 0.49,
     # Relative standard deviation of the postsynaptic potential.

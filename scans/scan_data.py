@@ -11,37 +11,37 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, figsize=(20, 10)):
+    def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 12)):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
-            self.plotvars = ['fr-exc', 'corr', 'cvisi', 'fr-pv', 'fr-som', 'fr-vip']
+            self.plotvars = [r'$r_{Exc}$', 'pairwise correlation', 'CV ISI', r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$']
         else:
             self.plotvars = plotvars
         self.mtxs = {}
         self.fits = {}
-        self.criteria = {'fr-exc': [0.0, 2.0],
-                            'corr': [0.0001, 0.1],
-                            'cvisi': [0.6, 0.76]
+        self.criteria = {r'$r_{Exc}$': [0.0, 2.0],
+                            'pairwise correlation': [0.0001, 0.1],
+                            'CV ISI': [0.6, 0.76]
                             }
-        self.cmaps = {'fr-exc': 'Blues',
-                        'corr': 'RdBu',
-                        'cvisi': 'Blues',
-                        'fr-pv': 'Blues',
-                        'fr-som': 'Blues',
-                        'fr-vip': 'Blues'}
-        self.fmt = {'fr-exc': '%1.1f',
-                        'corr': '%1.4f',
-                        'cvisi': '%1.2f',
-                        'fr-pv': '%1.1f',
-                        'fr-som': '%1.1f',
-                        'fr-vip': '%1.1f'}
-        self.units = {'fr-exc': '(spikes/s)',
-                        'corr': '',
-                        'cvisi': '',
-                        'fr-pv': '(spikes/s)',
-                        'fr-som': '(spikes/s)',
-                        'fr-vip': '(spikes/s)'}
+        self.cmaps = {r'$r_{Exc}$': 'Blues',
+                        'pairwise correlation': 'RdBu',
+                        'CV ISI': 'Blues',
+                        r'$r_{PV}$': 'Blues',
+                        r'$r_{SOM}$': 'Blues',
+                        r'$r_{VIP}$': 'Blues'}
+        self.fmt = {r'$r_{Exc}$': '%1.1f',
+                        'pairwise correlation': '%1.4f',
+                        'CV ISI': '%1.2f',
+                        r'$r_{PV}$': '%1.1f',
+                        r'$r_{SOM}$': '%1.1f',
+                        r'$r_{VIP}$': '%1.1f'}
+        self.units = {r'$r_{Exc}$': '(spikes/s)',
+                        'pairwise correlation': '',
+                        'CV ISI': '',
+                        r'$r_{PV}$': '(spikes/s)',
+                        r'$r_{SOM}$': '(spikes/s)',
+                        r'$r_{VIP}$': '(spikes/s)'}
         self.setup(inputs, dims)
 
     def setup(self, inputs, dims):
@@ -74,12 +74,12 @@ class ScanData:
                     self.dims['za']: params_list[2],
                     self.dims['zb']: params_list[3],
                     'lyr': lyr,
-                    'fr-exc': fr_arr[excs[i], 0],
-                    'fr-pv': fr_arr[pvs[i], 0],
-                    'fr-som': fr_arr[soms[i], 0],
-                    'fr-vip': fr_arr[vips[i], 0],
-                    'corr': ai_arr[i, 0],
-                    'cvisi': ai_arr[i, 1],
+                    r'$r_{Exc}$': fr_arr[excs[i], 0],
+                    r'$r_{PV}$': fr_arr[pvs[i], 0],
+                    r'$r_{SOM}$': fr_arr[soms[i], 0],
+                    r'$r_{VIP}$': fr_arr[vips[i], 0],
+                    'pairwise correlation': ai_arr[i, 0],
+                    'CV ISI': ai_arr[i, 1],
                     # 'corr.n': ain_arr[i, 0],
                     # 'cvisi.n': ain_arr[i, 1],
                     }
@@ -156,29 +156,27 @@ class ScanData:
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
         plt.xlim((xs[0], xs[-1]))
         plt.ylim((ys[0], ys[-1]))
-        plt.yticks(ys, rotation=30)
-        plt.xticks(xs, rotation=30)
         xlbl, ylbl = self.dims['x'], self.dims['y']
+        ylbl = ylbl.replace('bg_rate', r'$r_{bg}$')
         # plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = 0.0, np.nanmax(np.abs(self.mtxs[str(zb)][str(za)][plotvar]))
-            if plotvar == 'corr':
+            if plotvar == 'pairwise correlation':
                 vmin = -vmax
             for r in range(4):
                 ax = axs[r, c]
-
                 # plot data
                 data = self.mtxs[str(zb)][str(za)][plotvar][r].T
-                if plotvar == 'fr-vip' and r > 0:
+                if plotvar == r'$r_{VIP}$' and r > 0:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
-                # cf = ax.contourf(data,
+                # im = ax.contourf(data,
                 #     cmap=self.cmaps[plotvar],
                 #     origin='lower',
                 #     extent=self.extent,
                 #     vmin=vmin,
                 #     vmax=vmax)
-                cf = ax.imshow(data, interpolation='bilinear',
+                im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
                     origin='lower',
                     extent=self.extent,
@@ -198,37 +196,39 @@ class ScanData:
                     data_fit[np.where(tri_fit==1)] = 20.0
                     print('L{}:\n{}\n{}'.format(r, data[::-1], data_fit[::-1]))
                     cf_fit = ax.contourf(data_fit,
-                        levels=[5.0, 15.0, 25.0],
+                        levels=[9.0, 19.0, 29.0],
                         origin='lower',
-                        colors='gray',
                         extent=self.extent,
-                        hatches=['//', '++', '//'],
+                        hatches=['//', '++', ''],
                         alpha=0.0)
+                    cf_fit = ax.contour(data_fit,
+                        levels=[9.0, 19.0],
+                        origin='lower',
+                        extent=self.extent,
+                        colors='k')
                     # ax.clabel(cf_fit, cf_fit.levels, fmt=self.fmt[plotvar], inline=True, fontsize=10)
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
-                ax.set_xticklabels(xs, rotation=30)
-                ax.set_yticklabels(ys, rotation=30)
+                # ax.set_xticklabels(xs[::2], rotation=30)
+                # ax.set_yticklabels(ys[::2], rotation=30)
 
                 # title
                 if r == 0:
-                    ax.set_title(plotvar + self.units[plotvar] + '\n ')
+                    ax.set_title(plotvar + '\n ')
 
                 # xlabel
                 if r == 3:
                     ax.set_xlabel(xlbl)
-                    cbar = fig.colorbar(cf, ax=axs[:, c], orientation='horizontal', shrink=0.8, aspect=10)
-                    # cbar_xlbls = cbar.ax.get_xticklabels()
-                    # print('cbar_xlbls = {}'.format(cbar_xlbls))
-                    # cbar.ax.set_xticklabels(cbar_xlbls, rotation=30)
+                    cbar = fig.colorbar(im, ax=axs[:, c], orientation='horizontal', shrink=0.8, aspect=10)
 
                 # ylabel
                 if c == 0:
                     ax.set_ylabel(ylbl)
-                    # ax.text(0.5, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+                    ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         # fig.suptitle('ai state and firint rates')
+        # plt.subplots_adjust(left=0.2)
         fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
 
@@ -236,4 +236,4 @@ if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
     scandata = ScanData(inputs, dims=dims)
-    # scandata = ScanData(inputs, plotvars=['fr-exc', 'corr', 'cvisi'], figsize=(10, 8))
+    # scandata = ScanData(inputs, plotvars=[r'$r_{Exc}$', 'pairwise correlation', 'CV ISI'], figsize=(10, 8))
