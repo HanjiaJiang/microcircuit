@@ -12,9 +12,10 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 class ScanData:
     # directory list, dimension dictionary
     def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 12)):
+        self.set_vars(plotvars, figsize)
         self.setup(inputs, dims)
 
-    def set_dicts(self):
+    def set_vars(self, plotvars, figsize):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
@@ -47,7 +48,6 @@ class ScanData:
                         r'$r_{VIP}$': '(spikes/s)'}
 
     def setup(self, inputs, dims):
-        self.set_dicts()
         # determine the order of plot dimenstions
         if isinstance(dims, list) and len(dims) == 4:
             pass
@@ -238,5 +238,5 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims)
+    scandata = ScanData(inputs, dims=dims)    
     # scandata = ScanData(inputs, plotvars=[r'$r_{Exc}$', 'pairwise correlation', 'CV ISI'], figsize=(10, 8))

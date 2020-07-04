@@ -1,7 +1,7 @@
-conn = ['5', '6-6']     # connectivity
-lyr_epsp = [0, 1]      # layer-sepcific epsp
-u_compen = [0, 1]      # compensate w by U
-vip_conn = [1]      # adjust vip-to-som connectivity
+conn = ['6-6']     # connectivity
+lyr_epsp = [1]      # layer-sepcific epsp
+u_compen = [1]      # compensate w by U
+vip_conn = [0]      # adjust vip-to-som connectivity
 
 localrules: all, create
 
