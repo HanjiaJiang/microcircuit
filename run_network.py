@@ -9,7 +9,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     on_server = False
     run_analysis = True
     print_to_file = False
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
         if not on_server:
             analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-            analysis.fr_boxplot(spikes)
+            analysis.fr_plot(spikes)
 
         spikes.verify_print(data_path)
 

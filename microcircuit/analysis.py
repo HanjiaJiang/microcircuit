@@ -16,6 +16,10 @@ from scipy import interpolate
 
 class Spikes:
     def __init__(self, path, name):
+        self.setup(path, name)
+        self.load()
+
+    def setup(self, path, name):
         self.path = path
         self.name = name
         self.gids = []
@@ -23,29 +27,23 @@ class Spikes:
         self.data = []
         self.react_lines = []
         self.veri_dict = {}
-        self.fr_cri = [ (0.5, 0.6, 4.5),
-                        (7.5, 11.7, 23.3),
-                        (0.03, 0.4, 4.1),
+        self.fr_result = []
+        self.fr_musig = [(2.7, 3.7), (13.8, 8.9), (2.6, 3.6),
+                         (14.6, 7.3),
+                         (0.5, 0.8), (10.2, 7.2), (2.6, 3.2),
+                         (6.8, 5.2), (7.5, 5.2), (2.8, 4.5),
+                         (6.1, 6.9), (16.9, 14.3), (3.9, 4.9)]
+        self.fr_qrt = [ (0.5, 0.6, 4.5), (7.5, 11.7, 23.3), (0.03, 0.4, 4.1),
                         (8.5, 11.1, 21.0),
-
-                        (0.0, 0.1, 0.7),
-                        (4.3, 7.8, 14.7),
-                        (0.3, 0.6, 4.9),
-
-                        (2.7, 5.2, 11.2),
-                        (4.3, 7.6, 8.7),
-                        (0.2, 0.8, 3.6),
-
-                        (0.4, 2.6, 11.5),
-                        (4.6, 17.2, 22.0),
-                        (0.5, 1.7, 6.9)]
+                        (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
+                        (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
+                        (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)]
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
             os.mkdir(self.path)
             print('Spikes.__init__(): data directory created')
         self.set_labels()
-        self.load()
 
     def read_name(self):
         # Import filenames
@@ -146,11 +144,11 @@ class Spikes:
                        'L5 Exc', 'L5 PV', 'L5 SOM',
                        'L6 Exc', 'L6 PV', 'L6 SOM']
 
-        self.subtype_labels = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+        self.subtypes = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
 
-        self.pos_labels = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+        self.positions = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
 
-        self.layer_labels = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+        self.layers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
 
         self.colors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
@@ -340,6 +338,7 @@ def fire_rate(spikes, begin, end):
     for rate_mean, rate_std in zip(rates_averaged_all, rates_std_all):
         f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
+    spikes.fr_result = np.array([rates_averaged_all, rates_std_all])
     return rates_averaged_all, rates_std_all
 
 
@@ -366,7 +365,7 @@ def plot_raster(spikes, begin, end):
 
     # legend
     for i in range(4):
-        plt.scatter([], [], s=100, label=spikes.subtype_labels[i], color=spikes.colors[i])
+        plt.scatter([], [], s=100, label=spikes.subtypes[i], color=spikes.colors[i])
     plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1))
 
     # set top and right frames invisible
@@ -414,21 +413,57 @@ def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
     ax.spines['top'].set_visible(False)
     ax.yaxis.set_visible(False)
     legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1))
-    # for legend_handle in legend.legendHandles:
-    #     legend_handle._legmarker.set_markersize(30)
     plt.xlabel(xlbl)
     fig.tight_layout()
     plt.savefig(os.path.join(path, 'boxplot_' + title + '.png'), dpi=300)
     plt.close()
 
-def fr_boxplot(spikes):
+def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
+    layers = ['L2/3', 'L4', 'L5', 'L6']
+    legends = ['Exc', 'PV', 'SOM', 'VIP']
+
+    # bars
+    x = np.arange(13)  # the label locations
+    w = 0.3  # the width of the bars
+    fig, ax = plt.subplots(figsize=figsize)
+    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :])
+    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False)
+
+    # colors
+    for i, (r1, r2) in enumerate(zip(rects1, rects2)):
+        r1.set_color(colors[i])
+        r2.set_color(colors[i])
+
+    # legends
+    for i in range(4):
+        plt.scatter([], [], s=100, marker='s', label=legends[i], color=colors[i])
+    legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.15))
+
+    # ticks
+    ax.set_ylabel(ylbl)
+    ax.set_xticks([])
+    ax.set_xticklabels([])
+    ax.set_xlim((0-1.5*w, 12+1.5*w))
+
+    # vlines
+    for x in [3.5, 6.5, 9.5]:
+        ax.axvline(x, 0, 1, color='k')
+
+    for i, x in enumerate([1.5, 5, 8, 11]):
+        ax.text(x, ax.get_ylim()[1], layers[i], horizontalalignment='center', verticalalignment='bottom')
+
+    fig.tight_layout()
+    plt.savefig(os.path.join(path, 'bars_' + title + '.png'))
+    plt.close()
+
+def fr_plot(spikes):
     rates = []
     for i in range(len(spikes.populations)):
         fpath = os.path.join(spikes.path, ('rate' + str(i) + '.npy'))
         if os.path.isfile(fpath):
             rates.append(np.load(fpath))
-    do_boxplot(rates[::-1], spikes.fr_cri[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtype_labels[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
-
+    do_boxplot(rates[::-1], spikes.fr_qrt[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
+    do_bars(spikes.fr_result, np.array(spikes.fr_musig).T, spikes.path, 'fr', spikes.colors, 'spikes/s')
 
 '''
 Other analysis
@@ -679,7 +714,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
             # Calculate population selectivity and plot
             len_q = int(len(SI_by_neuronbin)/4)
-            idx_lyr = spikes.layer_labels[i]
+            idx_lyr = spikes.layers[i]
             SIs_s1 = SI_by_neuronbin[len_q:3*len_q]
             SIs_s2 = np.concatenate((SI_by_neuronbin[:len_q], SI_by_neuronbin[3*len_q:]), axis=0)
             if raw is True:
@@ -687,12 +722,12 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
             else:
                 SIs_by_popbin.append(np.nanmean(SI_by_neuronbin, axis=0))
             # main lines
-            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=spikes.colors[i], linewidth=2, label=spikes.subtype_labels[i])
+            axs[idx_lyr].plot(xs, SIs_by_popbin[-1], color=spikes.colors[i], linewidth=2, label=spikes.subtypes[i])
             # boxplot
             if raw is True:
                 for k, SIs in enumerate(SIs_s1.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
+                    positions=[xs[k] + 2*spikes.positions[i]*bin_w/10.0],
                     boxprops=dict(color=spikes.colors[i], linewidth=2),
                     whiskerprops=dict(color=spikes.colors[i], linewidth=2),
                     flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=2),
@@ -700,7 +735,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
                     capprops=dict(color=spikes.colors[i], linewidth=2))
                 for k, SIs in enumerate(SIs_s2.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + (2*spikes.pos_labels[i] + 1)*bin_w/10.0],
+                    positions=[xs[k] + (2*spikes.positions[i] + 1)*bin_w/10.0],
                     boxprops=dict(color=spikes.colors[i], linewidth=1),
                     whiskerprops=dict(color=spikes.colors[i], linewidth=1),
                     flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=1),
@@ -709,7 +744,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
             else:
                 for k, SIs in enumerate(SI_by_neuronbin.T):
                     axs[idx_lyr].boxplot(SIs[~np.isnan(SIs)], widths=[bin_w/10.0],
-                    positions=[xs[k] + 2*spikes.pos_labels[i]*bin_w/10.0],
+                    positions=[xs[k] + 2*spikes.positions[i]*bin_w/10.0],
                     boxprops=dict(color=spikes.colors[i], linewidth=1.5),
                     whiskerprops=dict(color=spikes.colors[i], linewidth=1.5),
                     flierprops=dict(markeredgecolor=spikes.colors[i], marker='.', markersize=1.5),
@@ -721,7 +756,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
                 axs[idx_lyr].plot([0.0, duration], [ylims[1], ylims[1]], color='k', linewidth=10)
             if i < 4:
                 axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
-            axs[idx_lyr].text(-25.0, np.mean(ylims), spikes.layer_labels[idx_lyr])
+            axs[idx_lyr].text(-25.0, np.mean(ylims), spikes.layers[idx_lyr])
     for ax in axs:
         ax.plot([0.0, bin_w*n_bin], [0.0, 0.0], color='k', linestyle='--')
     plt.xticks(xs[::2], labels=xs[::2].astype(str))

@@ -97,6 +97,12 @@ class ScanParams:
             # vip-to-som change to layer-no-specific
             self.net_dict['conn_probs'][[6, 9, 12], 3] = self.net_dict['conn_probs'][2, 3]
 
+    def set_ucomp(self, input):
+        if int(input) == 0:
+            self.net_dict['U-compensate'] = False
+        else:
+            self.net_dict['U-compensate'] = True
+
 '''
 preliminary settings
 '''
@@ -154,9 +160,9 @@ if __name__ == "__main__":
 
     # constant parameters
     scanparams.load_conn(constants[0])
-    scanparams.adjust_vip_conn(constants[1])
-    scanparams.set_epsp(constants[2])
-    scanparams.set_ipsp(constants[3])
+    scanparams.set_epsp(constants[1])
+    scanparams.set_ucomp(constants[2])
+    scanparams.adjust_vip_conn(constants[3])
 
     # parameters to be scanned
     for out in outs:

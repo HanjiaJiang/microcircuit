@@ -1,13 +1,13 @@
-conn = ['6-6']     # connectivity
+conn = ['5', '6-6']     # connectivity
+lyr_epsp = [0, 1]      # layer-sepcific epsp
+u_compen = [0, 1]      # compensate w by U
 vip_conn = [1]      # adjust vip-to-som connectivity
-lyr_epsp = [1]      # layer-sepcific epsp
-lyr_ipsp = [0]      # layer-specific ipsp
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp)
+        expand('done_{a}_{b}_{c}_{d}', a=conn, b=lyr_epsp, c=u_compen, d=vip_conn)
     shell:
         '''
         rm done*
@@ -30,7 +30,7 @@ rule snakes:
 
 rule create:
     output:
-        expand('{a}_{b}_{c}_{d}/', a=conn, b=vip_conn, c=lyr_epsp, d=lyr_ipsp)
+        expand('{a}_{b}_{c}_{d}/', a=conn, b=lyr_epsp, c=u_compen, d=vip_conn)
     shell:
         '''
         python create_snakes.py {output}

@@ -76,7 +76,7 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net
                 else:
                     syn_dict['tau_psc'] = net_dict['neuron_params']['tau_syn_in']
     # make up for the release probability U
-    if 'U' in syn_dict.keys():
+    if net_dict['U-compensate'] and 'U' in syn_dict.keys():
         w /= syn_dict['U']
         w_sd /= syn_dict['U']
     # var_n, mu_n: variance and mean of the underlying normal distribution

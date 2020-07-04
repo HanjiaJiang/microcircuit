@@ -12,6 +12,9 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 class ScanData:
     # directory list, dimension dictionary
     def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 12)):
+        self.setup(inputs, dims)
+
+    def set_dicts(self):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
@@ -42,9 +45,9 @@ class ScanData:
                         r'$r_{PV}$': '(spikes/s)',
                         r'$r_{SOM}$': '(spikes/s)',
                         r'$r_{VIP}$': '(spikes/s)'}
-        self.setup(inputs, dims)
 
     def setup(self, inputs, dims):
+        self.set_dicts()
         # determine the order of plot dimenstions
         if isinstance(dims, list) and len(dims) == 4:
             pass
