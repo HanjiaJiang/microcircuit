@@ -189,7 +189,7 @@ net_dict = {
                       [0.0000, 0.1798, 0.1662, 0.1744]])
         },
     # compensate w by U
-    'U-compensate': False
+    'U-compensate': True
     }
 
 

@@ -8,9 +8,9 @@ from stp_test import ConnTest
 
 if __name__ == '__main__':
     spk_n = 10
-    with open('stp_fitted_01.pickle', 'rb') as p:
+    with open('stp_fitted_02.pickle', 'rb') as p:
         stp = pickle.load(p)
-    with open('exp-data_01.json', 'r') as js:
+    with open('exp-data_02.json', 'r') as js:
         exp = json.load(js)
     for prek, prev in stp.items():
         for postk, postv in prev.items():

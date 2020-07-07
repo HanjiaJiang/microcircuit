@@ -45,13 +45,13 @@ class ScanParams:
         self.net_dict['bg_rate'] = 4.0
         self.net_dict['epsp']['use'] = True
         self.net_dict['ipsp']['use'] = False
-        self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
-        # self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
-        self.set_indgs([1000, 2000, 800, 1000])
+        self.net_dict['U-compensate'] = False
+        self.special_dict['stp_dict'] = self.stps['stp_fitted_01.pickle']
+        self.set_indgs([1000, 1750, 500, 500])
         self.load_conn('6-6')
 
     def set_g(self, g):
-        self.net_dict['g'] = -int(np.abs(g))
+        self.net_dict['g'] = -int(np.abs(int(g)))
 
     def set_bg(self, bg):
         self.net_dict['bg_rate'] = float(bg)
@@ -93,8 +93,9 @@ class ScanParams:
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
     def adjust_vip_conn(self, adjust):
+        self.net_dict['conn_probs'] = copy.deepcopy(net_dict['conn_probs'])
         if int(adjust) != 0:
-            # vip-to-som change to layer-no-specific
+            # vip-to-som all the same across layers
             self.net_dict['conn_probs'][[6, 9, 12], 3] = self.net_dict['conn_probs'][2, 3]
 
     def set_ucomp(self, input):
@@ -157,20 +158,21 @@ if __name__ == "__main__":
     # create ScanParams object
     scanparams = ScanParams()
     scanparams.set_constant()
+    scanparams.adjust_vip_conn(True)
 
     # constant parameters
     scanparams.load_conn(constants[0])
     scanparams.set_epsp(constants[1])
     scanparams.set_ucomp(constants[2])
-    scanparams.adjust_vip_conn(constants[3])
+    scanparams.set_stp(constants[3])
 
     # parameters to be scanned
     for out in outs:
         lvls_str, lvls = read_levels(out)
         scanparams.set_path(out, lvls_str)
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
-        scanparams.set_ctsp(lvls[2])
-        scanparams.set_stp(lvls[3])
-        # scanparams.set_indgs(lvls)
+        # scanparams.set_g(lvls[0])
+        # scanparams.set_bg(lvls[1])
+        # scanparams.set_ctsp(lvls[2])
+        # scanparams.set_stp(lvls[3])
+        scanparams.set_indgs(lvls)
         scanparams.save_pickle(out)

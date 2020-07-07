@@ -1,13 +1,13 @@
-conn = ['6-6']     # connectivity
-lyr_epsp = [1]      # layer-sepcific epsp
-u_compen = [1]      # compensate w by U
-vip_conn = [0]      # adjust vip-to-som connectivity
+conn = ['5', '6-6']     # connectivity
+lyr_epsp = [0, 1]      # layer-sepcific epsp
+u_compen = [0, 1]      # compensate w by U
+stp = [1, 2]
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=conn, b=lyr_epsp, c=u_compen, d=vip_conn)
+        expand('done_{a}_{b}_{c}_{d}', a=conn, b=lyr_epsp, c=u_compen, d=stp)
     shell:
         '''
         rm done*
@@ -22,15 +22,14 @@ rule snakes:
         '''
         cp -r microcircuit/ scans/ snake-gs.sh cluster.json config.yml run_network.py {input}
         cd {input}
-        snakemake
-        # sbatch snake-gs.sh
+        sbatch snake-gs.sh
         cd ..
         > {output}
         '''
 
 rule create:
     output:
-        expand('{a}_{b}_{c}_{d}/', a=conn, b=lyr_epsp, c=u_compen, d=vip_conn)
+        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=lyr_epsp, c=u_compen, d=stp))
     shell:
         '''
         python create_snakes.py {output}

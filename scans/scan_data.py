@@ -11,43 +11,50 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, figsize=(16, 12)):
-        self.set_vars(plotvars, figsize)
-        self.setup(inputs, dims)
+    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), mark_rmse=False):
+        self.set_params(plotvars, figsize, criteria, mark_rmse)
+        self.set_data(inputs, dims)
 
-    def set_vars(self, plotvars, figsize):
+    def set_params(self, plotvars, figsize, criteria, mark_rmse):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
+        self.mark_rmse = mark_rmse
         if plotvars is None:
-            self.plotvars = [r'$r_{Exc}$', 'pairwise correlation', 'CV ISI', r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$']
+            self.plotvars = [r'$r_{Exc}$', 'pairwise\ncorrelation', 'CV(ISI)', r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$']
         else:
             self.plotvars = plotvars
-        self.mtxs = {}
-        self.fits = {}
-        self.criteria = {r'$r_{Exc}$': [0.0, 2.0],
-                            'pairwise correlation': [0.0001, 0.1],
-                            'CV ISI': [0.6, 0.76]
-                            }
+        self.mtxs, self.fits, self.rmse, self.rmse_n = {}, {}, {}, {}
+        self.standard = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
+                            r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
+                            r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
+                            r'$r_{VIP}$': [14.6]}
+        if criteria is None:
+            self.criteria = {r'$r_{Exc}$': [[0.0, 2.0], [0.0, 2.0], [0.0, 2.0], [0.0, 2.0]],
+                                'pairwise\ncorrelation': [[0.0001, 0.1], [0.0001, 0.1], [0.0001, 0.1], [0.0001, 0.1]],
+                                'CV(ISI)': [[0.6, 0.76], [0.6, 0.76], [0.6, 0.76], [0.6, 0.76]]
+                                }
+        else:
+            self.criteria = criteria
         self.cmaps = {r'$r_{Exc}$': 'Blues',
-                        'pairwise correlation': 'RdBu',
-                        'CV ISI': 'Blues',
+                        'pairwise\ncorrelation': 'RdBu',
+                        'CV(ISI)': 'Blues',
                         r'$r_{PV}$': 'Blues',
                         r'$r_{SOM}$': 'Blues',
                         r'$r_{VIP}$': 'Blues'}
         self.fmt = {r'$r_{Exc}$': '%1.1f',
-                        'pairwise correlation': '%1.4f',
-                        'CV ISI': '%1.2f',
+                        'pairwise\ncorrelation': '%1.4f',
+                        'CV(ISI)': '%1.2f',
                         r'$r_{PV}$': '%1.1f',
                         r'$r_{SOM}$': '%1.1f',
                         r'$r_{VIP}$': '%1.1f'}
         self.units = {r'$r_{Exc}$': '(spikes/s)',
-                        'pairwise correlation': '',
-                        'CV ISI': '',
+                        'pairwise\ncorrelation': '',
+                        'CV(ISI)': '',
                         r'$r_{PV}$': '(spikes/s)',
                         r'$r_{SOM}$': '(spikes/s)',
                         r'$r_{VIP}$': '(spikes/s)'}
 
-    def setup(self, inputs, dims):
+    def set_data(self, inputs, dims):
         # determine the order of plot dimenstions
         if isinstance(dims, list) and len(dims) == 4:
             pass
@@ -60,16 +67,18 @@ class ScanData:
             'za': dims[2],
             'zb': dims[3],
         }
-        print(self.dims)
+        print('dimensions =\n{}'.format(self.dims))
         # make DataFrame object
         data_list = []
         excs, pvs, soms, vips = [0, 4, 7, 10], [1, 5, 8, 11], [2, 6, 9, 12], [3, 3, 3, 3]
         for p in inputs:
             path_str = os.path.dirname(p)
             params_list = np.array(path_str.split('/')[-1].split('_')).astype(float)
-            fr_arr = np.loadtxt(os.path.join(path_str, 'fr.dat'), delimiter=',')
-            ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')
-            # ain_arr = np.loadtxt(os.path.join(path_str, 'ai_n.dat'), delimiter=',')
+            fr_arr, ai_arr = np.full((4, 2), np.nan), np.full((4, 2), np.nan)
+            if os.path.isfile(os.path.join(path_str, 'fr.dat')):
+                fr_arr = np.loadtxt(os.path.join(path_str, 'fr.dat'), delimiter=',')
+            if os.path.isfile(os.path.join(path_str, 'ai.dat')):
+                ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')            
             for i, lyr in enumerate(self.lyrs):
                 tmp_dict = {
                     self.dims['x']: params_list[0],
@@ -81,10 +90,8 @@ class ScanData:
                     r'$r_{PV}$': fr_arr[pvs[i], 0],
                     r'$r_{SOM}$': fr_arr[soms[i], 0],
                     r'$r_{VIP}$': fr_arr[vips[i], 0],
-                    'pairwise correlation': ai_arr[i, 0],
-                    'CV ISI': ai_arr[i, 1],
-                    # 'corr.n': ain_arr[i, 0],
-                    # 'cvisi.n': ain_arr[i, 1],
+                    'pairwise\ncorrelation': ai_arr[i, 0],
+                    'CV(ISI)': ai_arr[i, 1]
                     }
                 data_list.append(tmp_dict)
         self.df = pd.DataFrame(data_list)
@@ -100,7 +107,7 @@ class ScanData:
         x_intrv, y_intrv = (xlvls[1] - xlvls[0]), (ylvls[1] - ylvls[0])
         self.extent = [xlvls[0] - x_intrv/2, xlvls[-1] + x_intrv/2, ylvls[0] - y_intrv/2, ylvls[-1] + y_intrv/2]
         self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls = xlvls, ylvls, zalvls, zblvls
-        print('levels=')
+        print('levels =')
         print(self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls)
         self.make_data()
         self.make_plots()
@@ -117,24 +124,28 @@ class ScanData:
             lvls_s.append(sorted(list(set(l))))
         return lvls_s
 
-    # make plot matrix
+    # make data matrix
     def make_data(self):
         # structure
         for zb in self.zb_lvls:
             self.mtxs[str(zb)] = {}
             self.fits[str(zb)] = {}
+            self.rmse[str(zb)] = {}
+            self.rmse_n[str(zb)] = {}
             for za in self.za_lvls:
                 self.mtxs[str(zb)][str(za)] = {}
                 self.fits[str(zb)][str(za)] = {}
+                self.rmse[str(zb)][str(za)] = np.full((len(self.y_lvls), len(self.x_lvls)), 0)
+                self.rmse_n[str(zb)][str(za)] = np.full((len(self.y_lvls), len(self.x_lvls)), 0)
                 for plotvar in self.plotvars:
                     self.mtxs[str(zb)][str(za)][plotvar] = np.full((len(self.lyrs), len(self.y_lvls), len(self.x_lvls)), np.nan)
                     if plotvar in self.criteria:
                         self.fits[str(zb)][str(za)][plotvar] = np.full((len(self.lyrs), len(self.y_lvls), len(self.x_lvls)), 0)
-            # print(self.mtxs[str(zb)])
+
         # data
         lyrs = self.df['lyr'].tolist()
         for plotvar in self.plotvars:
-            for i, value in enumerate(self.df[plotvar].tolist()):
+            for i, v in enumerate(self.df[plotvar].tolist()):
                 x = self.df[self.dims['x']][i]
                 y = self.df[self.dims['y']][i]
                 za = self.df[self.dims['za']][i]
@@ -143,9 +154,46 @@ class ScanData:
                 lyr = self.lyrs.index(lyrs[i])
                 idx_x, idx_y = self.x_lvls.index(x), self.y_lvls.index(y)
                 self.mtxs[str(zb)][str(za)][plotvar][lyr, idx_x, idx_y] = value
+                # fitness
                 if plotvar in self.criteria:
-                    if self.criteria[plotvar][0] <= value <= self.criteria[plotvar][1]:
+                    if self.criteria[plotvar][lyr][0] <= value <= self.criteria[plotvar][lyr][1]:
                         self.fits[str(zb)][str(za)][plotvar][lyr, idx_x, idx_y] = 1
+
+        # RMSE of firing rate
+        for i, v in enumerate(self.df['lyr'].tolist()):
+            x = self.df[self.dims['x']][i]
+            y = self.df[self.dims['y']][i]
+            za = self.df[self.dims['za']][i]
+            zb = self.df[self.dims['zb']][i]
+            idx_lyr = self.lyrs.index(lyrs[i])
+            idx_x, idx_y = self.x_lvls.index(x), self.y_lvls.index(y)
+            fr_exc = self.df[r'$r_{Exc}$'][i]
+            fr_pv = self.df[r'$r_{PV}$'][i]
+            fr_som = self.df[r'$r_{SOM}$'][i]
+            fr_vip = self.df[r'$r_{VIP}$'][i]
+            corr = self.df['pairwise\ncorrelation'][i]
+            cvisi = self.df['CV(ISI)'][i]
+            if fr_exc != np.nan:
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_exc - self.standard[r'$r_{Exc}$'][idx_lyr])**2
+                self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
+            if fr_pv != np.nan:
+                print(x, y, '{:.2f}'.format((fr_pv - self.standard[r'$r_{PV}$'][idx_lyr])**2))
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_pv - self.standard[r'$r_{PV}$'][idx_lyr])**2
+                self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
+            if fr_som != np.nan:
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_som - self.standard[r'$r_{SOM}$'][idx_lyr])**2
+                self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
+            if idx_lyr == 0 and fr_vip != np.nan:
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_vip - self.standard[r'$r_{VIP}$'][idx_lyr])**2
+                self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
+
+        for k1, v1 in self.rmse.items():
+            for k2, v2 in v1.items():
+                print('za:{}, zb:{}, rmse ='.format(k2, k1))
+                print(self.rmse[k1][k2])
+                print(self.rmse_n[k1][k2])
+                self.rmse[k1][k2] = np.sqrt(np.divide(v2, self.rmse_n[k1][k2]))
+                print(self.rmse[k1][k2])
 
     def make_plots(self):
         # plot
@@ -164,7 +212,7 @@ class ScanData:
         # plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = 0.0, np.nanmax(np.abs(self.mtxs[str(zb)][str(za)][plotvar]))
-            if plotvar == 'pairwise correlation':
+            if plotvar == 'pairwise\ncorrelation':
                 vmin = -vmax
             for r in range(4):
                 ax = axs[r, c]
@@ -189,22 +237,23 @@ class ScanData:
                 # single- and triple-fit
                 if plotvar in self.criteria:
                     tri_fit = np.ones(data.shape)
-                    for k, v in self.criteria.items():
-                        fit = self.fits[str(zb)][str(za)][k][r].T
-                        tri_fit = np.multiply(tri_fit, fit)
-                    # data_fit = fitness
-                    data_fit = np.zeros(data.shape)
-                    # individual
-                    data_fit[np.where((data>self.criteria[plotvar][0])&(data<self.criteria[plotvar][1]))] = 10.0
-                    data_fit[np.where(tri_fit==1)] = 20.0
-                    print('L{}:\n{}\n{}'.format(r, data[::-1], data_fit[::-1]))
-                    cf_fit = ax.contourf(data_fit,
+                    for k in self.criteria.keys():
+                        tri_fit = np.multiply(tri_fit, self.fits[str(zb)][str(za)][k][r].T)
+                    # matrix for single and triple-fit
+                    fit_mtx = np.zeros(data.shape)
+                    # single
+                    fit_mtx[np.where(self.fits[str(zb)][str(za)][plotvar][r].T == 1)] = 10.0
+                    # triple
+                    fit_mtx[np.where(tri_fit==1)] = 20.0
+                    print('{}, {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
+                    print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
+                    cf_fit = ax.contourf(fit_mtx,
                         levels=[9.0, 19.0, 29.0],
                         origin='lower',
                         extent=self.extent,
                         hatches=['//', '++', ''],
                         alpha=0.0)
-                    cf_fit = ax.contour(data_fit,
+                    cf_fit = ax.contour(fit_mtx,
                         levels=[9.0, 19.0],
                         origin='lower',
                         extent=self.extent,
@@ -229,14 +278,24 @@ class ScanData:
                 if c == 0:
                     ax.set_ylabel(ylbl)
                     ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+
+                # RMSE
+                if self.mark_rmse and c == 0:
+                    best_rmse = np.min(self.rmse[str(zb)][str(za)])
+                    i_x, i_y = np.where(self.rmse[str(zb)][str(za)]==best_rmse)
+                    ax.scatter(xs[i_x], ys[i_y], s = 200, marker = '*', color='yellow', edgecolor='k', zorder=10)
+
+        if self.mark_rmse:
+            plt.suptitle('min. RMSE={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
-        # fig.suptitle('ai state and firint rates')
-        # plt.subplots_adjust(left=0.2)
         fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
 
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims)    
-    # scandata = ScanData(inputs, plotvars=[r'$r_{Exc}$', 'pairwise correlation', 'CV ISI'], figsize=(10, 8))
+    # scandata = ScanData(inputs, dims=dims)
+    criteria = {r'$r_{Exc}$': [[0, 6.4], [0, 1.3], [1.6, 12], [0, 13.0]],
+                r'$r_{PV}$': [[4.9, 22.7], [3.0, 17.4], [2.3, 12.7], [2.6, 31.2]],
+                r'$r_{SOM}$': [[0, 6.2], [0.0, 5.8], [0, 7.3], [0, 8.8]]}
+    scandata = ScanData(inputs, dims=dims, criteria=criteria, mark_rmse=True)
