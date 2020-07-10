@@ -44,11 +44,13 @@ class ScanParams:
         self.net_dict['g'] = -8
         self.net_dict['bg_rate'] = 4.0
         self.net_dict['epsp']['use'] = True
-        self.net_dict['ipsp']['use'] = False
-        self.net_dict['U-compensate'] = False
-        self.special_dict['stp_dict'] = self.stps['stp_fitted_01.pickle']
-        self.set_indgs([1000, 1750, 500, 500])
-        self.load_conn('6-6')
+        self.net_dict['ipsp']['use'] = True
+        self.net_dict['U-compensate'] = True
+        self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
+        self.set_indgs([1000, 1500, 1000, 1000])
+        # self.renew_conn('7-9')
+        self.load_conn('7-9')
+        self.adjust_vip_conn(True)
 
     def set_g(self, g):
         self.net_dict['g'] = -int(np.abs(int(g)))
@@ -93,9 +95,9 @@ class ScanParams:
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
     def adjust_vip_conn(self, adjust):
-        self.net_dict['conn_probs'] = copy.deepcopy(net_dict['conn_probs'])
         if int(adjust) != 0:
             # vip-to-som all the same across layers
+            print('adjust vip conn.')
             self.net_dict['conn_probs'][[6, 9, 12], 3] = self.net_dict['conn_probs'][2, 3]
 
     def set_ucomp(self, input):
@@ -158,13 +160,13 @@ if __name__ == "__main__":
     # create ScanParams object
     scanparams = ScanParams()
     scanparams.set_constant()
-    scanparams.adjust_vip_conn(True)
 
     # constant parameters
     scanparams.load_conn(constants[0])
     scanparams.set_epsp(constants[1])
-    scanparams.set_ucomp(constants[2])
+    scanparams.set_g(constants[2])
     scanparams.set_stp(constants[3])
+    scanparams.adjust_vip_conn(True)
 
     # parameters to be scanned
     for out in outs:

@@ -251,9 +251,10 @@ class ConnTest:
         spk_ts = self.spk_ts[-1]
         # plot
         if self.verify or self.init_flg:
-            fig = plt.figure(figsize=(8, 6))
+            fig, ax = plt.subplots(figsize=(10, 6))
         # calculation
         baseline = vs[ts==spk_ts[0]]
+        ts_peak = []
         for i in range(spk_n):
             # data with spk_n stimulations (the last one)
             t_start = spk_ts[i]
@@ -268,18 +269,30 @@ class ConnTest:
             peak = float(np.abs(v_peak - baseline))
             self.result['peaks'][i] = peak
             self.result['peaks_norm'][i] = self.result['peaks'][i]/self.result['peaks'][0]
-            if self.pre_subtype == 'Exc':
-                plt.text(t_start+self.bisyn_delay, peak, '{:.4f}'.format(peak))
-            else:
-                plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
+            # if self.pre_subtype == 'Exc':
+            #     plt.text(t_start+self.bisyn_delay, peak, '{:.4f}'.format(peak))
+            # else:
+            #     plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
+            ts_peak.append(ts[vs==peak])
 
         if self.verify or self.init_flg:
-            plt.plot(ts, vs, color='b')
+            ax.plot(ts, vs/self.result['peaks'][0], color='b', label='sim.')
             if self.pre_subtype == 'Exc':
-                plt.scatter(spk_ts+self.bisyn_delay, self.result['peaks'], color='green', label='peak amplitudes')
+                ax.plot(ts_peak, self.exp_data['peaks_norm'], color='r', marker='.', label='exp.')
+                # plt.text(spk_ts+self.bisyn_delay, self.exp_data['peaks_norm'], self.result['peaks_norm'].astype(str))
             else:
-                plt.scatter(spk_ts+self.bisyn_delay, -self.result['peaks'], color='green', label='peak amplitudes')
-            plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
+                ax.plot(ts_peak, -self.exp_data['peaks_norm'], color='r', marker='.', label='exp.')
+                # plt.text(spk_ts+self.bisyn_delay, -self.exp_data['peaks_norm'], self.result['peaks_norm'].astype(str))
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.set_xticks(list(range(0, 500, 50)))
+            ax.set_yticks([])
+            plt.legend()
+            plt.xlim((0, 120))
+            plt.xlabel('time (ms)')
+            plt.title('U = {:.2f}, F = {:.0f} ms, D = {:.0f} ms'.format(self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
+            # plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
             plt.savefig('stp-data/stp:calc_peaks():{}.png'.format(self.conn_name))
             # plt.show()
 
@@ -396,20 +409,20 @@ class ConnTest:
 if __name__ == '__main__':
     # neuron parameters
     pre_subtype = 'Exc'
-    post_subtype = 'Exc'
+    post_subtype = 'SOM'
 
     # stimulation parameters
     spk_n = 10
     spk_isi = 10.0
 
     # experimental data
-    pprs = np.array([1.0, 0.69])
-    peaks = None
+    pprs = None
+    peaks = np.array([0.16, 0.31, 0.45, 0.55, 0.67, 0.75, 0.82, 0.88, 0.93, 0.99])
 
     # tsodyks Parameters
-    U = 0.55
-    F = 560.0
-    D = 140.0
+    U = 0.3
+    F = 200
+    D = 0
 
     # scanning input
     try:

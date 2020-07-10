@@ -15,14 +15,14 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = False
+    do_ai = True
     do_response = False
     do_selectivity = False
 
     # set ai segments
     n_seg_ai = 1
-    start_ai = 2000.0
-    seg_ai = 2000.0
+    start_ai = 1000.0
+    seg_ai = 1000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input

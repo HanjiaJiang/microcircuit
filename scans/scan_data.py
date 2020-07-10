@@ -11,62 +11,58 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), mark_rmse=False):
-        self.set_params(plotvars, figsize, criteria, mark_rmse)
+    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), rmse_flg=False):
+        self.set_params(plotvars, figsize, criteria, rmse_flg)
         self.set_data(inputs, dims)
 
-    def set_params(self, plotvars, figsize, criteria, mark_rmse):
+    def set_params(self, plotvars, figsize, criteria, rmse_flg):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
-        self.mark_rmse = mark_rmse
         if plotvars is None:
             self.plotvars = [r'$r_{Exc}$', 'pairwise\ncorrelation', 'CV(ISI)', r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$']
         else:
             self.plotvars = plotvars
         self.mtxs, self.fits, self.rmse, self.rmse_n = {}, {}, {}, {}
-        self.standard = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
-                            r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
-                            r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
-                            r'$r_{VIP}$': [14.6]}
+        # ground state criteria
         if criteria is None:
-            self.criteria = {r'$r_{Exc}$': [[0.0, 2.0], [0.0, 2.0], [0.0, 2.0], [0.0, 2.0]],
-                                'pairwise\ncorrelation': [[0.0001, 0.1], [0.0001, 0.1], [0.0001, 0.1], [0.0001, 0.1]],
-                                'CV(ISI)': [[0.6, 0.76], [0.6, 0.76], [0.6, 0.76], [0.6, 0.76]]
+            self.criteria = {r'$r_{Exc}$': [[0.0, 10.0], [0.0, 10.0], [0.0, 10.0], [0.0, 10.0]],
+                                'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
+                                'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]]
                                 }
         else:
             self.criteria = criteria
+        # RMSE
+        self.rmse_flg = rmse_flg
+        self.rmse_criteria = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
+                            r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
+                            r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
+                            r'$r_{VIP}$': [14.6]}
         self.cmaps = {r'$r_{Exc}$': 'Blues',
                         'pairwise\ncorrelation': 'RdBu',
                         'CV(ISI)': 'Blues',
                         r'$r_{PV}$': 'Blues',
                         r'$r_{SOM}$': 'Blues',
                         r'$r_{VIP}$': 'Blues'}
-        self.fmt = {r'$r_{Exc}$': '%1.1f',
-                        'pairwise\ncorrelation': '%1.4f',
+        self.clabel_format = {r'$r_{Exc}$': '%1.1f',
+                        'pairwise\ncorrelation': '%1.3f',
                         'CV(ISI)': '%1.2f',
                         r'$r_{PV}$': '%1.1f',
                         r'$r_{SOM}$': '%1.1f',
                         r'$r_{VIP}$': '%1.1f'}
-        self.units = {r'$r_{Exc}$': '(spikes/s)',
-                        'pairwise\ncorrelation': '',
-                        'CV(ISI)': '',
-                        r'$r_{PV}$': '(spikes/s)',
-                        r'$r_{SOM}$': '(spikes/s)',
-                        r'$r_{VIP}$': '(spikes/s)'}
+        self.vmaxs = {r'$r_{Exc}$': 20.0,
+                        'pairwise\ncorrelation': 0.1,
+                        'CV(ISI)': 1.0,
+                        r'$r_{PV}$': 50.0,
+                        r'$r_{SOM}$': 50.0,
+                        r'$r_{VIP}$': 50.0}
 
     def set_data(self, inputs, dims):
-        # determine the order of plot dimenstions
+        # dimensions
         if isinstance(dims, list) and len(dims) == 4:
             pass
         else:
-            print('using default dimension items: exc, pv, som, vip')
             dims = ['exc', 'pv', 'som', 'vip']
-        self.dims = {
-            'x': dims[0],
-            'y': dims[1],
-            'za': dims[2],
-            'zb': dims[3],
-        }
+        self.dims = {'x': dims[0], 'y': dims[1], 'za': dims[2], 'zb': dims[3]}
         print('dimensions =\n{}'.format(self.dims))
         # make DataFrame object
         data_list = []
@@ -78,8 +74,9 @@ class ScanData:
             if os.path.isfile(os.path.join(path_str, 'fr.dat')):
                 fr_arr = np.loadtxt(os.path.join(path_str, 'fr.dat'), delimiter=',')
             if os.path.isfile(os.path.join(path_str, 'ai.dat')):
-                ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')            
+                ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')
             for i, lyr in enumerate(self.lyrs):
+                # include items in the dataframe
                 tmp_dict = {
                     self.dims['x']: params_list[0],
                     self.dims['y']: params_list[1],
@@ -143,57 +140,44 @@ class ScanData:
                         self.fits[str(zb)][str(za)][plotvar] = np.full((len(self.lyrs), len(self.y_lvls), len(self.x_lvls)), 0)
 
         # data
-        lyrs = self.df['lyr'].tolist()
-        for plotvar in self.plotvars:
-            for i, v in enumerate(self.df[plotvar].tolist()):
-                x = self.df[self.dims['x']][i]
-                y = self.df[self.dims['y']][i]
-                za = self.df[self.dims['za']][i]
-                zb = self.df[self.dims['zb']][i]
-                value = self.df[plotvar][i]
-                lyr = self.lyrs.index(lyrs[i])
-                idx_x, idx_y = self.x_lvls.index(x), self.y_lvls.index(y)
-                self.mtxs[str(zb)][str(za)][plotvar][lyr, idx_x, idx_y] = value
-                # fitness
-                if plotvar in self.criteria:
-                    if self.criteria[plotvar][lyr][0] <= value <= self.criteria[plotvar][lyr][1]:
-                        self.fits[str(zb)][str(za)][plotvar][lyr, idx_x, idx_y] = 1
-
-        # RMSE of firing rate
-        for i, v in enumerate(self.df['lyr'].tolist()):
+        for i, lyr in enumerate(self.df['lyr'].tolist()):
             x = self.df[self.dims['x']][i]
             y = self.df[self.dims['y']][i]
             za = self.df[self.dims['za']][i]
             zb = self.df[self.dims['zb']][i]
-            idx_lyr = self.lyrs.index(lyrs[i])
+            idx_lyr = self.lyrs.index(lyr)
             idx_x, idx_y = self.x_lvls.index(x), self.y_lvls.index(y)
             fr_exc = self.df[r'$r_{Exc}$'][i]
             fr_pv = self.df[r'$r_{PV}$'][i]
             fr_som = self.df[r'$r_{SOM}$'][i]
             fr_vip = self.df[r'$r_{VIP}$'][i]
-            corr = self.df['pairwise\ncorrelation'][i]
-            cvisi = self.df['CV(ISI)'][i]
+            for plotvar in self.plotvars:
+                value = self.df[plotvar][i]
+                self.mtxs[str(zb)][str(za)][plotvar][idx_lyr, idx_x, idx_y] = value
+                # fitness to ground state criteria
+                if plotvar in self.criteria:
+                    if self.criteria[plotvar][idx_lyr][0] <= value <= self.criteria[plotvar][idx_lyr][1]:
+                        self.fits[str(zb)][str(za)][plotvar][idx_lyr, idx_x, idx_y] = 1
             if fr_exc != np.nan:
-                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_exc - self.standard[r'$r_{Exc}$'][idx_lyr])**2
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_exc - self.rmse_criteria[r'$r_{Exc}$'][idx_lyr])**2
                 self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
             if fr_pv != np.nan:
-                print(x, y, '{:.2f}'.format((fr_pv - self.standard[r'$r_{PV}$'][idx_lyr])**2))
-                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_pv - self.standard[r'$r_{PV}$'][idx_lyr])**2
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_pv - self.rmse_criteria[r'$r_{PV}$'][idx_lyr])**2
                 self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
             if fr_som != np.nan:
-                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_som - self.standard[r'$r_{SOM}$'][idx_lyr])**2
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_som - self.rmse_criteria[r'$r_{SOM}$'][idx_lyr])**2
                 self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
             if idx_lyr == 0 and fr_vip != np.nan:
-                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_vip - self.standard[r'$r_{VIP}$'][idx_lyr])**2
+                self.rmse[str(zb)][str(za)][idx_x, idx_y] += (fr_vip - self.rmse_criteria[r'$r_{VIP}$'][idx_lyr])**2
                 self.rmse_n[str(zb)][str(za)][idx_x, idx_y] += 1
 
+        # calculate RMSEs
         for k1, v1 in self.rmse.items():
             for k2, v2 in v1.items():
-                print('za:{}, zb:{}, rmse ='.format(k2, k1))
+                self.rmse[k1][k2] = np.sqrt(np.divide(v2, self.rmse_n[k1][k2]))
+                print('za:{}, zb:{}, rmse:'.format(k2, k1))
                 print(self.rmse[k1][k2])
                 print(self.rmse_n[k1][k2])
-                self.rmse[k1][k2] = np.sqrt(np.divide(v2, self.rmse_n[k1][k2]))
-                print(self.rmse[k1][k2])
 
     def make_plots(self):
         # plot
@@ -209,9 +193,12 @@ class ScanData:
         plt.ylim((ys[0], ys[-1]))
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg_rate', r'$r_{bg}$')
+        best_rmse = np.nan
         # plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = 0.0, np.nanmax(np.abs(self.mtxs[str(zb)][str(za)][plotvar]))
+            if self.rmse_flg:
+                vmax = self.vmaxs[plotvar]
             if plotvar == 'pairwise\ncorrelation':
                 vmin = -vmax
             for r in range(4):
@@ -221,12 +208,8 @@ class ScanData:
                 if plotvar == r'$r_{VIP}$' and r > 0:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
-                # im = ax.contourf(data,
-                #     cmap=self.cmaps[plotvar],
-                #     origin='lower',
-                #     extent=self.extent,
-                #     vmin=vmin,
-                #     vmax=vmax)
+
+                # simple grid
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
                     origin='lower',
@@ -248,22 +231,44 @@ class ScanData:
                     print('{}, {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
                     print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
                     cf_fit = ax.contourf(fit_mtx,
-                        levels=[9.0, 19.0, 29.0],
+                        levels=[5.0, 15.0, 25.0],
                         origin='lower',
                         extent=self.extent,
                         hatches=['//', '++', ''],
-                        alpha=0.0)
+                        alpha=0.0,
+                        zorder=9)
                     cf_fit = ax.contour(fit_mtx,
-                        levels=[9.0, 19.0],
+                        levels=[5.0, 15.0],
                         origin='lower',
                         extent=self.extent,
                         colors='k')
-                    # ax.clabel(cf_fit, cf_fit.levels, fmt=self.fmt[plotvar], inline=True, fontsize=10)
+                    # ax.clabel(cf_fit, cf_fit.levels, clabel_format=self.clabel_format[plotvar], inline=True, fontsize=10)
+
+                # RMSE
+                if self.rmse_flg:
+                    cf = ax.contourf(data,
+                        levels=np.linspace(vmin, vmax, 11),
+                        cmap=self.cmaps[plotvar],
+                        origin='lower',
+                        extent=self.extent,
+                        vmin=vmin,
+                        vmax=vmax)
+                    ct = ax.contour(data,
+                        levels=np.linspace(vmin, vmax, 11),
+                        origin='lower',
+                        extent=self.extent,
+                        colors='gray',
+                        linewidths=0.5,
+                        vmin=vmin,
+                        vmax=vmax)
+                    ax.clabel(ct, fmt=self.clabel_format[plotvar], colors='k', inline=True, fontsize=10)
+                    if 'r_' in plotvar and 'VIP' not in plotvar:
+                        best_rmse = np.min(self.rmse[str(zb)][str(za)])
+                        i_x, i_y = np.where(self.rmse[str(zb)][str(za)]==best_rmse)
+                        ax.scatter(xs[i_x], ys[i_y], s = 100, marker = '*', color='yellow', edgecolor='k', zorder=10)
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
-                # ax.set_xticklabels(xs[::2], rotation=30)
-                # ax.set_yticklabels(ys[::2], rotation=30)
 
                 # title
                 if r == 0:
@@ -279,14 +284,8 @@ class ScanData:
                     ax.set_ylabel(ylbl)
                     ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
-                # RMSE
-                if self.mark_rmse and c == 0:
-                    best_rmse = np.min(self.rmse[str(zb)][str(za)])
-                    i_x, i_y = np.where(self.rmse[str(zb)][str(za)]==best_rmse)
-                    ax.scatter(xs[i_x], ys[i_y], s = 200, marker = '*', color='yellow', edgecolor='k', zorder=10)
-
-        if self.mark_rmse:
-            plt.suptitle('min. RMSE={:.2f}'.format(best_rmse))
+        if self.rmse_flg:
+            plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
@@ -296,6 +295,8 @@ if __name__ == '__main__':
     dims = sys.argv[1:5]
     # scandata = ScanData(inputs, dims=dims)
     criteria = {r'$r_{Exc}$': [[0, 6.4], [0, 1.3], [1.6, 12], [0, 13.0]],
+                'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
+                'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]],
                 r'$r_{PV}$': [[4.9, 22.7], [3.0, 17.4], [2.3, 12.7], [2.6, 31.2]],
                 r'$r_{SOM}$': [[0, 6.2], [0.0, 5.8], [0, 7.3], [0, 8.8]]}
-    scandata = ScanData(inputs, dims=dims, criteria=criteria, mark_rmse=True)
+    scandata = ScanData(inputs, dims=dims, criteria=criteria, rmse_flg=True)
