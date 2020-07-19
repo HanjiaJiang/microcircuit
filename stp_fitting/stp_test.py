@@ -25,6 +25,7 @@ class ConnTest:
 
     def setup(self, syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify):
         nest.ResetKernel()
+        nest.SetKernelStatus({'print_time': False})
         self.syn_dict = syn_dict
         self.conn_name = '-'.join([pre_subtype, post_subtype])
         pre_subtype, post_subtype = self.set_subtype(pre_subtype, post_subtype)
@@ -260,6 +261,7 @@ class ConnTest:
             t_start = spk_ts[i]
             # data of ith pulse
             vs_ith = vs[(ts>=t_start+self.bisyn_delay)&(ts<t_start+isi+self.bisyn_delay)]
+            ts_ith = ts[(ts>=t_start+self.bisyn_delay)&(ts<t_start+isi+self.bisyn_delay)]
             # determine the peak by Exc/Inh
             if self.pre_subtype == 'Exc':
                 v_peak = np.max(vs_ith)
@@ -273,7 +275,7 @@ class ConnTest:
             #     plt.text(t_start+self.bisyn_delay, peak, '{:.4f}'.format(peak))
             # else:
             #     plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
-            ts_peak.append(ts[vs==peak])
+            ts_peak.append(ts_ith[vs_ith==v_peak][0])
 
         if self.verify or self.init_flg:
             ax.plot(ts, vs/self.result['peaks'][0], color='b', label='sim.')

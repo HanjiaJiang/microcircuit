@@ -1,7 +1,7 @@
 Us = '0.5-0.55-0.05'
-Fs = '200.0-260.0-20.0'
-Ds = '200.0-260.0-20.0'
-n_bestpoints = 20
+Fs = '100.0-160.0-20.0'
+Ds = '100.0-160.0-20.0'
+n_bestpoints = 10
 n_dataset = 7
 exp_data = 'exp-data_03.json'
 

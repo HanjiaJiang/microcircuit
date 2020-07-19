@@ -492,9 +492,9 @@ def renew_conn(conn_probs, exp_csv=None):
     print('conn. map before =\n{}'.format(conn_probs))
     conn_probs = conn_barrel_integrate(raw.mouse_dict, raw.bbp, exp, raw.allen, (exp>0)*1)  # flags: use exp. data if > 0
     # make up for the data where connectivity = 0.0 in Lefort, 2009; to be improved
-    conn_probs[10, 0] = 0.0
-    conn_probs[0, 10] = 0.0
-    conn_probs[4, 10] = 0.0
+    # conn_probs[10, 0] = 0.0
+    # conn_probs[0, 10] = 0.0
+    # conn_probs[4, 10] = 0.0
     np.savetxt(exp_csv.replace('raw', 'conn'), conn_probs, fmt='%.4f', delimiter=',')
     print('conn. map renewed =\n{}'.format(conn_probs))
     return conn_probs

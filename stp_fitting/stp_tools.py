@@ -45,7 +45,7 @@ def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='
                 best_xs = points[points[:, 0]==U][:, 1]
                 best_ys = points[points[:, 0]==U][:, 2]
                 axs[r, c].scatter(best_xs, best_ys, color='r')
-                best_value = data[idx_u][np.argwhere(xs==best_xs[0])[0, 0]][np.argwhere(ys==best_ys[0])[0, 0]]
+                best_value = data[idx_u, ys.tolist().index(best_ys[0]), xs.tolist().index(best_xs[0])]
                 axs[r, c].text(best_xs[0], best_ys[0], '{:.4f}'.format(best_value), color='magenta', fontsize=12, horizontalalignment='center')
 
             # set off-limit colors

@@ -23,6 +23,21 @@ class ScanParams:
         self.special_dict = copy.deepcopy(special_dict)
         self.stps = copy.deepcopy(stps)
 
+    def set_constant(self):
+        self.net_dict['g'] = -8
+        self.net_dict['bg_rate'] = 4.0
+        self.net_dict['epsp']['use'] = False
+        self.net_dict['ipsp']['use'] = False
+        self.net_dict['U-compensate'] = True
+        self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
+        self.set_indgs([750, 1500, 500, 1250])
+        # self.set_indgs([1000, 1000, 0, 1000])
+        # self.net_dict['K_ext'][7] = 2000
+        # self.net_dict['K_ext'][9] = 0
+        # self.renew_conn('7-15')
+        self.load_conn('7-15')
+        self.adjust_vip_conn(True)
+
     def save_pickle(self, pickle_path):
         all_dict = {
             'net_dict': self.net_dict,
@@ -39,18 +54,6 @@ class ScanParams:
     def do_single(self, pickle_path):
         self.set_constant()
         self.save_pickle(pickle_path)
-
-    def set_constant(self):
-        self.net_dict['g'] = -8
-        self.net_dict['bg_rate'] = 4.0
-        self.net_dict['epsp']['use'] = True
-        self.net_dict['ipsp']['use'] = True
-        self.net_dict['U-compensate'] = True
-        self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
-        self.set_indgs([1000, 1500, 1000, 1000])
-        # self.renew_conn('7-9')
-        self.load_conn('7-9')
-        self.adjust_vip_conn(True)
 
     def set_g(self, g):
         self.net_dict['g'] = -int(np.abs(int(g)))
@@ -85,7 +88,7 @@ class ScanParams:
 
     def set_indgs(self, indgs):
         if len(indgs) == 4:
-            exc, pv, som, vip = indgs[0], indgs[1], indgs[2], indgs[3]
+            exc, pv, som, vip = int(indgs[0]), int(indgs[1]), int(indgs[2]), int(indgs[3])
             self.net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
 
     def renew_conn(self, raw):
@@ -162,19 +165,20 @@ if __name__ == "__main__":
     scanparams.set_constant()
 
     # constant parameters
-    scanparams.load_conn(constants[0])
-    scanparams.set_epsp(constants[1])
-    scanparams.set_g(constants[2])
-    scanparams.set_stp(constants[3])
+    scanparams.set_indgs(constants)
+    # scanparams.load_conn(constants[0])
+    # scanparams.set_epsp(constants[1])
+    # scanparams.set_ucomp(constants[2])
+    # scanparams.set_stp(constants[3])
     scanparams.adjust_vip_conn(True)
 
     # parameters to be scanned
     for out in outs:
         lvls_str, lvls = read_levels(out)
         scanparams.set_path(out, lvls_str)
-        # scanparams.set_g(lvls[0])
-        # scanparams.set_bg(lvls[1])
-        # scanparams.set_ctsp(lvls[2])
-        # scanparams.set_stp(lvls[3])
-        scanparams.set_indgs(lvls)
+        # scanparams.set_indgs(lvls)
+        scanparams.set_g(lvls[0])
+        scanparams.set_bg(lvls[1])
+        scanparams.set_epsp(lvls[2])
+        scanparams.set_stp(lvls[3])
         scanparams.save_pickle(out)

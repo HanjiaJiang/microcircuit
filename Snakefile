@@ -1,13 +1,13 @@
-conn = ['5', '6-6', '7-9']     # connectivity
-lyr_epsp = [1]      # layer-sepcific epsp
-g = [4, 6, 8]      # compensate w by U
-stp = [2]
+exc = 750
+pv = 1250
+som = range(500, 1001, 250)
+vip = range(750, 1251, 250)
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=conn, b=lyr_epsp, c=g, d=stp)
+        expand('done_{a}_{b}_{c}_{d}', a=exc, b=pv, c=som, d=vip)
     shell:
         '''
         rm done*
@@ -29,7 +29,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=conn, b=lyr_epsp, c=g, d=stp))
+        directory(expand('{a}_{b}_{c}_{d}/', a=exc, b=pv, c=som, d=vip))
     shell:
         '''
         python create_snakes.py {output}

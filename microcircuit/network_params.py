@@ -55,20 +55,21 @@ def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None):
     ipsp_pv2e = mtx_i[0, 1]
     if flg_e is False:
         if isinstance(g, int):
-            mtx_e = np.full((4, 4), 0.5)    # mean
+            mtx_e = np.full((4, 4), 0.75)    # mean
         else:
-            mtx_e = np.full((4, 4), 1.0)    # s.d.
+            mtx_e = np.full((4, 4), 0.96)    # s.d.
     # assign by layer
     for a, row in enumerate(mtx_e):
         for b, epsp in enumerate(row):
             mtx[a*4:a*4+4, b*4:b*4+4] = epsp
             if isinstance(g, int):
-                if flg_e and flg_i:
+                if flg_i:
                     mtx[a*4:a*4+4, b*4+1:b*4+4] = mtx_i[:, 1:]*np.abs(g/(ipsp_pv2e/epsp))
                 else:
                     mtx[a*4:a*4+4, b*4+1:b*4+4] = epsp*g
     mtx = np.delete(mtx, [7, 11, 15], 0)
     mtx = np.delete(mtx, [7, 11, 15], 1)
+    # print(repr(mtx))
     return mtx
 
 net_dict = {
@@ -84,7 +85,8 @@ net_dict = {
     # elements corresponds to the names of the variable 'populations'.
     # 190717: round up to fit 8 clusters
     'N_full': np.array(
-        [1691, 136, 47, 64, 1656, 89, 44, 1095, 114, 100, 1288, 67, 56]), # mouse column (VIP summed across all layers)
+        [1691, 88, 72, 90, 1656, 85, 48, 1095, 109, 105, 1288, 56, 67]), # mouse column (fairly distribution among 3 classes)
+        # [1691, 136, 47, 64, 1656, 89, 44, 1095, 114, 100, 1288, 67, 56]), # mouse column (VIP summed across all layers)
         # [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column (rounded)
         # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column (rounded)
     # rat C2 barrel column totally 18976 cells

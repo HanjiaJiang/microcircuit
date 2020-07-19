@@ -1,24 +1,32 @@
 import os
 import numpy as np
+import scipy as sp
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-def plotconn(fn, raw=False, threshold=False, vipconn=True):
-    # set labels
-    # lyr_lbls = ['L2/3', 'L4', 'L5', 'L6']
-    # lyr_pos = [1.5/13, 4.5/13, 7.5/13, 11/13]
+class MidpointNormalize(mpl.colors.Normalize):
+    def __init__(self, vmin, vmax, midpoint=0, clip=False):
+        self.midpoint = midpoint
+        mpl.colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        normalized_min = max(0, 1 / 2 * (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
+        normalized_max = min(1, 1 / 2 * (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
+        normalized_mid = 0.5
+        x, y = [self.vmin, self.midpoint, self.vmax], [normalized_min, normalized_mid, normalized_max]
+        return sp.ma.masked_array(sp.interp(value, x, y))
+
+def plotpsp(fn, raw=False, vipconn=True, vlimits=(-1.5, 1.5)):
     pop_lbls = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                 'L4 Exc', 'L4 PV', 'L4 SOM',
                 'L5 Exc', 'L5 PV', 'L5 SOM',
                 'L6 Exc', 'L6 PV', 'L6 SOM']
-    # pop_lbls = ['Exc', 'PV', 'SOM', 'VIP',
-    #             'Exc', 'PV', 'SOM',
-    #             'Exc', 'PV', 'SOM',
-    #             'Exc', 'PV', 'SOM']
 
     # get data
     data = np.loadtxt(fn, delimiter=',')
     if vipconn is True:
         data[[6, 9, 12], 3] = data[2, 3]
+    data[:, [1,2,3,5,6,8,9,11,12]] /= 8.
 
     # set plot parameters
     # plt.rcParams['figure.constrained_layout.use'] = True
@@ -30,23 +38,26 @@ def plotconn(fn, raw=False, threshold=False, vipconn=True):
     plt.rcParams['xtick.labelbottom'] = False
 
     # color map
+    # norm = MidpointNormalize(vmin=vlimits[0], vmax=vlimits[1], midpoint=0)
     cx = plt.imshow(data,
     interpolation='none',
-    cmap='Blues',
+    cmap='RdBu',
     extent=[0, 13, 0, 13],
-    vmin=0.0,
-    vmax=1.0
+    vmin=vlimits[0],
+    vmax=vlimits[1]
+    # norm=norm
     )
 
     # values
-    mtx = conn_estimate_mtx()
+    flg_mtx = ipsp_estimate_mtx()
     for i in range(13):
         for j in range(13):
-            prob, fsize, fcolor = data[i, j], 10, 'k'
-            text = '{:.2f}'.format(prob)
-            if threshold is True and prob < 0.05:
-                fcolor = 'gray'
-            if '7-15' in fn and mtx[i][j] == 1:
+            value, fsize, fcolor = data[i, j], 10, 'k'
+            text = '{:.2f}'.format(value)
+            if np.abs(value) > (vlimits[1] - vlimits[0])/3.:
+                fcolor = 'w'                
+            if 'ipsp' in fn and flg_mtx[i][j] == 1:
+                # fcolor = 'gray'
                 text += '*'
             plt.text(j+0.5, 12-i+0.5, text,
             fontsize=fsize,
@@ -82,25 +93,25 @@ def plotconn(fn, raw=False, threshold=False, vipconn=True):
     plt.savefig(fn.replace('.csv', '.png'), bbox_inches='tight')
     plt.close()
 
-def conn_estimate_mtx():
-    mtx = [[0,1,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,1,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,1,1,0,0,0],
-           [0,0,0,0,0,0,0,1,1,1,0,0,0],
-           [0,0,0,0,0,0,0,1,1,1,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,1,1],
-           [0,0,0,0,0,0,0,0,0,0,1,1,1],
-           [0,0,0,0,0,0,0,0,0,0,1,1,1],
+def ipsp_estimate_mtx():
+    mtx = [[0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,1,1,0,0,1,0,0,1,0,0,1],
+           [0,1,1,1,0,1,1,0,1,1,0,1,1],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,1,1,0,0,1,0,0,1,0,0,1],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,1,1,0,0,1,0,0,1,0,0,1],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
+           [0,0,1,1,0,0,1,0,0,1,0,0,1],
            ]
     return mtx
 
 if __name__ == '__main__':
     fns = os.listdir()
     for fn in fns:
-        if fn.startswith('conn') and fn.endswith('.csv'):
-            plotconn(fn, threshold=True, vipconn=True)
+        if fn.startswith('psp') and fn.endswith('.csv'):
+            plotpsp(fn, vipconn=False)

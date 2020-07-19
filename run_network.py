@@ -21,8 +21,8 @@ if __name__ == "__main__":
 
     # set ai segments
     n_seg_ai = 1
-    start_ai = 1000.0
-    seg_ai = 1000.0
+    start_ai = 2000.0
+    seg_ai = 2000.0
     len_ai = seg_ai*n_seg_ai
 
     # set thalamic input
@@ -93,6 +93,9 @@ if __name__ == "__main__":
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
                           para_dict['stim_dict'], para_dict['special_dict'])
     net.setup()
+    # print(repr(para_dict['net_dict']['conn_probs']))
+    print(repr(para_dict['net_dict']['psp_means']))
+    print(repr(para_dict['net_dict']['psp_stds']))
     if run_sim:
         # print parameters
         create.print_all(para_dict)

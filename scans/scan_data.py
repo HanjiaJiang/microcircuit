@@ -43,12 +43,12 @@ class ScanData:
                         r'$r_{PV}$': 'Blues',
                         r'$r_{SOM}$': 'Blues',
                         r'$r_{VIP}$': 'Blues'}
-        self.clabel_format = {r'$r_{Exc}$': '%1.1f',
+        self.clabel_format = {r'$r_{Exc}$': '%1.0f',
                         'pairwise\ncorrelation': '%1.3f',
                         'CV(ISI)': '%1.2f',
-                        r'$r_{PV}$': '%1.1f',
-                        r'$r_{SOM}$': '%1.1f',
-                        r'$r_{VIP}$': '%1.1f'}
+                        r'$r_{PV}$': '%1.0f',
+                        r'$r_{SOM}$': '%1.0f',
+                        r'$r_{VIP}$': '%1.0f'}
         self.vmaxs = {r'$r_{Exc}$': 20.0,
                         'pairwise\ncorrelation': 0.1,
                         'CV(ISI)': 1.0,
@@ -236,11 +236,13 @@ class ScanData:
                         extent=self.extent,
                         hatches=['//', '++', ''],
                         alpha=0.0,
+                        linewidth=0.5,
                         zorder=9)
                     cf_fit = ax.contour(fit_mtx,
                         levels=[5.0, 15.0],
                         origin='lower',
                         extent=self.extent,
+                        linewidth=0.5,
                         colors='k')
                     # ax.clabel(cf_fit, cf_fit.levels, clabel_format=self.clabel_format[plotvar], inline=True, fontsize=10)
 
@@ -262,10 +264,16 @@ class ScanData:
                         vmin=vmin,
                         vmax=vmax)
                     ax.clabel(ct, fmt=self.clabel_format[plotvar], colors='k', inline=True, fontsize=10)
-                    if 'r_' in plotvar and 'VIP' not in plotvar:
+                    # star of best RMSE
+                    if plotvar == r'$r_{Exc}$':
                         best_rmse = np.min(self.rmse[str(zb)][str(za)])
                         i_x, i_y = np.where(self.rmse[str(zb)][str(za)]==best_rmse)
                         ax.scatter(xs[i_x], ys[i_y], s = 100, marker = '*', color='yellow', edgecolor='k', zorder=10)
+                    # text RMSE values
+                    if plotvar == r'$r_{PV}$':
+                        for a, x in enumerate(xs):
+                            for b, y in enumerate(ys):
+                                ax.text(x, y, '{:.1f}'.format(self.rmse[str(zb)][str(za)][a, b]), color='gray', fontsize=6, horizontalalignment='center', verticalalignment='center')
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
@@ -293,10 +301,11 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    # scandata = ScanData(inputs, dims=dims)
-    criteria = {r'$r_{Exc}$': [[0, 6.4], [0, 1.3], [1.6, 12], [0, 13.0]],
-                'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
-                'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]],
-                r'$r_{PV}$': [[4.9, 22.7], [3.0, 17.4], [2.3, 12.7], [2.6, 31.2]],
-                r'$r_{SOM}$': [[0, 6.2], [0.0, 5.8], [0, 7.3], [0, 8.8]]}
-    scandata = ScanData(inputs, dims=dims, criteria=criteria, rmse_flg=True)
+    # scandata = ScanData(inputs, rmse_flg=True)
+    scandata = ScanData(inputs, dims=['g', r'$r_{bg}$', 'lyr_epsp', 'stp'], rmse_flg=True)
+    # criteria = {r'$r_{Exc}$': [[0, 6.4], [0, 1.3], [1.6, 12], [0, 13.0]],
+    #             'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
+    #             'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]],
+    #             r'$r_{PV}$': [[4.9, 22.7], [3.0, 17.4], [2.3, 12.7], [2.6, 31.2]],
+    #             r'$r_{SOM}$': [[0, 6.2], [0.0, 5.8], [0, 7.3], [0, 8.8]]}
+    # scandata = ScanData(inputs, dims=dims, criteria=criteria, rmse_flg=True)
