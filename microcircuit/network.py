@@ -231,6 +231,26 @@ class Network:
                     )
                 self.dc.append(dc)
 
+    def create_ac_generator(self):
+        if self.stim_dict['ac_input']['offset'] > 0.:
+            self.ac = []
+            for t in self.stim_dict['ac_input']['ts']:
+                ac = nest.Create(
+                    'ac_generator',
+                    params={
+                        'amplitude': self.stim_dict['ac_input']['amplitude'],
+                        'frequency': self.stim_dict['ac_input']['frequency'],
+                        'offset': self.stim_dict['ac_input']['offset'],
+                        'phase': self.stim_dict['ac_input']['phase'],
+                        'start': t,
+                        'stop': t + self.stim_dict['ac_input']['duration'],
+                    }
+                )
+                self.ac.append(ac)
+                for i in self.stim_dict['ac_input']['targets']:
+                    nest.Connect(ac, self.pops[i])
+
+
     def create_connections(self):
         if nest.Rank() == 0:
             print('Recurrent connections are established')
@@ -397,6 +417,7 @@ class Network:
         # self.create_thalamic_input()
         self.create_poisson()
         self.create_dc_generator()
+        self.create_ac_generator()
         self.create_connections()
         if self.net_dict['poisson_input']:
             self.connect_poisson()

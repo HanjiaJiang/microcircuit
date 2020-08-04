@@ -18,12 +18,13 @@ class ConnTest:
                     peaks=None,
                     spk_n=10,
                     spk_isi=50.0,
-                    verify=False):
-        self.setup(syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify)
+                    verify=False,
+                    w=100.):
+        self.setup(syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify, w)
         self.init_flg = True
         os.system('mkdir -p stp-data/')
 
-    def setup(self, syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify):
+    def setup(self, syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify, w):
         nest.ResetKernel()
         nest.SetKernelStatus({'print_time': False})
         self.syn_dict = syn_dict
@@ -37,7 +38,7 @@ class ConnTest:
         self.bisyn_delay = 4.0
         self.set_params()
         self.set_labels()
-        self.set_neurons()
+        self.set_neurons(w=w)
         self.set_spkgen()
         self.set_mm()
         self.set_data(pprs, peaks)
@@ -467,7 +468,8 @@ if __name__ == '__main__':
                         peaks=peaks,
                         spk_n=spk_n,
                         spk_isi=spk_isi,
-                        verify=single_verify)
+                        verify=single_verify,
+                        w=72.19)
     conntest.run_sim(spk_n*spk_isi*1.5)
     conntest.run_analysis()
     # verify_print()

@@ -179,13 +179,13 @@ class ScanData:
                 print(self.rmse[k1][k2])
                 print(self.rmse_n[k1][k2])
 
-    def make_plots(self):
+    def make_plots(self, afx=None):
         # plot
         for zb in self.zb_lvls:
             for za in self.za_lvls:
-                self.colormap(za, zb)
+                self.colormap(za, zb, afx=afx)
 
-    def colormap(self, za, zb):
+    def colormap(self, za, zb, afx=None):
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
@@ -193,23 +193,23 @@ class ScanData:
         plt.ylim((ys[0], ys[-1]))
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg_rate', r'$r_{bg}$')
-        best_rmse = np.nan
-        # plot
+        # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
-            vmin, vmax = 0.0, np.nanmax(np.abs(self.mtxs[str(zb)][str(za)][plotvar]))
-            if self.rmse_flg:
-                vmax = self.vmaxs[plotvar]
+            vmin, vmax = 0.0, self.vmaxs[plotvar]
             if plotvar == 'pairwise\ncorrelation':
                 vmin = -vmax
+            # fit in all criteria and layers
+            all_fit = np.ones((len(ys), len(xs)))
+            # loop layers
             for r in range(4):
                 ax = axs[r, c]
                 # plot data
-                data = self.mtxs[str(zb)][str(za)][plotvar][r].T
+                data = self.mtxs[str(zb)][str(za)][plotvar][r].T    # (y, x)
                 if plotvar == r'$r_{VIP}$' and r > 0:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
 
-                # simple grid
+                # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
                     origin='lower',
@@ -217,19 +217,43 @@ class ScanData:
                     vmin=vmin,
                     vmax=vmax)
 
-                # single- and triple-fit
+                # contour
+                cf = ax.contourf(data,
+                    levels=np.linspace(vmin, vmax, 11),
+                    cmap=self.cmaps[plotvar],
+                    origin='lower',
+                    extent=self.extent,
+                    vmin=vmin,
+                    vmax=vmax)
+                ct = ax.contour(data,
+                    levels=np.linspace(vmin, vmax, 11),
+                    origin='lower',
+                    extent=self.extent,
+                    colors='gray',
+                    linewidths=0.5,
+                    vmin=vmin,
+                    vmax=vmax)
+                ax.clabel(ct, fmt=self.clabel_format[plotvar],
+                colors='k', inline=True, fontsize=10)
+
+                # single- & triple-fit patches
                 if plotvar in self.criteria:
-                    tri_fit = np.ones(data.shape)
+                    tri_fits = np.ones(data.shape)
                     for k in self.criteria.keys():
-                        tri_fit = np.multiply(tri_fit, self.fits[str(zb)][str(za)][k][r].T)
+                        fits = self.fits[str(zb)][str(za)][k][r].T # (y, x)
+                        tri_fits = np.multiply(tri_fits, fits) # (y, x)
+                        # save triple-fit by layer, for RMSE later
+                        if c == 0:
+                            for row in range(4):
+                                all_fit = np.multiply(all_fit, self.fits[str(zb)][str(za)][k][row].T)
                     # matrix for single and triple-fit
                     fit_mtx = np.zeros(data.shape)
-                    # single
-                    fit_mtx[np.where(self.fits[str(zb)][str(za)][plotvar][r].T == 1)] = 10.0
-                    # triple
-                    fit_mtx[np.where(tri_fit==1)] = 20.0
-                    print('{}, {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
+                    fit_mtx[np.where(fits == 1)] = 10.0 # single
+                    fit_mtx[np.where(tri_fits==1)] = 20.0 # triple
+                    # validate
+                    print('{}, layer {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
                     print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
+                    # plot
                     cf_fit = ax.contourf(fit_mtx,
                         levels=[5.0, 15.0, 25.0],
                         origin='lower',
@@ -244,45 +268,47 @@ class ScanData:
                         extent=self.extent,
                         linewidth=0.5,
                         colors='k')
-                    # ax.clabel(cf_fit, cf_fit.levels, clabel_format=self.clabel_format[plotvar], inline=True, fontsize=10)
 
                 # RMSE
                 if self.rmse_flg:
-                    cf = ax.contourf(data,
-                        levels=np.linspace(vmin, vmax, 11),
-                        cmap=self.cmaps[plotvar],
-                        origin='lower',
-                        extent=self.extent,
-                        vmin=vmin,
-                        vmax=vmax)
-                    ct = ax.contour(data,
-                        levels=np.linspace(vmin, vmax, 11),
-                        origin='lower',
-                        extent=self.extent,
-                        colors='gray',
-                        linewidths=0.5,
-                        vmin=vmin,
-                        vmax=vmax)
-                    ax.clabel(ct, fmt=self.clabel_format[plotvar], colors='k', inline=True, fontsize=10)
-                    # star of best RMSE
-                    if plotvar == r'$r_{Exc}$':
-                        best_rmse = np.min(self.rmse[str(zb)][str(za)])
-                        i_x, i_y = np.where(self.rmse[str(zb)][str(za)]==best_rmse)
-                        ax.scatter(xs[i_x], ys[i_y], s = 100, marker = '*', color='yellow', edgecolor='k', zorder=10)
+                    rmse_mtx = self.rmse[str(zb)][str(za)].T  # (y, x)
+                    # mark best RMSEs
+                    if c == 0:
+                        rmse_mtx = self.rmse[str(zb)][str(za)].T
+                        best_rmse = np.min(rmse_mtx)
+                        i_y, i_x = np.where(rmse_mtx==best_rmse)
+                        ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
+                        color='yellow', edgecolor='k', zorder=9)
+                        # best RMSE in the triple-fit area
+                        if len(rmse_mtx[np.where(all_fit==1)]) > 0:
+                            best_rmse = np.min(rmse_mtx[np.where(all_fit==1)])
+                            i_y, i_x = np.where(rmse_mtx==best_rmse)
+                            ax.scatter(xs[i_x], ys[i_y], s=100, marker='*',
+                            color='yellow', edgecolor='k', zorder=10)
+                            ax.text(xs[i_x]+100, ys[i_y],
+                            '{:.1f}'.format(best_rmse),
+                            color='magenta', fontsize=10, zorder=10)
                     # text RMSE values
                     if plotvar == r'$r_{PV}$':
-                        for a, x in enumerate(xs):
-                            for b, y in enumerate(ys):
-                                ax.text(x, y, '{:.1f}'.format(self.rmse[str(zb)][str(za)][a, b]), color='gray', fontsize=6, horizontalalignment='center', verticalalignment='center')
+                        for a, y in enumerate(ys):
+                            for b, x in enumerate(xs):
+                                clr = 'gray'
+                                if all_fit[a, b] == 1:
+                                    clr = 'magenta'
+                                ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
+                                color=clr, fontsize=8,
+                                horizontalalignment='center',
+                                verticalalignment='center',
+                                zorder=10)
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
 
-                # title
+                # titles
                 if r == 0:
                     ax.set_title(plotvar + '\n ')
 
-                # xlabel
+                # xlabels and colorbars
                 if r == 3:
                     ax.set_xlabel(xlbl)
                     cbar = fig.colorbar(im, ax=axs[:, c], orientation='horizontal', shrink=0.8, aspect=10)
@@ -292,20 +318,19 @@ class ScanData:
                     ax.set_ylabel(ylbl)
                     ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
-        if self.rmse_flg:
-            plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
+        # if self.rmse_flg:
+        #     plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
+        plot_name = os.getcwd().split('/')[-1] + '_' + plot_name
+        if isinstance(afx, str):
+            plot_name = afx + plot_name
         fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
 
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    # scandata = ScanData(inputs, rmse_flg=True)
-    scandata = ScanData(inputs, dims=['g', r'$r_{bg}$', 'lyr_epsp', 'stp'], rmse_flg=True)
-    # criteria = {r'$r_{Exc}$': [[0, 6.4], [0, 1.3], [1.6, 12], [0, 13.0]],
-    #             'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
-    #             'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]],
-    #             r'$r_{PV}$': [[4.9, 22.7], [3.0, 17.4], [2.3, 12.7], [2.6, 31.2]],
-    #             r'$r_{SOM}$': [[0, 6.2], [0.0, 5.8], [0, 7.3], [0, 8.8]]}
-    # scandata = ScanData(inputs, dims=dims, criteria=criteria, rmse_flg=True)
+    # scandata = ScanData(inputs)
+    scandata = ScanData(inputs, dims=dims)
+    scandata.rmse_flg = True
+    scandata.make_plots(afx='rmse_')

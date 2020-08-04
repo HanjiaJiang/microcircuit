@@ -1,13 +1,13 @@
-exc = 750
-pv = 1250
-som = range(500, 1001, 250)
-vip = range(750, 1251, 250)
+g = [4, 6, 8]
+vip = range(1500, 2001, 250)
+lyr_epsp = 0
+lyr_ipsp = 0
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=exc, b=pv, c=som, d=vip)
+        expand('done_{a}_{b}_{c}_{d}', a=g, b=vip, c=lyr_epsp, d=lyr_ipsp)
     shell:
         '''
         rm done*
@@ -22,6 +22,7 @@ rule snakes:
         '''
         cp -r microcircuit/ scans/ snake-gs.sh cluster.json config.yml run_network.py {input}
         cd {input}
+        # snakemake
         sbatch snake-gs.sh
         cd ..
         > {output}
@@ -29,7 +30,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=exc, b=pv, c=som, d=vip))
+        directory(expand('{a}_{b}_{c}_{d}/', a=g, b=vip, c=lyr_epsp, d=lyr_ipsp))
     shell:
         '''
         python create_snakes.py {output}

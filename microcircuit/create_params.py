@@ -29,14 +29,26 @@ class ScanParams:
         self.net_dict['epsp']['use'] = False
         self.net_dict['ipsp']['use'] = False
         self.net_dict['U-compensate'] = True
-        self.special_dict['stp_dict'] = self.stps['stp_fitted_02.pickle']
-        self.set_indgs([750, 1500, 500, 1250])
-        # self.set_indgs([1000, 1000, 0, 1000])
+        # self.sim_dict['master_seed'] = 60
+        # self.special_dict['stp_dict'] = {}
+        # self.set_indgs([1000, 1500, 750, 900])
+        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        self.set_indgs([750, 1500, 500, 1000])
+        # self.set_indgs([1000, 1500, 1000, 2000])
+        # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
         # self.net_dict['K_ext'][7] = 2000
         # self.net_dict['K_ext'][9] = 0
-        # self.renew_conn('7-15')
+        # self.renew_conn('allen')
         self.load_conn('7-15')
-        self.adjust_vip_conn(True)
+        self.vip_som(True)
+
+    def del_item(self, dict_stp, keys=None, keysets=None):
+        if keys is not None:
+            for key in keys:
+                del dict_stp[key]
+        if keysets is not None:
+            for sets in keysets:
+                del dict_stp[sets[0]][sets[1]]
 
     def save_pickle(self, pickle_path):
         all_dict = {
@@ -86,10 +98,21 @@ class ScanParams:
             self.special_dict['stp_dict'] = self.stps[stp_name]
             print('stp used = {}'.format(stp_name))
 
+    def set_exc(self, exc):
+        self.net_dict['K_ext'][[0, 4, 7, 10]] = int(exc)
+
+    def set_pv(self, pv):
+        self.net_dict['K_ext'][[1, 5, 8, 11]] = int(pv)
+
+    def set_som(self, som):
+        self.net_dict['K_ext'][[2, 6, 9, 12]] = int(som)
+
+    def set_vip(self, vip):
+        self.net_dict['K_ext'][3] = int(vip)
+
     def set_indgs(self, indgs):
-        if len(indgs) == 4:
-            exc, pv, som, vip = int(indgs[0]), int(indgs[1]), int(indgs[2]), int(indgs[3])
-            self.net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
+        exc, pv, som, vip = indgs[0], indgs[1], indgs[2], indgs[3]
+        self.net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
 
     def renew_conn(self, raw):
         self.net_dict['conn_probs'] = func.renew_conn(net_dict['conn_probs'], 'microcircuit/conn_probs/raw_{}.csv'.format(raw))
@@ -97,7 +120,7 @@ class ScanParams:
     def load_conn(self, conn):
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
-    def adjust_vip_conn(self, adjust):
+    def vip_som(self, adjust):
         if int(adjust) != 0:
             # vip-to-som all the same across layers
             print('adjust vip conn.')
@@ -165,20 +188,21 @@ if __name__ == "__main__":
     scanparams.set_constant()
 
     # constant parameters
-    scanparams.set_indgs(constants)
-    # scanparams.load_conn(constants[0])
-    # scanparams.set_epsp(constants[1])
-    # scanparams.set_ucomp(constants[2])
-    # scanparams.set_stp(constants[3])
-    scanparams.adjust_vip_conn(True)
+    scanparams.set_g(constants[0])
+    scanparams.set_vip(constants[1])
+    scanparams.set_epsp(constants[2])
+    scanparams.set_ipsp(constants[3])
+    scanparams.vip_som(True)
 
     # parameters to be scanned
     for out in outs:
         lvls_str, lvls = read_levels(out)
         scanparams.set_path(out, lvls_str)
-        # scanparams.set_indgs(lvls)
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
-        scanparams.set_epsp(lvls[2])
-        scanparams.set_stp(lvls[3])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(lvls[2])
+        # scanparams.set_g(lvls[0])
+        # scanparams.set_bg(lvls[1])
+        # scanparams.set_epsp(lvls[2])
+        # scanparams.set_ipsp(lvls[3])
         scanparams.save_pickle(out)

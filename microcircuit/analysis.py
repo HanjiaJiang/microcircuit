@@ -1,18 +1,18 @@
 import os
-import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
-import matplotlib
-matplotlib.rcParams['font.size'] = 20.0
+import pickle
 import numpy as np
 from random import sample
-from multiprocessing import Process
-from multiprocessing import Manager
-import pickle
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename
 import scipy.stats as stats
 from scipy import interpolate
 
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+from multiprocessing import Process
+from multiprocessing import Manager
+
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.rcParams['font.size'] = 20.0
 
 class Spikes:
     def __init__(self, path, name):
@@ -155,46 +155,6 @@ class Spikes:
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
 
-
-'''
-Plots
-'''
-def nxn_bars(arr, y_bottom, y_top, labels=None, ylabel=None):
-    arr_len = len(arr)
-    arr_shape = np.array(arr).shape
-    if len(arr_shape) is not 2:
-        print('array not a 2-D array')
-        return
-    elif arr_shape[0] != arr_shape[1]:
-        print('array not a square array')
-        return
-
-    if isinstance(labels, list) is not True:
-        print('labels not a list')
-        labels = list(range(arr_len))
-    elif len(labels) > arr_len:
-        print('labels too long, use the first {}'.format(arr_len))
-        labels = labels[:len(arr)]
-    elif len(labels) < arr_len:
-        print('labels too short')
-        labels = list(range(arr_len))
-
-    labels = np.array(labels).astype(str)
-    x = np.arange(arr_len)
-    barwidth = 0.75/arr_len
-    fig, ax = plt.subplots(figsize=(12, 12))
-    for i in range(len(arr)):
-        ax.bar(x + barwidth * i, arr[i, :], barwidth, label=labels[i])
-    ax.legend(bbox_to_anchor=(0., 1.2, 1.0, 0.1),
-              ncol=int(len(labels)/2), mode="expand", borderaxespad=0.)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel(ylabel)
-    # ax.legend()
-    plt.ylim((y_bottom, y_top))
-    fig.tight_layout()
-    plt.savefig('nxn_bars.png')
-    plt.show()
 
 '''
 Calculation
@@ -426,13 +386,15 @@ def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
     x = np.arange(13)  # the label locations
     w = 0.3  # the width of the bars
     fig, ax = plt.subplots(figsize=figsize)
-    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :])
-    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False)
+    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :], color=colors, edgecolor=colors)
+    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False, edgecolor=colors, hatch='///')
 
     # colors
-    for i, (r1, r2) in enumerate(zip(rects1, rects2)):
-        r1.set_color(colors[i])
-        r2.set_color(colors[i])
+    # for i, (r1, r2) in enumerate(zip(rects1, rects2)):
+    #     r1.set_color(colors[i])
+    #     r2.set_color(colors[i])
+    #     r1.set_hatch('//')
+    #     r2.set_hatch('xx')
 
     # legends
     for i in range(4):
@@ -462,7 +424,7 @@ def fr_plot(spikes):
         fpath = os.path.join(spikes.path, ('rate' + str(i) + '.npy'))
         if os.path.isfile(fpath):
             rates.append(np.load(fpath))
-    do_boxplot(rates[::-1], spikes.fr_qrt[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
+    # do_boxplot(rates[::-1], spikes.fr_qrt[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
     do_bars(spikes.fr_result, np.array(spikes.fr_musig).T, spikes.path, 'fr', spikes.colors, 'spikes/s')
 
 '''
@@ -765,21 +727,23 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=False):
+def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=False):
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
     data_all = spikes.get_data(begin, begin+n_stim*interval)
+    # response data to file
     f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
-    fig = plt.figure(figsize=(8, 4), constrained_layout=True)
-    ax = fig.add_subplot(111)
+
+    # plot settings
+    fig, ax = plt.subplots(figsize=(8, 4), constrained_layout=True)
     colors = ['hotpink', 'dodgerblue', 'black', 'black']
     linestyles = ['solid', 'solid', 'solid', 'dashed']
-    xy_by_layer = []
-    empty_flg = False
+    xy_by_layer, empty_flg = [], False
+
     # calculate response spread and amplitude
-    exc_idx = [0, 4, 7, 10]
-    for a, i in enumerate(exc_idx):
+    exc_lyrs = [0, 4, 7, 10]
+    for a, i in enumerate(exc_lyrs):
         data = data_all[i]
         # skip if no data
         if type(data) != np.ndarray or data.ndim != 2:
@@ -787,28 +751,25 @@ def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=Fal
             empty_flg = True
             continue
         data = data[np.argsort(data[:, 1])] # sort by time
-        stds = []         # response spread
-        n_spikes = []  # response amplitude
-        ts = data[:, 1]
-        ids = data[:, 0]
+        rsp_amp, rsp_spread = [], [] # response amplitude and spread
+        ts, ids = data[:, 1], data[:, 0]
         ltcs_by_stim = []
 
-        # cache for latency by neuron: [(id, sum, n), ...]
+        # cache for neuron: [[id, sum, n], ...]
         id_set = np.arange(spikes.gids[i][0], spikes.gids[i][1]+1)
         neuron_ltc_cache = np.array([id_set, np.zeros(id_set.shape), np.zeros(id_set.shape)]).T
 
-        # loop stimulation
+        # loop by stimulation
         for j in range(n_stim):
             # define start and end of window
             win_begin = stims[j]
             win_end = stims[j] + window
             # spread and amplitude
             ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
-            n_spikes.append(len(ts_stim))
+            rsp_amp.append(len(ts_stim))
             if len(ts_stim) >= 3:
                 std = np.std(ts_stim)
-                stds.append(std)
-
+                rsp_spread.append(std)
             # latency by neurons
             ids_stim = ids[(ts > win_begin) & (ts <= win_end)]
             neuron_ltcs = []
@@ -819,18 +780,25 @@ def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=Fal
                 neuron_ltc_cache[k, 1] += ts_stim[idx] - win_begin   # latency
                 neuron_ltc_cache[k, 2] += 1  # sample n
 
-        # calculate average latency
-        ltc_sample_ratio = 1.0  # ratio of the sampled neurons
+        # calculate:
+        # include neurons with n of responses > n_stim/2
         neuron_ltc_cache = neuron_ltc_cache[np.where(neuron_ltc_cache[:, 2]>=n_stim/2)]
-        # mean latency of each neuron
+        # neuron mean latencies
         mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
-        hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, 1.0))
-        xs = bins[:-1]
-        ys = hist/np.sum(hist)
+        # layer average latency
+        lyr_avg_ltc = np.mean(mean_ltcs)
+        # for raster plot vline marking (not using)
+        spikes.react_lines.append(lyr_avg_ltc + win_begin)
+
+        # plot:
+        hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, bw))
+        xs, ys = bins[:-1], hist/np.sum(hist)
         xy_by_layer.append([xs, ys])
-        f_cubic = interpolate.interp1d(xs, ys, kind='cubic')
-        xs = np.linspace(min(xs), max(xs), len(xs)*5)
-        ys = f_cubic(xs)
+        f_cubic = interpolate.interp1d(xs, ys, kind='quadratic')
+        # interpolate
+        if interpol:
+            xs = np.linspace(min(xs), max(xs), len(xs)*5)
+            ys = f_cubic(xs)
         ax.plot(xs, ys,
             linestyle=linestyles[a],
             linewidth=3,
@@ -838,21 +806,19 @@ def response(spikes, begin, stims, window, bw=0.1, pop_ltc=False, exportplot=Fal
             color=colors[a])
         ax.set_xlabel('mean spike latency (ms)')
         ax.set_ylabel('fraction')
-        avg_ltc = np.mean(mean_ltcs[:int(len(mean_ltcs)*ltc_sample_ratio)])
+        ax.set_ylim(top=0.41)
 
-        # for raster plot vline marking
-        spikes.react_lines.append(avg_ltc + win_begin)
-
-        # save synfire spread, amplitude, average latency (across neurons)
-        f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(stds), np.mean(n_spikes), avg_ltc))
+        # save response spread, amplitude, layer average latency
+        f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(rsp_spread), np.mean(rsp_amp), lyr_avg_ltc))
     f.close()
     plt.legend()
     # export latency plot
+    plt.savefig(os.path.join(spikes.path, 'hist-ltc.png'))
     if exportplot:
-        plt.savefig(spikes.path.split('/')[-1] + '_hist-ltc.png')
-    else:
-        plt.savefig(os.path.join(spikes.path, 'hist-ltc.png'))
-    # save latency data
+        os.system('cp -p {} {}'.format(
+        os.path.join(spikes.path, 'hist-ltc.png'),
+        spikes.path.split('/')[-1] + '_hist-ltc.png'))
+    # save neuron latency data
     if empty_flg:
         xy_by_layer = []
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)

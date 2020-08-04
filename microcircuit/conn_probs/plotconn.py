@@ -103,4 +103,4 @@ if __name__ == '__main__':
     fns = os.listdir()
     for fn in fns:
         if fn.startswith('conn') and fn.endswith('.csv'):
-            plotconn(fn, threshold=True, vipconn=True)
+            plotconn(fn, threshold=True, vipconn=False)

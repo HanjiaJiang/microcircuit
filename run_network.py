@@ -10,45 +10,36 @@ import microcircuit.create_params as create
 if __name__ == "__main__":
     # simulation settings
     run_sim = True
-    on_server = False
     run_analysis = True
     print_to_file = False
 
     #  settings
-    do_ai = True
-    do_response = False
+    do_ai = False
+    do_response = True
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai = 1
-    start_ai = 2000.0
-    seg_ai = 2000.0
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
+    t_stim = start_ai + len_ai
 
-    # set thalamic input
-    n_stim = 0
+    # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    th_rate = 120.0
-    interval_stim = 1000.0
-    ana_win = 40.0
-    orient = False
-    duration = 10.0
-    start_stim = start_ai + len_ai
-    len_stim = interval_stim*n_stim
-    stims = list(range(int(start_stim + interval_stim/2), int(start_stim + len_stim), int(interval_stim)))
+    n_stim, th_rate, stim_intrv = 10, 120., 1000.
+    duration, ana_win, orient = 10., 40., False
+    start_stim, len_stim = t_stim, stim_intrv*n_stim
+    stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
+    t_stim += len_stim
 
     # set others
     plot_half_len = 100.0
-    if n_stim == 0:
-        plot_center = start_ai
-    else:
-        plot_center = stims[-1]
+    plot_center = (start_ai if n_stim ==0 else stims[0])
 
     # initiate ScanParams
     scanparams = create.ScanParams()
 
-    # check for: parameter scan or single-run
+    # get pickle, scan or single
     try:
         pickle_path = sys.argv[1]    # path to pickle file
     except IndexError:  # single-run if no path input
@@ -66,16 +57,14 @@ if __name__ == "__main__":
         pickle_path = os.path.join(dpath, 'para_dict.pickle')
         scanparams.do_single(pickle_path)
 
-    # assign parameters
+    # get parameters from pickle
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
     data_path = para_dict['sim_dict']['data_path']
 
     # cpu number / on server or not
-    cpu_ratio = 0.5
-    if mp.cpu_count() > 10:
-        cpu_ratio = 1
-        on_server = True
+    on_server = (False if mp.cpu_count() <= 10 else True)
+    cpu_ratio = (0.5 if mp.cpu_count() <= 10 else 1.)
 
     # set print to file
     if print_to_file:
@@ -84,18 +73,13 @@ if __name__ == "__main__":
     # set simulation condition
     create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
     para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
-    para_dict['sim_dict']['t_sim'] = start_ai + len_ai + len_stim
-    print('start_ai = {}, len_ai = {}'.format(start_ai, len_ai))
-    print('thalamic_input = {}'.format(para_dict['stim_dict']['thalamic_input']))
+    para_dict['sim_dict']['t_sim'] = t_stim
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
                           para_dict['stim_dict'], para_dict['special_dict'])
     net.setup()
-    # print(repr(para_dict['net_dict']['conn_probs']))
-    print(repr(para_dict['net_dict']['psp_means']))
-    print(repr(para_dict['net_dict']['psp_stds']))
     if run_sim:
         # print parameters
         create.print_all(para_dict)
@@ -113,7 +97,7 @@ if __name__ == "__main__":
         if n_stim > 0:
             t1 = time.time()
             if do_response:
-                analysis.response(spikes, start_stim, stims, window=ana_win)
+                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True)
             t2 = time.time()
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
