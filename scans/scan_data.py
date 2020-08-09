@@ -238,11 +238,13 @@ class ScanData:
 
                 # single- & triple-fit patches
                 if plotvar in self.criteria:
+                    # single fit
+                    fits = self.fits[str(zb)][str(za)][plotvar][r].T
+                    # triple-fit
                     tri_fits = np.ones(data.shape)
                     for k in self.criteria.keys():
-                        fits = self.fits[str(zb)][str(za)][k][r].T # (y, x)
-                        tri_fits = np.multiply(tri_fits, fits) # (y, x)
-                        # save triple-fit by layer, for RMSE later
+                        tri_fits = np.multiply(tri_fits, self.fits[str(zb)][str(za)][k][r].T) # (y, x)
+                        # save all-fit (across layers), for RMSE later
                         if c == 0:
                             for row in range(4):
                                 all_fit = np.multiply(all_fit, self.fits[str(zb)][str(za)][k][row].T)

@@ -15,26 +15,36 @@ if __name__ == "__main__":
 
     #  settings
     do_ai = False
-    do_response = True
+    do_response = False
     do_selectivity = False
 
     # set ai segments
     n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
-    t_stim = start_ai + len_ai
+    t_sim = start_ai + len_ai
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 10, 120., 1000.
+    n_stim, th_rate, stim_intrv = 0, 120., 1000.
     duration, ana_win, orient = 10., 40., False
-    start_stim, len_stim = t_stim, stim_intrv*n_stim
+    start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
-    t_stim += len_stim
+    t_sim += len_stim
+
+    # set input for paradox effect
+    paradox_type = 'dc'
+    n_paradox, paradox_start, = 10, t_sim
+    paradox_duration, paradox_intrv = 600., 1000.
+    paradox_pops = [1, 5, 8, 11]
+    paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
+    # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
+    paradox_freq, paradox_ac_amp = 10., 0.1 # ac
+    # t_sim += n_paradox*len(paradox_offsets)*(paradox_duration+paradox_intrv)
 
     # set others
     plot_half_len = 100.0
-    plot_center = (start_ai if n_stim ==0 else stims[0])
+    plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
     scanparams = create.ScanParams()
@@ -72,8 +82,11 @@ if __name__ == "__main__":
 
     # set simulation condition
     create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
+    t_sim += create.set_paradox(para_dict, paradox_type, n_paradox, paradox_pops,
+        paradox_offsets, paradox_start, paradox_duration, paradox_intrv,
+        paradox_ac_amp, paradox_freq)
     para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
-    para_dict['sim_dict']['t_sim'] = t_stim
+    para_dict['sim_dict']['t_sim'] = t_sim
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
     # initialize and run
@@ -97,7 +110,7 @@ if __name__ == "__main__":
         if n_stim > 0:
             t1 = time.time()
             if do_response:
-                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True)
+                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True, bw=5.)
             t2 = time.time()
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
@@ -105,13 +118,12 @@ if __name__ == "__main__":
             t3 = time.time()
             print('response() runing time = {}'.format(t2 - t1))
             print('selectivity() runing time = {}'.format(t3 - t2))
-            # move hist-ltc.png to root folder
-            # if on_server:
-            #     os.system('mv {} {}'.format(os.path.join(data_path, 'hist-ltc.png'), 'hist-ltc_{}.png'.format(data_path.split('/')[-2])))
+        analysis.paradox_fr(spikes, para_dict['stim_dict']['paradox'])
+        analysis.paradox_fr(spikes, para_dict['stim_dict']['paradox'], zoomin=False)
 
-        if not on_server:
-            analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-            analysis.fr_plot(spikes)
+        # if not on_server:
+        analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+        analysis.fr_plot(spikes)
 
         spikes.verify_print(data_path)
 

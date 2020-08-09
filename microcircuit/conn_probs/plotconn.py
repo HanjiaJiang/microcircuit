@@ -2,18 +2,12 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plotconn(fn, raw=False, threshold=False, vipconn=True):
+def plotconn(fn, raw=False, threshold=False, vipconn=True, vmax=0.6):
     # set labels
-    # lyr_lbls = ['L2/3', 'L4', 'L5', 'L6']
-    # lyr_pos = [1.5/13, 4.5/13, 7.5/13, 11/13]
     pop_lbls = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                 'L4 Exc', 'L4 PV', 'L4 SOM',
                 'L5 Exc', 'L5 PV', 'L5 SOM',
                 'L6 Exc', 'L6 PV', 'L6 SOM']
-    # pop_lbls = ['Exc', 'PV', 'SOM', 'VIP',
-    #             'Exc', 'PV', 'SOM',
-    #             'Exc', 'PV', 'SOM',
-    #             'Exc', 'PV', 'SOM']
 
     # get data
     data = np.loadtxt(fn, delimiter=',')
@@ -35,17 +29,19 @@ def plotconn(fn, raw=False, threshold=False, vipconn=True):
     cmap='Blues',
     extent=[0, 13, 0, 13],
     vmin=0.0,
-    vmax=1.0
+    vmax=vmax
     )
 
     # values
     mtx = conn_estimate_mtx()
     for i in range(13):
         for j in range(13):
-            prob, fsize, fcolor = data[i, j], 10, 'k'
-            text = '{:.2f}'.format(prob)
+            prob, fsize, fcolor = data[i, j], 12, 'k'
+            text = '{:.0%}'.format(prob)
             if threshold is True and prob < 0.05:
                 fcolor = 'gray'
+            if prob > 2*vmax/3:
+                fcolor = 'w'
             if '7-15' in fn and mtx[i][j] == 1:
                 text += '*'
             plt.text(j+0.5, 12-i+0.5, text,
@@ -89,13 +85,13 @@ def conn_estimate_mtx():
            [0,0,0,0,0,0,0,0,0,0,0,0,0],
            [0,0,0,0,0,0,0,0,0,0,0,0,0],
            [0,0,0,0,1,0,0,0,0,0,0,0,0],
-           [0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,1,0,0,0,0,0,0,0,0,0],
            [0,0,0,0,0,0,0,0,1,1,0,0,0],
            [0,0,0,0,0,0,0,1,1,1,0,0,0],
-           [0,0,0,0,0,0,0,1,1,1,0,0,0],
+           [0,0,0,1,0,0,0,1,1,1,0,0,0],
            [0,0,0,0,0,0,0,0,0,0,0,1,1],
            [0,0,0,0,0,0,0,0,0,0,1,1,1],
-           [0,0,0,0,0,0,0,0,0,0,1,1,1],
+           [0,0,0,1,0,0,0,0,0,0,1,1,1],
            ]
     return mtx
 
@@ -103,4 +99,4 @@ if __name__ == '__main__':
     fns = os.listdir()
     for fn in fns:
         if fn.startswith('conn') and fn.endswith('.csv'):
-            plotconn(fn, threshold=True, vipconn=False)
+            plotconn(fn, threshold=True, vipconn=True)

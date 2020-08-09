@@ -38,13 +38,17 @@ stim_dict = {
     'dc_amp': np.ones(len(net_dict['populations'])) * 0.3,
     # stimulus orientation 190614
     'orientation': 0.0,  # from -pi/2 to pi/2
-    'ac_input': {
-        'offset': 0.,
-        'amplitude': 0.1,
-        'frequency': 100.,
-        'phase': 0.,
-        'ts': np.arange(2000, 4000, 2000).astype(float),
-        'duration': 1000,
-        'targets': [1, 2, 3]
-        }
+    # input for paradox effect
+    'paradox': {
+        'type': 'dc',
+        'offsets': [0.],
+        'amplitude': 0.1,   # ac
+        'frequency': 100.,  # ac
+        'phase': 0.,        # ac
+        'n': 0,             # n of each offset level
+        'duration': 1000.,
+        'targets': [1],
+        'starts': {'0.0': [2000.]},
+        'intrv': 1000.
+        },
     }

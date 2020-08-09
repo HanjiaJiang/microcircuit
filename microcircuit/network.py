@@ -231,24 +231,51 @@ class Network:
                     )
                 self.dc.append(dc)
 
-    def create_ac_generator(self):
-        if self.stim_dict['ac_input']['offset'] > 0.:
-            self.ac = []
-            for t in self.stim_dict['ac_input']['ts']:
-                ac = nest.Create(
-                    'ac_generator',
-                    params={
-                        'amplitude': self.stim_dict['ac_input']['amplitude'],
-                        'frequency': self.stim_dict['ac_input']['frequency'],
-                        'offset': self.stim_dict['ac_input']['offset'],
-                        'phase': self.stim_dict['ac_input']['phase'],
-                        'start': t,
-                        'stop': t + self.stim_dict['ac_input']['duration'],
-                    }
-                )
-                self.ac.append(ac)
-                for i in self.stim_dict['ac_input']['targets']:
-                    nest.Connect(ac, self.pops[i])
+    def create_paradox(self):
+        if self.stim_dict['paradox']['n'] > 0:
+            self.paradox_gens = []
+            duration = self.stim_dict['paradox']['duration']
+            paradox_type = self.stim_dict['paradox']['type']
+            generator_type = '{}_generator'.format(paradox_type)
+            for i, offset in enumerate(self.stim_dict['paradox']['offsets']):
+                print('paradox starts = {}'.format(self.stim_dict['paradox']['starts'][str(offset)]))
+                if offset <= 0:
+                    continue
+                for j, start in enumerate(self.stim_dict['paradox']['starts'][str(offset)]):
+                    params = {'amplitude': offset, 'start': start, 'stop': start + duration}
+                    if paradox_type == 'ac':
+                        params['amplitude'] = self.stim_dict['paradox']['amplitude']
+                        params['frequency'] = self.stim_dict['paradox']['frequency']
+                        params['phase'] = self.stim_dict['paradox']['phase']
+                    gen = nest.Create(generator_type, params=params)
+                    self.paradox_gens.append(gen)
+                    for k in self.stim_dict['paradox']['targets']:
+                        nest.Connect(gen, self.pops[k])
+
+
+    # def create_ac_paradox(self):
+    #     if self.stim_dict['ac_paradox']['n'] > 0:
+    #         self.ac_paradox = []
+    #         duration = self.stim_dict['ac_paradox']['duration']
+    #         for i, offset in enumerate(self.stim_dict['ac_paradox']['offsets']):
+    #             print('ac start = {}'.format(self.stim_dict['ac_paradox']['starts'][str(offset)]))
+    #             if offset <= 0:
+    #                 continue
+    #             for j, start in enumerate(self.stim_dict['ac_paradox']['starts'][str(offset)]):
+    #                 ac = nest.Create(
+    #                     'ac_generator',
+    #                     params={
+    #                         'amplitude': self.stim_dict['ac_paradox']['amplitude'],
+    #                         'frequency': self.stim_dict['ac_paradox']['frequency'],
+    #                         'offset': offset,
+    #                         'phase': self.stim_dict['ac_paradox']['phase'],
+    #                         'start': start,
+    #                         'stop': start + duration,
+    #                     }
+    #                 )
+    #                 self.ac_paradox.append(ac)
+    #                 for k in self.stim_dict['ac_paradox']['targets']:
+    #                     nest.Connect(ac, self.pops[k])
 
 
     def create_connections(self):
@@ -417,7 +444,8 @@ class Network:
         # self.create_thalamic_input()
         self.create_poisson()
         self.create_dc_generator()
-        self.create_ac_generator()
+        self.create_paradox()
+        # self.create_ac_paradox()
         self.create_connections()
         if self.net_dict['poisson_input']:
             self.connect_poisson()

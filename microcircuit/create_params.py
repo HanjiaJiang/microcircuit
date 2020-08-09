@@ -29,16 +29,15 @@ class ScanParams:
         self.net_dict['epsp']['use'] = False
         self.net_dict['ipsp']['use'] = False
         self.net_dict['U-compensate'] = True
-        # self.sim_dict['master_seed'] = 60
-        # self.special_dict['stp_dict'] = {}
-        # self.set_indgs([1000, 1500, 750, 900])
-        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
-        self.set_indgs([750, 1500, 500, 1000])
-        # self.set_indgs([1000, 1500, 1000, 2000])
+        self.special_dict['stp_dict'] = {}
+        self.set_indgs([750, 1500, 0, 1250])
+        # self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        # self.set_indgs([750, 1500, 0, 1250])
         # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
-        # self.net_dict['K_ext'][7] = 2000
-        # self.net_dict['K_ext'][9] = 0
-        # self.renew_conn('allen')
+        # self.net_dict['K_ext'] = np.array([750, 1500, 1000, 2000,
+        #                                    750, 1500, 1000,
+        #                                    500, 500, 1000,
+        #                                    500, 500, 1000])
         self.load_conn('7-15')
         self.vip_som(True)
 
@@ -135,6 +134,30 @@ class ScanParams:
 '''
 preliminary settings
 '''
+def set_paradox(para_dict, paradox_type, n, pops, offsets, start, duration, intrv, amp=0.1, freq=10.):
+    para_dict['stim_dict']['paradox']['type'] = paradox_type
+    para_dict['stim_dict']['paradox']['offsets'] = offsets
+    para_dict['stim_dict']['paradox']['n'] = n
+    para_dict['stim_dict']['paradox']['duration'] = duration
+    para_dict['stim_dict']['paradox']['targets'] = pops
+    # handle starts
+    starts_dict, n_offset, seg = {}, len(offsets), duration+intrv
+    for offset in offsets:
+        starts_dict[str(offset)] = []
+    for i in range(n):
+        tmps = np.array([start + i*n_offset*seg + j*seg for j in range(n_offset)])
+        np.random.shuffle(tmps)
+        for k, tmp in enumerate(tmps):
+            starts_dict[str(offsets[k])].append(tmp)
+    # for i, offset in enumerate(offsets):
+    #     starts_dict[str(offset)] = [start + i*n*(duration+intrv) + j*(duration+intrv) for j in range(n)]
+    para_dict['stim_dict']['paradox']['starts'] = starts_dict
+    para_dict['stim_dict']['paradox']['intrv'] = intrv
+    if paradox_type == 'ac':
+        para_dict['stim_dict']['paradox']['amplitude'] = amp
+        para_dict['stim_dict']['paradox']['frequency'] = freq
+    return n*len(offsets)*(duration+intrv)
+
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):
     th_dict = {}
