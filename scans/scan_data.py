@@ -333,6 +333,6 @@ if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
     # scandata = ScanData(inputs)
-    scandata = ScanData(inputs, dims=dims)
-    scandata.rmse_flg = True
-    scandata.make_plots(afx='rmse_')
+    scandata = ScanData(inputs, dims=dims, rmse_flg=True)
+    # scandata.rmse_flg = True
+    # scandata.make_plots(afx='rmse_')

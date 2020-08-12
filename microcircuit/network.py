@@ -68,6 +68,7 @@ class Network:
         # self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
         self.weight_mat = get_weight_mtx(self.net_dict, self.spe_dict['ctsp'])
         self.weight_mat_std = self.net_dict['psp_stds']
+        self.dc_extra = self.net_dict['dc_extra']
         # if self.net_dict['poisson_input']:
         #     self.DC_amp_e = np.zeros(len(self.net_dict['populations']))
         # else:
@@ -93,6 +94,7 @@ class Network:
                 self.net_dict['neuron_model'], int(self.nr_neurons[i])
                 )
             E_L, V_th, C_m, tau_m, V_reset = ctsp_assign(pop, self.net_dict, self.spe_dict)
+            # print('self.dc_extra[i] = {}'.format(self.dc_extra[i]))
             nest.SetStatus(
                 population, {
                     'tau_syn_ex': self.net_dict['neuron_params']['tau_syn_ex'],
@@ -103,6 +105,7 @@ class Network:
                     'tau_m': tau_m,
                     'V_reset': self.net_dict['neuron_params']['V_reset']['default'],
                     't_ref': self.net_dict['neuron_params']['t_ref'],
+                    'I_e': self.dc_extra[i]
                     # 'I_e': self.DC_amp_e[i]
                     }
                 )
@@ -251,31 +254,6 @@ class Network:
                     self.paradox_gens.append(gen)
                     for k in self.stim_dict['paradox']['targets']:
                         nest.Connect(gen, self.pops[k])
-
-
-    # def create_ac_paradox(self):
-    #     if self.stim_dict['ac_paradox']['n'] > 0:
-    #         self.ac_paradox = []
-    #         duration = self.stim_dict['ac_paradox']['duration']
-    #         for i, offset in enumerate(self.stim_dict['ac_paradox']['offsets']):
-    #             print('ac start = {}'.format(self.stim_dict['ac_paradox']['starts'][str(offset)]))
-    #             if offset <= 0:
-    #                 continue
-    #             for j, start in enumerate(self.stim_dict['ac_paradox']['starts'][str(offset)]):
-    #                 ac = nest.Create(
-    #                     'ac_generator',
-    #                     params={
-    #                         'amplitude': self.stim_dict['ac_paradox']['amplitude'],
-    #                         'frequency': self.stim_dict['ac_paradox']['frequency'],
-    #                         'offset': offset,
-    #                         'phase': self.stim_dict['ac_paradox']['phase'],
-    #                         'start': start,
-    #                         'stop': start + duration,
-    #                     }
-    #                 )
-    #                 self.ac_paradox.append(ac)
-    #                 for k in self.stim_dict['ac_paradox']['targets']:
-    #                     nest.Connect(ac, self.pops[k])
 
 
     def create_connections(self):

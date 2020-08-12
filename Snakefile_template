@@ -1,7 +1,7 @@
-F1 = 750
-F2 = 1500
-F3 = range(500, 1501, 100)
-F4 = range(1000, 2001, 100)
+F1 = range(4, 10)
+F2 = range(2, 8)
+F3 = range(1000, 2001, 250)
+F4 = 0
 
 localrules: all, create
 
@@ -10,7 +10,7 @@ rule all:
         expand('scans/{a}_{b}_{c}_{d}/', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python scans/scan_data.py exc pv som none {input}
+        python scans/scan_data.py g bg_rate vip none {input}
         mkdir -p ../png/
         mv *.png ../png/
         '''

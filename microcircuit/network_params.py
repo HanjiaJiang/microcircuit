@@ -55,9 +55,9 @@ def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None):
     ipsp_pv2e = mtx_i[0, 1]
     if flg_e is False:
         if isinstance(g, int):
-            mtx_e = np.full((4, 4), 0.75)    # mean
+            mtx_e = np.full((4, 4), 0.7543)    # mean
         else:
-            mtx_e = np.full((4, 4), 0.96)    # s.d.
+            mtx_e = np.full((4, 4), 1.2704)    # s.d. (relative)
     # assign by layer
     for a, row in enumerate(mtx_e):
         for b, epsp in enumerate(row):
@@ -191,7 +191,8 @@ net_dict = {
                       [0.0000, 0.1798, 0.1662, 0.1744]])
         },
     # compensate w by U
-    'U-compensate': True
+    'U-compensate': True,
+    'dc_extra': np.zeros(13).astype(float)
     }
 
 

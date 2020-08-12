@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = False
+    do_ai = True
     do_response = False
     do_selectivity = False
 
@@ -22,6 +22,9 @@ if __name__ == "__main__":
     n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
+
+    # set background input
+    indgs = [750,1500,500,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -32,15 +35,17 @@ if __name__ == "__main__":
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
     t_sim += len_stim
 
-    # set input for paradox effect
+    # set paradox effect input
     paradox_type = 'dc'
     n_paradox, paradox_start, = 10, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
-    paradox_pops = [1, 5, 8, 11]
+    paradox_pops = [1, 2, 3, 5, 6, 8, 9, 11, 12]
     paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
     # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
     paradox_freq, paradox_ac_amp = 10., 0.1 # ac
-    # t_sim += n_paradox*len(paradox_offsets)*(paradox_duration+paradox_intrv)
+
+    # set dc_extra
+    dc_extra_targets, dc_extra_amps = [], []
 
     # set others
     plot_half_len = 100.0
@@ -65,7 +70,7 @@ if __name__ == "__main__":
 
         # create pickle file
         pickle_path = os.path.join(dpath, 'para_dict.pickle')
-        scanparams.do_single(pickle_path)
+        scanparams.do_single(pickle_path, indgs=indgs)
 
     # get parameters from pickle
     with open(pickle_path, 'rb') as handle:
@@ -87,6 +92,8 @@ if __name__ == "__main__":
         paradox_ac_amp, paradox_freq)
     para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
     para_dict['sim_dict']['t_sim'] = t_sim
+    for target, amp in zip(dc_extra_targets, dc_extra_amps):
+        para_dict['net_dict']['dc_extra'][target] = amp
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
     # initialize and run
@@ -110,7 +117,7 @@ if __name__ == "__main__":
         if n_stim > 0:
             t1 = time.time()
             if do_response:
-                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True, bw=5.)
+                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True, bw=1.)
             t2 = time.time()
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
@@ -122,8 +129,8 @@ if __name__ == "__main__":
         analysis.paradox_fr(spikes, para_dict['stim_dict']['paradox'], zoomin=False)
 
         # if not on_server:
-        analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-        analysis.fr_plot(spikes)
+        # analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+        # analysis.fr_plot(spikes)
 
         spikes.verify_print(data_path)
 
