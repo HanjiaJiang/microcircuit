@@ -19,12 +19,12 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 10000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [750,1500,500,1250]
+    indgs = [1000,1500,750,1000]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # set paradox effect input
     paradox_type = 'dc'
-    n_paradox, paradox_start, = 10, t_sim
+    n_paradox, paradox_start, = 0, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
     paradox_pops = [1, 2, 3, 5, 6, 8, 9, 11, 12]
     paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
@@ -49,7 +49,9 @@ if __name__ == "__main__":
 
     # set others
     plot_half_len = 100.0
-    plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
+    plot_center = start_ai
+    # plot_center = stims[0]
+    # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
     scanparams = create.ScanParams()
@@ -125,12 +127,11 @@ if __name__ == "__main__":
             t3 = time.time()
             print('response() runing time = {}'.format(t2 - t1))
             print('selectivity() runing time = {}'.format(t3 - t2))
-        analysis.paradox_fr(spikes, para_dict['stim_dict']['paradox'])
-        analysis.paradox_fr(spikes, para_dict['stim_dict']['paradox'], zoomin=False)
+        analysis.paradox_calc(spikes, para_dict['stim_dict']['paradox'])
 
         # if not on_server:
-        # analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
-        # analysis.fr_plot(spikes)
+        analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+        analysis.fr_plot(spikes)
 
         spikes.verify_print(data_path)
 

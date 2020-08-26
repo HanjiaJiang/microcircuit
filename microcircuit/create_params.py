@@ -29,8 +29,8 @@ class ScanParams:
         self.net_dict['epsp']['use'] = False
         self.net_dict['ipsp']['use'] = False
         self.net_dict['U-compensate'] = True
-        # self.special_dict['stp_dict'] = {}
-        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        self.special_dict['stp_dict'] = {}
+        # self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
         # self.net_dict['K_ext'] = np.array([750, 1500, 500, 1250,
@@ -166,7 +166,7 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
         para_dict['stim_dict']['th_start'] = np.array(th_starts).astype(float)
         para_dict['stim_dict']['th_duration'] = duration
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
-        para_dict['stim_dict']['conn_probs_th'] = np.array([0.058, 0.058, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
+        para_dict['stim_dict']['conn_probs_th'] = np.array([0.062, 0.062, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
     para_dict['special_dict']['orient_tuning'] = orient
 
 '''

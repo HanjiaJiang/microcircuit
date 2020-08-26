@@ -1,5 +1,5 @@
-F1 = range(4, 10)
-F2 = range(2, 8)
+F1 = range(4, 11)
+F2 = range(2, 9)
 F3 = range(1000, 2001, 250)
 F4 = 0
 
@@ -13,6 +13,7 @@ rule all:
         python scans/scan_data.py g bg_rate vip none {input}
         mkdir -p ../png/
         mv *.png ../png/
+        cp -r ../run_network.py ../Snakefile* ../microcircuit/ ../png/
         '''
 
 rule create:

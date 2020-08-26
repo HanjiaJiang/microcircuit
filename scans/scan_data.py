@@ -5,17 +5,18 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 matplotlib.rcParams['font.size'] = 15.0
 np.set_printoptions(precision=3, linewidth=500, suppress=True)
 # from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), rmse_flg=False):
-        self.set_params(plotvars, figsize, criteria, rmse_flg)
+    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), mark_flg=False):
+        self.set_params(plotvars, figsize, criteria, mark_flg)
         self.set_data(inputs, dims)
 
-    def set_params(self, plotvars, figsize, criteria, rmse_flg):
+    def set_params(self, plotvars, figsize, criteria, mark_flg):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
@@ -32,7 +33,7 @@ class ScanData:
         else:
             self.criteria = criteria
         # RMSE
-        self.rmse_flg = rmse_flg
+        self.mark_flg = mark_flg
         self.rmse_criteria = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
                             r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
                             r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
@@ -212,29 +213,29 @@ class ScanData:
                 # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
-                    origin='lower',
-                    extent=self.extent,
-                    vmin=vmin,
-                    vmax=vmax)
+                    origin='lower', extent=self.extent,
+                    vmin=vmin, vmax=vmax, zorder=1)
+
+                # patch to cover grid (shitty)
+                rect = patches.Rectangle((xs[0],ys[0]),(xs[-1]-xs[0]),(ys[-1]-ys[0]), edgecolor='w',facecolor='w', zorder=2)
+                ax.add_patch(rect)
 
                 # contour
                 cf = ax.contourf(data,
                     levels=np.linspace(vmin, vmax, 11),
                     cmap=self.cmaps[plotvar],
-                    origin='lower',
-                    extent=self.extent,
-                    vmin=vmin,
-                    vmax=vmax)
+                    origin='lower', extent=self.extent,
+                    vmin=vmin, vmax=vmax, zorder=3,
+                    extend='max')
+                cf.cmap.set_over('darkblue')
                 ct = ax.contour(data,
                     levels=np.linspace(vmin, vmax, 11),
-                    origin='lower',
-                    extent=self.extent,
-                    colors='gray',
-                    linewidths=0.5,
-                    vmin=vmin,
-                    vmax=vmax)
-                ax.clabel(ct, fmt=self.clabel_format[plotvar],
-                colors='k', inline=True, fontsize=10)
+                    origin='lower', extent=self.extent,
+                    colors='gray', linewidths=0.5,
+                    vmin=vmin, vmax=vmax, zorder=4)
+                if self.mark_flg:
+                    ax.clabel(ct, fmt=self.clabel_format[plotvar],
+                    colors='k', inline=True, fontsize=10)
 
                 # single- & triple-fit patches
                 if plotvar in self.criteria:
@@ -257,22 +258,22 @@ class ScanData:
                     print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
                     # plot
                     cf_fit = ax.contourf(fit_mtx,
-                        levels=[5.0, 15.0, 25.0],
+                        levels=[9., 19., 25.],
                         origin='lower',
                         extent=self.extent,
                         hatches=['//', '++', ''],
                         alpha=0.0,
                         linewidth=0.5,
-                        zorder=9)
+                        zorder=5)
                     cf_fit = ax.contour(fit_mtx,
-                        levels=[5.0, 15.0],
+                        levels=[9., 19.],
                         origin='lower',
                         extent=self.extent,
                         linewidth=0.5,
-                        colors='k')
+                        colors='k', zorder=6)
 
                 # RMSE
-                if self.rmse_flg:
+                if self.mark_flg:
                     rmse_mtx = self.rmse[str(zb)][str(za)].T  # (y, x)
                     # mark best RMSEs
                     if c == 0:
@@ -280,16 +281,16 @@ class ScanData:
                         best_rmse = np.min(rmse_mtx)
                         i_y, i_x = np.where(rmse_mtx==best_rmse)
                         ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
-                        color='yellow', edgecolor='k', zorder=9)
+                        color='yellow', edgecolor='k', zorder=7)
                         # best RMSE in the triple-fit area
                         if len(rmse_mtx[np.where(all_fit==1)]) > 0:
                             best_rmse = np.min(rmse_mtx[np.where(all_fit==1)])
                             i_y, i_x = np.where(rmse_mtx==best_rmse)
                             ax.scatter(xs[i_x], ys[i_y], s=100, marker='*',
-                            color='yellow', edgecolor='k', zorder=10)
-                            ax.text(xs[i_x]+100, ys[i_y],
+                            color='yellow', edgecolor='k', zorder=8)
+                            ax.text(xs[i_x], ys[i_y],
                             '{:.1f}'.format(best_rmse),
-                            color='magenta', fontsize=10, zorder=10)
+                            color='r', fontsize=10, zorder=9)
                     # text RMSE values
                     if plotvar == r'$r_{PV}$':
                         for a, y in enumerate(ys):
@@ -320,7 +321,7 @@ class ScanData:
                     ax.set_ylabel(ylbl)
                     ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
-        # if self.rmse_flg:
+        # if self.mark_flg:
         #     plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         plot_name = os.getcwd().split('/')[-1] + '_' + plot_name
@@ -333,6 +334,6 @@ if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
     # scandata = ScanData(inputs)
-    scandata = ScanData(inputs, dims=dims, rmse_flg=True)
-    # scandata.rmse_flg = True
-    # scandata.make_plots(afx='rmse_')
+    scandata = ScanData(inputs, dims=dims)
+    scandata.mark_flg = True
+    scandata.make_plots(afx='mark_')

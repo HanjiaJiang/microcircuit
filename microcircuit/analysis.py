@@ -823,21 +823,37 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
         xy_by_layer = []
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
 
-def paradox_fr(spikes, params_dict, zoomin=True):
-    if not params_dict['n'] > 0:
+
+def paradox_plot(spikes, xs, frs_all, normalize=False, ylims=(0.0, 5.0), shrink=8):
+    fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
+    plt.xlabel('I (pA)')
+    affix = 'normalized' if normalize else ''
+    plt.ylabel('{} r (spike/s)'.format(affix))
+    for i, gids in enumerate(spikes.gids):
+        # axs[spikes.layers[i]].hlines(1., params_dict['offsets'][0], params_dict['offsets'][-1], linestyles=':', color='k')
+        if normalize is False and spikes.subtypes[i] in ['PV', 'VIP']:
+            frs = np.array(frs_all[i])/shrink
+        else:
+            frs = np.array(frs_all[i])
+        axs[spikes.layers[i]].plot(xs, frs, color=spikes.colors[i], linewidth=2, marker='.', markersize=10)
+    # legend
+    for i in range(4):
+        axs[0].plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
+    axs[0].legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.5))
+    if normalize is False and isinstance(ylims, tuple):
+        plt.ylim(ylims)
+    plt.savefig(os.path.join(spikes.path, 'paradox_{}.png'.format(affix)), bbox_inches='tight')
+    plt.close()
+
+def paradox_calc(spikes, prdx_dict):
+    if prdx_dict['n'] <= 0:
         return
     f = open(os.path.join(spikes.path, 'paradox.dat'), 'w')
-    ac_n, duration = params_dict['n'], params_dict['duration']
-    fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
-    plt.xlabel('{} input (pA)'.format(params_dict['type']))
-    plt.ylabel('normalized firing rate')
+    n_stim, duration = prdx_dict['n'], prdx_dict['duration']
+    frs_all, frsnorm_all = [], []
     for i, gids in enumerate(spikes.gids):
-        frs = []
-        n_pop = gids[1] - gids[0] + 1
-        # data_gs = spikes.get_data(begin_gs, end_gs)[i]
-        # if type(data_gs) == np.ndarray and data_gs.ndim == 2:
-        #     fr_gs = 1000*(len(data_gs)/n_pop)/(end_gs - begin_gs)
-        for j, (offset, starts) in enumerate(params_dict['starts'].items()):
+        frs, n_pop = [], gids[1] - gids[0] + 1
+        for j, (offset, starts) in enumerate(prdx_dict['starts'].items()):
             spk_sum, fr = 0, np.nan
             for k, start in enumerate(starts):
                 data = spikes.get_data(start+duration/2, start+duration)[i]
@@ -845,20 +861,53 @@ def paradox_fr(spikes, params_dict, zoomin=True):
                     spk_sum = np.nan
                     break
                 spk_sum += len(data)
-            fr = 1000*(spk_sum/n_pop)/(ac_n*(duration/2))
+            fr = 1000*(spk_sum/n_pop)/(n_stim*(duration/2))
             frs.append(fr)
             f.write('{:.3f}, '.format(fr))
+        frs_all.append(frs)
+        norm = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(prdx_dict['offsets']), np.nan)
+        frsnorm_all.append(norm)
         f.write('\n')
-        norm_frs = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(params_dict['offsets']), np.nan)
-        axs[spikes.layers[i]].plot(params_dict['offsets'], norm_frs, color=spikes.colors[i], linewidth=2, marker='.', markersize=10)
-        axs[spikes.layers[i]].hlines(1., params_dict['offsets'][0], params_dict['offsets'][-1], linestyles=':', color='k')
     f.close()
-    # legend
-    for i in range(4):
-        axs[0].plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
-    axs[0].legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.5))
-    # zoom in
-    if zoomin:
-        plt.ylim((0.5, 1.2))
-    plt.savefig(os.path.join(spikes.path, 'paradox-zoomin={}.png'.format(zoomin)), bbox_inches='tight')
-    plt.close()
+    paradox_plot(spikes, prdx_dict['offsets'], frs_all, normalize=False)
+    paradox_plot(spikes, prdx_dict['offsets'], frsnorm_all, normalize=True)
+
+# def paradox_fr(spikes, params_dict, zoomin=True):
+#     if not params_dict['n'] > 0:
+#         return
+#     f = open(os.path.join(spikes.path, 'paradox.dat'), 'w')
+#     ac_n, duration = params_dict['n'], params_dict['duration']
+#     fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
+#     plt.xlabel('{} input (pA)'.format(params_dict['type']))
+#     plt.ylabel('normalized firing rate')
+#     for i, gids in enumerate(spikes.gids):
+#         frs = []
+#         n_pop = gids[1] - gids[0] + 1
+#         # data_gs = spikes.get_data(begin_gs, end_gs)[i]
+#         # if type(data_gs) == np.ndarray and data_gs.ndim == 2:
+#         #     fr_gs = 1000*(len(data_gs)/n_pop)/(end_gs - begin_gs)
+#         for j, (offset, starts) in enumerate(params_dict['starts'].items()):
+#             spk_sum, fr = 0, np.nan
+#             for k, start in enumerate(starts):
+#                 data = spikes.get_data(start+duration/2, start+duration)[i]
+#                 if type(data) != np.ndarray or data.ndim != 2:
+#                     spk_sum = np.nan
+#                     break
+#                 spk_sum += len(data)
+#             fr = 1000*(spk_sum/n_pop)/(ac_n*(duration/2))
+#             frs.append(fr)
+#             f.write('{:.3f}, '.format(fr))
+#         f.write('\n')
+#         norm_frs = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(params_dict['offsets']), np.nan)
+#         axs[spikes.layers[i]].plot(params_dict['offsets'], norm_frs, color=spikes.colors[i], linewidth=2, marker='.', markersize=10)
+#         axs[spikes.layers[i]].hlines(1., params_dict['offsets'][0], params_dict['offsets'][-1], linestyles=':', color='k')
+#     f.close()
+#     # legend
+#     for i in range(4):
+#         axs[0].plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
+#     axs[0].legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.5))
+#     # zoom in
+#     if zoomin:
+#         plt.ylim((0.5, 1.2))
+#     plt.savefig(os.path.join(spikes.path, 'paradox-zoomin={}.png'.format(zoomin)), bbox_inches='tight')
+#     plt.close()

@@ -1,4 +1,4 @@
-stp = [0, 2]
+stp = [0]
 som = range(0, 1001, 250)
 lyr_epsp = 0
 lyr_ipsp = 0
