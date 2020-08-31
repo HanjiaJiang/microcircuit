@@ -15,7 +15,7 @@ mkdir -p out
 
 snakemake --unlock\
 
-snakemake --jobs 5\
+snakemake --jobs 10\
           --cluster-config cluster.json\
           --cluster "sbatch -n {cluster.n} \
                             -o out/gs.{jobid}.out \

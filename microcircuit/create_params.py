@@ -4,7 +4,7 @@ import copy
 import json
 import pickle
 import numpy as np
-from microcircuit.network_params import net_dict
+from microcircuit.network_params import net_dict, net_update
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
 from microcircuit.functions import special_dict
@@ -24,13 +24,13 @@ class ScanParams:
         self.stps = copy.deepcopy(stps)
 
     def set_constant(self, indgs=[750,1500,500,1250]):
-        self.net_dict['g'] = -8
+        self.net_dict['g'] = -8.0
         self.net_dict['bg_rate'] = 4.0
         self.net_dict['epsp']['use'] = False
         self.net_dict['ipsp']['use'] = False
         self.net_dict['U-compensate'] = True
         self.special_dict['stp_dict'] = {}
-        # self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
         # self.net_dict['K_ext'] = np.array([750, 1500, 500, 1250,
@@ -39,6 +39,19 @@ class ScanParams:
         #                                    1250, 1500, 0])
         self.load_conn('7-15')
         self.vip_som(True)
+        net_update(self.net_dict)
+
+    def set_weight(self, pre, post, factor):
+        for i, prepop in enumerate(self.net_dict['populations']):
+            for j, postpop in enumerate(self.net_dict['populations']):
+                if pre in prepop and post in postpop:
+                    self.net_dict['psp_means'][j, i] *= float(factor)
+
+    def set_conn(self, pre, post, factor):
+        for i, prepop in enumerate(self.net_dict['populations']):
+            for j, postpop in enumerate(self.net_dict['populations']):
+                if pre in prepop and post in postpop:
+                    self.net_dict['conn_probs'][j, i] *= float(factor)
 
     def del_item(self, dict_stp, keys=None, keysets=None):
         if keys is not None:
@@ -63,6 +76,8 @@ class ScanParams:
 
     def do_single(self, pickle_path, indgs=None):
         self.set_constant(indgs)
+        self.set_weight('PV', 'SOM', 1.25)
+        self.set_weight('SOM', 'PV', 1.25)
         self.save_pickle(pickle_path)
 
     def set_g(self, g):
@@ -195,8 +210,8 @@ def print_all(all_dict):
 
 # read parameters from given input string
 def read_levels(in_str):
-    out_str = os.path.basename(in_str).split('.')[0]    # filename with .
-    out_list = np.array(out_str.split('_')).astype(int)
+    out_str = os.path.basename(in_str).replace('.pickle', '')    # filename with .
+    out_list = np.array(out_str.split('_')).astype(float)
     return out_str, out_list
 
 # run scanning
@@ -211,20 +226,29 @@ if __name__ == "__main__":
 
     # constant parameters
     scanparams.set_stp(constants[0])
-    scanparams.set_som(constants[1])
+    scanparams.set_vip(constants[1])
     scanparams.set_epsp(constants[2])
     scanparams.set_ipsp(constants[3])
+    # scanparams.set_exc(constants[0])
+    # scanparams.set_pv(constants[1])
+    # scanparams.set_som(constants[2])
+    # scanparams.set_vip(constants[3])
+    # scanparams.set_conn('PV', 'SOM', constants[0])
+    # scanparams.set_conn('SOM', 'PV', constants[1])
     scanparams.vip_som(True)
 
     # parameters to be scanned
     for out in outs:
+        print(out)
         lvls_str, lvls = read_levels(out)
         scanparams.set_path(out, lvls_str)
-        # scanparams.set_exc(lvls[0])
-        # scanparams.set_pv(lvls[1])
-        scanparams.set_vip(lvls[2])
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(lvls[2])
+        # scanparams.set_g(lvls[0])
+        # scanparams.set_bg(lvls[1])
         # scanparams.set_epsp(lvls[2])
         # scanparams.set_ipsp(lvls[3])
+        # scanparams.set_weight('PV', 'SOM', lvls[0])
+        # scanparams.set_weight('SOM', 'PV', lvls[1])
         scanparams.save_pickle(out)

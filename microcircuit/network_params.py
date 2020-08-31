@@ -54,7 +54,7 @@ def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None):
     mtx = np.zeros((16, 16))
     ipsp_pv2e = mtx_i[0, 1]
     if flg_e is False:
-        if isinstance(g, int):
+        if isinstance(g, int) or isinstance(g, float):
             mtx_e = np.full((4, 4), 0.7543)    # mean
         else:
             mtx_e = np.full((4, 4), 1.2704)    # s.d. (relative)
@@ -62,7 +62,7 @@ def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None):
     for a, row in enumerate(mtx_e):
         for b, epsp in enumerate(row):
             mtx[a*4:a*4+4, b*4:b*4+4] = epsp
-            if isinstance(g, int):
+            if isinstance(g, int) or isinstance(g, float):
                 if flg_i:
                     mtx[a*4:a*4+4, b*4+1:b*4+4] = mtx_i[:, 1:]*np.abs(g/(ipsp_pv2e/epsp))
                 else:
@@ -196,7 +196,7 @@ net_dict = {
     }
 
 
-def net_update(n_dict, g):
+def net_update(n_dict):
     updated_dict = {
         # mean delay matrix.
         'mean_delay_matrix': get_mean_delays(
@@ -223,3 +223,5 @@ def net_update(n_dict, g):
             n_dict['ipsp']['use'])
     }
     n_dict.update(updated_dict)
+
+# net_update(net_dict)

@@ -14,17 +14,17 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = True
+    do_ai = False
     do_response = False
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 10000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [1000,1500,750,1000]
+    indgs = [750,1500,0,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -37,9 +37,9 @@ if __name__ == "__main__":
 
     # set paradox effect input
     paradox_type = 'dc'
-    n_paradox, paradox_start, = 0, t_sim
+    n_paradox, paradox_start, = 10, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
-    paradox_pops = [1, 2, 3, 5, 6, 8, 9, 11, 12]
+    paradox_pops = [1, 5, 8, 11]
     paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
     # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
     paradox_freq, paradox_ac_amp = 10., 0.1 # ac
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     scanparams = create.ScanParams()
 
     # get pickle, scan or single
+    cwd = os.getcwd()
     try:
         pickle_path = sys.argv[1]    # path to pickle file
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
-        cwd = os.getcwd()
 
         # handle data path and copy files
         dpath = os.path.join(cwd, 'data')
@@ -137,9 +137,12 @@ if __name__ == "__main__":
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(data_path):
-        for item in os.listdir(data_path):
-            if item.endswith('.gdf'):
-                os.remove(os.path.join(data_path, item))
+        os.system('rm {}/*.gdf'.format(data_path))
+        if n_paradox > 0:
+            affix = cwd.replace('/', '-') + '-' + data_path.replace('/', '-')
+            os.chdir(data_path)
+            os.system('for f in *.png; do mv -- \"$f\" \"${{f%}}{}\"; done'.format('.' + affix + '.png'))
+            os.chdir(cwd)
 
     if print_to_file:
         exec(analysis.end2txt())

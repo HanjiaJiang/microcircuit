@@ -233,9 +233,9 @@ class ScanData:
                     origin='lower', extent=self.extent,
                     colors='gray', linewidths=0.5,
                     vmin=vmin, vmax=vmax, zorder=4)
-                if self.mark_flg:
-                    ax.clabel(ct, fmt=self.clabel_format[plotvar],
-                    colors='k', inline=True, fontsize=10)
+                # if self.mark_flg:
+                #     ax.clabel(ct, fmt=self.clabel_format[plotvar],
+                #     colors='k', inline=True, fontsize=10)
 
                 # single- & triple-fit patches
                 if plotvar in self.criteria:
@@ -292,17 +292,17 @@ class ScanData:
                             '{:.1f}'.format(best_rmse),
                             color='r', fontsize=10, zorder=9)
                     # text RMSE values
-                    if plotvar == r'$r_{PV}$':
-                        for a, y in enumerate(ys):
-                            for b, x in enumerate(xs):
-                                clr = 'gray'
-                                if all_fit[a, b] == 1:
-                                    clr = 'magenta'
-                                ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
-                                color=clr, fontsize=8,
-                                horizontalalignment='center',
-                                verticalalignment='center',
-                                zorder=10)
+                    # if plotvar == r'$r_{PV}$':
+                    #     for a, y in enumerate(ys):
+                    #         for b, x in enumerate(xs):
+                    #             clr = 'gray'
+                    #             if all_fit[a, b] == 1:
+                    #                 clr = 'magenta'
+                    #             ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
+                    #             color=clr, fontsize=8,
+                    #             horizontalalignment='center',
+                    #             verticalalignment='center',
+                    #             zorder=10)
 
                 # many settings
                 ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
@@ -333,7 +333,6 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    # scandata = ScanData(inputs)
     scandata = ScanData(inputs, dims=dims)
     scandata.mark_flg = True
     scandata.make_plots(afx='mark_')
