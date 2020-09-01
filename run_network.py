@@ -14,12 +14,12 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = False
+    do_ai = True
     do_response = False
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
+    n_seg_ai, start_ai, seg_ai = 5, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # set paradox effect input
     paradox_type = 'dc'
-    n_paradox, paradox_start, = 10, t_sim
+    n_paradox, paradox_start, = 0, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
     paradox_pops = [1, 5, 8, 11]
     paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]

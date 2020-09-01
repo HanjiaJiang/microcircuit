@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from scipy.interpolate import interp1d, interp2d
 matplotlib.rcParams['font.size'] = 15.0
 np.set_printoptions(precision=3, linewidth=500, suppress=True)
 # from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -50,12 +51,13 @@ class ScanData:
                         r'$r_{PV}$': '%1.0f',
                         r'$r_{SOM}$': '%1.0f',
                         r'$r_{VIP}$': '%1.0f'}
-        self.vmaxs = {r'$r_{Exc}$': 20.0,
-                        'pairwise\ncorrelation': 0.1,
-                        'CV(ISI)': 1.0,
-                        r'$r_{PV}$': 50.0,
-                        r'$r_{SOM}$': 50.0,
-                        r'$r_{VIP}$': 50.0}
+        self.vlims = {r'$r_{Exc}$': [0., 10.],
+                        'pairwise\ncorrelation': [-0.02, 0.02],
+                        'CV(ISI)': [0.5, 1.5],
+                        r'$r_{PV}$': [0., None],
+                        r'$r_{SOM}$': [0., None],
+                        r'$r_{VIP}$': [0., None]
+                        }
 
     def set_data(self, inputs, dims):
         # dimensions
@@ -102,8 +104,8 @@ class ScanData:
         xs, ys, zas, zbs = self.df[xname].tolist(), self.df[yname].tolist(), self.df[zaname].tolist(), self.df[zbname].tolist() # float
         lvls_s = self.get_lvls([xs, ys, zas, zbs])
         xlvls, ylvls, zalvls, zblvls = lvls_s[0], lvls_s[1], lvls_s[2], lvls_s[3]
-        x_intrv, y_intrv = (xlvls[1] - xlvls[0]), (ylvls[1] - ylvls[0])
-        self.extent = [xlvls[0] - x_intrv/2, xlvls[-1] + x_intrv/2, ylvls[0] - y_intrv/2, ylvls[-1] + y_intrv/2]
+        # x_intrv, y_intrv = (xlvls[1] - xlvls[0]), (ylvls[1] - ylvls[0])
+        # self.extent = [xlvls[0] - x_intrv/2, xlvls[-1] + x_intrv/2, ylvls[0] - y_intrv/2, ylvls[-1] + y_intrv/2]
         self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls = xlvls, ylvls, zalvls, zblvls
         print('levels =')
         print(self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls)
@@ -186,26 +188,61 @@ class ScanData:
             for za in self.za_lvls:
                 self.colormap(za, zb, afx=afx)
 
+    def interpolate_frame(self, frame, resolution=(100,100), kind='linear'):
+        dim_x, dim_y = frame.shape
+        if np.iscomplexobj(frame):
+            re_frame = interpolate_frame(np.real(frame),
+                                         resolution=resolution,
+                                         kind=kind)
+            im_frame = interpolate_frame(np.imag(frame),
+                                         resolution=resolution,
+                                         kind=kind)
+            return re_frame + 1j*im_frame
+        else:
+            f = interp2d(np.arange(dim_x), np.arange(dim_y), np.nan_to_num(frame), kind=kind)
+            frame = f(np.linspace(0, dim_x-1, resolution[0]),
+                      np.linspace(0, dim_y-1, resolution[1]))
+        return frame
+
+    def interpol(self, data, resolution=(100, 100), cut=0.5):
+        data_interpol = copy.deepcopy(data) # to be interpolated
+        data_mask = copy.deepcopy(data) # mask for nan values
+        data_mask[np.isnan(data_mask) == False] = 1.
+        data_mask[np.isnan(data_mask)] = 0.
+        for i, row in enumerate(data_interpol):
+            for j, item in enumerate(row):
+                if np.isnan(item):
+                    a = data[i, j+1]  if j < len(row)-1 else np.nan
+                    b = data[i+1, j]  if i < len(data_interpol)-1 else np.nan
+                    c = data[i, j-1]  if j > 0 else np.nan
+                    d = data[i-1, j]  if i > 0 else np.nan
+                    arr = np.array([a, b, c, d])
+                    data_interpol[i, j] = np.nanmean(arr)
+        data_interpol = self.interpolate_frame(data_interpol, resolution=resolution)
+        data_mask = self.interpolate_frame(data_mask, resolution=resolution)
+        data_interpol[data_mask<cut] = np.nan
+        return data_interpol
+
     def colormap(self, za, zb, afx=None):
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
+        extent = [xs[0], xs[-1], ys[0], ys[-1]]
         plt.xlim((xs[0], xs[-1]))
         plt.ylim((ys[0], ys[-1]))
+        plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg_rate', r'$r_{bg}$')
         # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
-            vmin, vmax = 0.0, self.vmaxs[plotvar]
-            if plotvar == 'pairwise\ncorrelation':
-                vmin = -vmax
+            vmin, vmax = self.vlims[plotvar][0], self.vlims[plotvar][1]
             # fit in all criteria and layers
             all_fit = np.ones((len(ys), len(xs)))
             # loop layers
             for r in range(4):
                 ax = axs[r, c]
-                # plot data
-                data = self.mtxs[str(zb)][str(za)][plotvar][r].T    # (y, x)
+                # plot interpolated data (y, x)
+                data = self.interpol(self.mtxs[str(zb)][str(za)][plotvar][r].T)
                 if plotvar == r'$r_{VIP}$' and r > 0:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
@@ -213,7 +250,7 @@ class ScanData:
                 # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
-                    origin='lower', extent=self.extent,
+                    origin='lower', extent=extent,
                     vmin=vmin, vmax=vmax, zorder=1)
 
                 # patch to cover grid (shitty)
@@ -222,17 +259,17 @@ class ScanData:
 
                 # contour
                 cf = ax.contourf(data,
-                    levels=np.linspace(vmin, vmax, 11),
+                    levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
                     cmap=self.cmaps[plotvar],
-                    origin='lower', extent=self.extent,
+                    origin='lower', extent=extent,
                     vmin=vmin, vmax=vmax, zorder=3,
                     extend='max')
                 cf.cmap.set_over('darkblue')
-                ct = ax.contour(data,
-                    levels=np.linspace(vmin, vmax, 11),
-                    origin='lower', extent=self.extent,
-                    colors='gray', linewidths=0.5,
-                    vmin=vmin, vmax=vmax, zorder=4)
+                # ct = ax.contour(data,
+                #     levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
+                #     origin='lower', extent=extent,
+                #     colors='gray', linewidths=0.5,
+                #     vmin=vmin, vmax=vmax, zorder=4)
                 # if self.mark_flg:
                 #     ax.clabel(ct, fmt=self.clabel_format[plotvar],
                 #     colors='k', inline=True, fontsize=10)
@@ -242,7 +279,7 @@ class ScanData:
                     # single fit
                     fits = self.fits[str(zb)][str(za)][plotvar][r].T
                     # triple-fit
-                    tri_fits = np.ones(data.shape)
+                    tri_fits = np.ones(fits.shape)
                     for k in self.criteria.keys():
                         tri_fits = np.multiply(tri_fits, self.fits[str(zb)][str(za)][k][r].T) # (y, x)
                         # save all-fit (across layers), for RMSE later
@@ -250,26 +287,26 @@ class ScanData:
                             for row in range(4):
                                 all_fit = np.multiply(all_fit, self.fits[str(zb)][str(za)][k][row].T)
                     # matrix for single and triple-fit
-                    fit_mtx = np.zeros(data.shape)
+                    fit_mtx = np.zeros(fits.shape)
                     fit_mtx[np.where(fits == 1)] = 10.0 # single
                     fit_mtx[np.where(tri_fits==1)] = 20.0 # triple
                     # validate
-                    print('{}, layer {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
-                    print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
+                    # print('{}, layer {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
+                    # print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
                     # plot
                     cf_fit = ax.contourf(fit_mtx,
                         levels=[9., 19., 25.],
                         origin='lower',
-                        extent=self.extent,
+                        extent=extent,
                         hatches=['//', '++', ''],
                         alpha=0.0,
-                        linewidth=0.5,
+                        linewidth=0.25,
                         zorder=5)
                     cf_fit = ax.contour(fit_mtx,
                         levels=[9., 19.],
                         origin='lower',
-                        extent=self.extent,
-                        linewidth=0.5,
+                        extent=extent,
+                        linewidth=0.25,
                         colors='k', zorder=6)
 
                 # RMSE
@@ -334,5 +371,5 @@ if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
     scandata = ScanData(inputs, dims=dims)
-    scandata.mark_flg = True
-    scandata.make_plots(afx='mark_')
+    # scandata.mark_flg = True
+    # scandata.make_plots(afx='mark_')
