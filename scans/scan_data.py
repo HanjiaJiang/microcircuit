@@ -227,7 +227,9 @@ class ScanData:
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
-        extent = [xs[0], xs[-1], ys[0], ys[-1]]
+        extent1 = [xs[0], xs[-1], ys[0], ys[-1]]
+        extent2 = [xs[0]-(xs[1]-xs[0])/2, xs[-1]+(xs[1]-xs[0])/2,
+                   ys[0]-(ys[1]-ys[0])/2, ys[-1]+(ys[1]-ys[0])/2]
         plt.xlim((xs[0], xs[-1]))
         plt.ylim((ys[0], ys[-1]))
         plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
@@ -250,7 +252,7 @@ class ScanData:
                 # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
-                    origin='lower', extent=extent,
+                    origin='lower', extent=extent1,
                     vmin=vmin, vmax=vmax, zorder=1)
 
                 # patch to cover grid (shitty)
@@ -261,13 +263,13 @@ class ScanData:
                 cf = ax.contourf(data,
                     levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
                     cmap=self.cmaps[plotvar],
-                    origin='lower', extent=extent,
+                    origin='lower', extent=extent1,
                     vmin=vmin, vmax=vmax, zorder=3,
                     extend='max')
                 cf.cmap.set_over('darkblue')
                 # ct = ax.contour(data,
                 #     levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
-                #     origin='lower', extent=extent,
+                #     origin='lower', extent=extent1,
                 #     colors='gray', linewidths=0.5,
                 #     vmin=vmin, vmax=vmax, zorder=4)
                 # if self.mark_flg:
@@ -276,6 +278,19 @@ class ScanData:
 
                 # single- & triple-fit patches
                 if plotvar in self.criteria:
+                    # # fit: interpolated
+                    # cri = self.criteria[plotvar][r]
+                    # fits_intrp, trifits_intrp = np.zeros(data.shape), np.ones(data.shape)
+                    # fits_intrp[(cri[0]<=data)&(data<=cri[1])] = 1
+                    # # triple
+                    # for k in self.criteria.keys():
+                    #     cri_tri = self.criteria[k][r]
+                    #     tmp = self.interpol(self.mtxs[str(zb)][str(za)][k][r].T)
+                    #     tmp[(cri_tri[0]<=tmp)&(tmp<=cri_tri[1])] = 1
+                    #     tmp[(cri_tri[0]>tmp)|(tmp>cri_tri[1])] = 0
+                    #     tmp[np.isnan(tmp)] = 0
+                    #     trifits_intrp = np.multiply(trifits_intrp, tmp)
+                    # fit: not interpolated
                     # single fit
                     fits = self.fits[str(zb)][str(za)][plotvar][r].T
                     # triple-fit
@@ -288,16 +303,12 @@ class ScanData:
                                 all_fit = np.multiply(all_fit, self.fits[str(zb)][str(za)][k][row].T)
                     # matrix for single and triple-fit
                     fit_mtx = np.zeros(fits.shape)
-                    fit_mtx[np.where(fits == 1)] = 10.0 # single
+                    fit_mtx[np.where(fits==1)] = 10.0 # single
                     fit_mtx[np.where(tri_fits==1)] = 20.0 # triple
-                    # validate
-                    # print('{}, layer {}, criteria = {}'.format(plotvar, self.lyrs[r], self.criteria[plotvar][r]))
-                    # print('data:\n{}\n{}'.format(data[::-1], fit_mtx[::-1]))
-                    # plot
                     cf_fit = ax.contourf(fit_mtx,
                         levels=[9., 19., 25.],
                         origin='lower',
-                        extent=extent,
+                        extent=extent2,
                         hatches=['//', '++', ''],
                         alpha=0.0,
                         linewidth=0.25,
@@ -305,9 +316,10 @@ class ScanData:
                     cf_fit = ax.contour(fit_mtx,
                         levels=[9., 19.],
                         origin='lower',
-                        extent=extent,
+                        extent=extent2,
                         linewidth=0.25,
-                        colors='k', zorder=6)
+                        zorder=6,
+                        colors='k')
 
                 # RMSE
                 if self.mark_flg:

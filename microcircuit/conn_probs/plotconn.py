@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plotconn(fn, raw=False, threshold=False, vipconn=True, vmax=0.6):
+def plotconn(fn, raw=False, threshold=False, vipconn=True, vmax=1.0):
     # set labels
     pop_lbls = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
                 'L4 Exc', 'L4 PV', 'L4 SOM',
@@ -33,22 +33,27 @@ def plotconn(fn, raw=False, threshold=False, vipconn=True, vmax=0.6):
     )
 
     # values
-    mtx = conn_estimate_mtx()
+    # mtx_est = conn_estimate_mtx()
+    mtx_real = conn_real_mtx()
     for i in range(13):
         for j in range(13):
-            prob, fsize, fcolor = data[i, j], 12, 'k'
+            prob, fsize, fcolor, weight= data[i, j], 12, 'k', 'normal'
             text = '{:.0%}'.format(prob)
-            if threshold is True and prob < 0.05:
-                fcolor = 'gray'
-            if prob > 2*vmax/3:
-                fcolor = 'w'
-            if '7-15' in fn and mtx[i][j] == 1:
-                text += '*'
+            # if threshold is True and prob < 0.05:
+            #     fcolor = 'gray'
+            # if prob > 2*vmax/3:
+            #     fcolor = 'w'
+            if '7-15' in fn:
+                if mtx_real[i][j] == 1:
+                    text += '*'
+                    # weight = 'heavy'
             plt.text(j+0.5, 12-i+0.5, text,
             fontsize=fsize,
             color=fcolor,
             horizontalalignment='center',
-            verticalalignment='center')
+            verticalalignment='center',
+            weight=weight
+            )
     ax = plt.gca()
 
     # source/target labels
@@ -92,6 +97,23 @@ def conn_estimate_mtx():
            [0,0,0,0,0,0,0,0,0,0,0,1,1],
            [0,0,0,0,0,0,0,0,0,0,1,1,1],
            [0,0,0,0,0,0,0,0,0,0,1,1,1],
+           ]
+    return mtx
+
+def conn_real_mtx():
+    mtx = [ [1,0,1,1,1,0,0,1,0,0,1,0,0],
+            [1,1,1,1,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,0,0,0,0,0,0,0,0,0],
+            [1,0,0,0,1,1,1,1,0,0,1,0,0],
+            [0,0,0,0,0,1,1,0,0,0,0,0,0],
+            [0,0,0,0,1,1,1,0,0,0,0,0,0],
+            [1,0,0,0,1,0,0,1,0,0,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [1,0,0,0,1,0,0,1,0,0,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0],
            ]
     return mtx
 

@@ -19,12 +19,12 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 5, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [750,1500,0,1250]
+    indgs = [750,1500,500,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection

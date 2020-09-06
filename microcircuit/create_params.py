@@ -30,7 +30,7 @@ class ScanParams:
         self.net_dict['ipsp']['use'] = False
         self.net_dict['U-compensate'] = True
         self.special_dict['stp_dict'] = {}
-        # self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
         # self.net_dict['K_ext'] = np.array([750, 1500, 500, 1250,
