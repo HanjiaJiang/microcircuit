@@ -33,13 +33,19 @@ class ScanParams:
         self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
-        # self.net_dict['K_ext'] = np.array([750, 1500, 500, 1250,
+        # self.net_dict['K_ext'] = np.array([750, 1500, 500, 2000,
         #                                    750, 1500, 500,
-        #                                    1250, 1500, 0,
-        #                                    1250, 1500, 0])
+        #                                    1000, 1000, 0,
+        #                                    1000, 1000, 0])
         self.load_conn('7-15')
-        self.vip_som(True)
+        # self.vip_som(True)
         net_update(self.net_dict)
+
+    def do_single(self, pickle_path, indgs=None):
+        self.set_constant(indgs)
+        # self.set_weight('Exc', 'Exc', 1.25)
+        # self.set_weight('SOM', 'PV', 1.25)
+        self.save_pickle(pickle_path)
 
     def set_weight(self, pre, post, factor):
         for i, prepop in enumerate(self.net_dict['populations']):
@@ -73,12 +79,6 @@ class ScanParams:
 
     def set_path(self, pickle_path, lvls_str):
         self.sim_dict['data_path'] = os.path.join(os.path.dirname(pickle_path), lvls_str)
-
-    def do_single(self, pickle_path, indgs=None):
-        self.set_constant(indgs)
-        self.set_weight('PV', 'SOM', 1.25)
-        self.set_weight('SOM', 'PV', 1.25)
-        self.save_pickle(pickle_path)
 
     def set_g(self, g):
         self.net_dict['g'] = -int(np.abs(int(g)))

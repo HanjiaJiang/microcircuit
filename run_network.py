@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = True
+    do_ai = False
     do_response = False
     do_selectivity = False
 

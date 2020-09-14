@@ -56,7 +56,7 @@ class ScanData:
                         'CV(ISI)': [0.5, 1.5],
                         r'$r_{PV}$': [0., None],
                         r'$r_{SOM}$': [0., None],
-                        r'$r_{VIP}$': [0., None]
+                        r'$r_{VIP}$': [0., 10.]
                         }
 
     def set_data(self, inputs, dims):
@@ -223,6 +223,48 @@ class ScanData:
         data_interpol[data_mask<cut] = np.nan
         return data_interpol
 
+    def get_multifit(self, za, zb, plotvar, r):
+        fits = self.fits[str(zb)][str(za)][plotvar][r].T
+        multi_fits = np.ones((len(self.y_lvls), len(self.x_lvls)))
+        all_fits = np.ones((len(self.y_lvls), len(self.x_lvls)))
+        for k in self.criteria.keys():
+            # multi-fit (same layer, across criteria)
+            multi_fits = np.multiply(multi_fits, self.fits[str(zb)][str(za)][k][r].T) # (y, x)
+            # all-fit (across layers and criteria)
+            for row in range(4):
+                all_fits = np.multiply(all_fits, self.fits[str(zb)][str(za)][k][row].T)
+        return fits, multi_fits, all_fits
+
+    def plot_fitpatch(self, ax, fits, multi_fits, extent):
+        fit_mtx = np.zeros(fits.shape)
+        fit_mtx[np.where(fits==1)] = 10.0 # single
+        fit_mtx[np.where(multi_fits==1)] = 20.0 # triple
+        cf_fit = ax.contourf(fit_mtx,
+            levels=[9., 19., 25.],
+            origin='lower',
+            extent=extent,
+            hatches=['//', '++', ''],
+            alpha=0.0,
+            linewidth=0.25,
+            zorder=5)
+        cf_fit = ax.contour(fit_mtx,
+            levels=[9., 19.],
+            origin='lower',
+            extent=extent,
+            linewidth=0.25,
+            zorder=6,
+            colors='k')
+
+    def plot_fitpoint(self, ax, fits, multi_fits):
+        iy, ix = np.where(fits == 1)
+        xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
+        print(xs, ys)
+        ax.scatter(xs, ys, color='gray', s=8, marker='o', zorder=5)
+        iy, ix = np.where(multi_fits == 1)
+        xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
+        ax.scatter(xs, ys, color='k', s=8, marker='o', zorder=6)
+        pass
+
     def colormap(self, za, zb, afx=None):
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
@@ -238,8 +280,6 @@ class ScanData:
         # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = self.vlims[plotvar][0], self.vlims[plotvar][1]
-            # fit in all criteria and layers
-            all_fit = np.ones((len(ys), len(xs)))
             # loop layers
             for r in range(4):
                 ax = axs[r, c]
@@ -276,50 +316,11 @@ class ScanData:
                 #     ax.clabel(ct, fmt=self.clabel_format[plotvar],
                 #     colors='k', inline=True, fontsize=10)
 
-                # single- & triple-fit patches
+                # single- & triple-fit (not interpolated)
                 if plotvar in self.criteria:
-                    # # fit: interpolated
-                    # cri = self.criteria[plotvar][r]
-                    # fits_intrp, trifits_intrp = np.zeros(data.shape), np.ones(data.shape)
-                    # fits_intrp[(cri[0]<=data)&(data<=cri[1])] = 1
-                    # # triple
-                    # for k in self.criteria.keys():
-                    #     cri_tri = self.criteria[k][r]
-                    #     tmp = self.interpol(self.mtxs[str(zb)][str(za)][k][r].T)
-                    #     tmp[(cri_tri[0]<=tmp)&(tmp<=cri_tri[1])] = 1
-                    #     tmp[(cri_tri[0]>tmp)|(tmp>cri_tri[1])] = 0
-                    #     tmp[np.isnan(tmp)] = 0
-                    #     trifits_intrp = np.multiply(trifits_intrp, tmp)
-                    # fit: not interpolated
-                    # single fit
-                    fits = self.fits[str(zb)][str(za)][plotvar][r].T
-                    # triple-fit
-                    tri_fits = np.ones(fits.shape)
-                    for k in self.criteria.keys():
-                        tri_fits = np.multiply(tri_fits, self.fits[str(zb)][str(za)][k][r].T) # (y, x)
-                        # save all-fit (across layers), for RMSE later
-                        if c == 0:
-                            for row in range(4):
-                                all_fit = np.multiply(all_fit, self.fits[str(zb)][str(za)][k][row].T)
-                    # matrix for single and triple-fit
-                    fit_mtx = np.zeros(fits.shape)
-                    fit_mtx[np.where(fits==1)] = 10.0 # single
-                    fit_mtx[np.where(tri_fits==1)] = 20.0 # triple
-                    cf_fit = ax.contourf(fit_mtx,
-                        levels=[9., 19., 25.],
-                        origin='lower',
-                        extent=extent2,
-                        hatches=['//', '++', ''],
-                        alpha=0.0,
-                        linewidth=0.25,
-                        zorder=5)
-                    cf_fit = ax.contour(fit_mtx,
-                        levels=[9., 19.],
-                        origin='lower',
-                        extent=extent2,
-                        linewidth=0.25,
-                        zorder=6,
-                        colors='k')
+                    fits, tri_fits, all_fits = self.get_multifit(za, zb, plotvar, r)
+                    self.plot_fitpoint(ax, fits, tri_fits)
+                    # self.plot_fitpatch(ax, fits, tri_fits, extent2)
 
                 # RMSE
                 if self.mark_flg:
@@ -332,8 +333,8 @@ class ScanData:
                         ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
                         color='yellow', edgecolor='k', zorder=7)
                         # best RMSE in the triple-fit area
-                        if len(rmse_mtx[np.where(all_fit==1)]) > 0:
-                            best_rmse = np.min(rmse_mtx[np.where(all_fit==1)])
+                        if len(rmse_mtx[np.where(all_fits==1)]) > 0:
+                            best_rmse = np.min(rmse_mtx[np.where(all_fits==1)])
                             i_y, i_x = np.where(rmse_mtx==best_rmse)
                             ax.scatter(xs[i_x], ys[i_y], s=100, marker='*',
                             color='yellow', edgecolor='k', zorder=8)
@@ -345,7 +346,7 @@ class ScanData:
                     #     for a, y in enumerate(ys):
                     #         for b, x in enumerate(xs):
                     #             clr = 'gray'
-                    #             if all_fit[a, b] == 1:
+                    #             if all_fits[a, b] == 1:
                     #                 clr = 'magenta'
                     #             ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
                     #             color=clr, fontsize=8,
