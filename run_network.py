@@ -14,12 +14,12 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  settings
-    do_ai = False
+    do_ai = True
     do_response = False
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
+    n_seg_ai, start_ai, seg_ai = 5, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -59,7 +59,21 @@ if __name__ == "__main__":
     # get pickle, scan or single
     cwd = os.getcwd()
     try:
-        pickle_path = sys.argv[1]    # path to pickle file
+        # load pickle file
+        pickle_path = sys.argv[1]
+        scanparams.load_pickle(pickle_path)
+        lvls_str, lvls = scanparams.read_levels(pickle_path)
+        # set parameters
+        scanparams.set_stp(2)
+        scanparams.set_g(sys.argv[3])
+        scanparams.vip2som(sys.argv[4])
+        scanparams.set_epsp(sys.argv[5])
+        scanparams.set_ipsp(sys.argv[6])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(0)
+        scanparams.set_vip(0)
+        scanparams.save_pickle(pickle_path)
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
 

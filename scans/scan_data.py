@@ -258,7 +258,6 @@ class ScanData:
     def plot_fitpoint(self, ax, fits, multi_fits):
         iy, ix = np.where(fits == 1)
         xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
-        print(xs, ys)
         ax.scatter(xs, ys, color='gray', s=8, marker='o', zorder=5)
         iy, ix = np.where(multi_fits == 1)
         xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
@@ -296,17 +295,21 @@ class ScanData:
                     vmin=vmin, vmax=vmax, zorder=1)
 
                 # patch to cover grid (shitty)
-                rect = patches.Rectangle((xs[0],ys[0]),(xs[-1]-xs[0]),(ys[-1]-ys[0]), edgecolor='w',facecolor='w', zorder=2)
-                ax.add_patch(rect)
+                # rect = patches.Rectangle((xs[0],ys[0]),(xs[-1]-xs[0]),(ys[-1]-ys[0]), edgecolor='w',facecolor='w', zorder=2)
+                # ax.add_patch(rect)
 
                 # contour
-                cf = ax.contourf(data,
-                    levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
-                    cmap=self.cmaps[plotvar],
-                    origin='lower', extent=extent1,
-                    vmin=vmin, vmax=vmax, zorder=3,
-                    extend='max')
-                cf.cmap.set_over('darkblue')
+                # datamin, datamax = np.nanmin(data), np.nanmax(data)
+                # if datamin == datamax or np.isnan(datamin) or np.isnan(datamax):
+                #     pass
+                # else:
+                #     cf = ax.contourf(data,
+                #         levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
+                #         cmap=self.cmaps[plotvar],
+                #         origin='lower', extent=extent1,
+                #         vmin=vmin, vmax=vmax, zorder=3,
+                #         extend='max')
+                #     cf.cmap.set_over('black')
                 # ct = ax.contour(data,
                 #     levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
                 #     origin='lower', extent=extent1,

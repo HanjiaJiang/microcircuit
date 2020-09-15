@@ -1,13 +1,13 @@
-exc = 750
-pv = 1500
-som = 500
-vip = 1250
+g = [4, 6, 8]
+vip2som = [0, 1]
+epsp = 0
+ipsp = 0
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=exc, b=pv, c=som, d=vip)
+        expand('done_{a}_{b}_{c}_{d}', a=g, b=vip2som, c=epsp, d=ipsp)
     shell:
         '''
         rm done*
@@ -30,7 +30,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=exc, b=pv, c=som, d=vip))
+        directory(expand('{a}_{b}_{c}_{d}/', a=g, b=vip2som, c=epsp, d=ipsp))
     shell:
         '''
         python create_snakes.py {output}

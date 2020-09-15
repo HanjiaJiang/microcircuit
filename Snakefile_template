@@ -1,5 +1,5 @@
-F1 = [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5]
-F2 = [3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
+F1 = range(500, 1501, 100)
+F2 = range(1000, 2001, 100)
 F3 = 0
 F4 = 0
 
@@ -10,7 +10,7 @@ rule all:
         expand('scans/{a}_{b}_{c}_{d}/', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python scans/scan_data.py g bg_rate lyr_epsp lyr_ipsp {input}
+        python scans/scan_data.py exc pv none none {input}
         mkdir -p ../png/
         mv *.png ../png/
         cp -r ../run_network.py ../Snakefile* ../microcircuit/ ../png/
@@ -22,7 +22,7 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python microcircuit/create_params.py {f1} {f2} {f3} {f4} {output}
+        python microcircuit/create_params.py {output}
         '''
 
 rule simulate:
@@ -30,5 +30,5 @@ rule simulate:
     output: directory('scans/{a}_{b}_{c}_{d}/')
     shell:
         '''
-        python -W ignore run_network.py {input} {output}
+        python -W ignore run_network.py {input} {output} {f1} {f2} {f3} {f4}
         '''

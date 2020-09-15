@@ -23,6 +23,14 @@ class ScanParams:
         self.special_dict = copy.deepcopy(special_dict)
         self.stps = copy.deepcopy(stps)
 
+    def load_pickle(self, p_path):
+        with open(p_path, 'rb') as p:
+            paradict = pickle.load(p)
+        self.net_dict = paradict['net_dict']
+        self.sim_dict = paradict['sim_dict']
+        self.stim_dict = paradict['stim_dict']
+        self.special_dict = paradict['special_dict']
+
     def set_constant(self, indgs=[750,1500,500,1250]):
         self.net_dict['g'] = -8.0
         self.net_dict['bg_rate'] = 4.0
@@ -32,13 +40,7 @@ class ScanParams:
         self.special_dict['stp_dict'] = {}
         self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
-        # self.del_item(self.special_dict['stp_dict'], keysets=[['L6_Exc', 'L6_Exc']])
-        # self.net_dict['K_ext'] = np.array([750, 1500, 500, 2000,
-        #                                    750, 1500, 500,
-        #                                    1000, 1000, 0,
-        #                                    1000, 1000, 0])
         self.load_conn('7-15')
-        # self.vip_som(True)
         net_update(self.net_dict)
 
     def do_single(self, pickle_path, indgs=None):
@@ -67,7 +69,9 @@ class ScanParams:
             for sets in keysets:
                 del dict_stp[sets[0]][sets[1]]
 
-    def save_pickle(self, pickle_path):
+    def save_pickle(self, pickle_path=None):
+        if pickle_path is None:
+            pickle_path = 'para_dict.pickle'
         all_dict = {
             'net_dict': self.net_dict,
             'sim_dict': self.sim_dict,
@@ -77,8 +81,8 @@ class ScanParams:
         with open(pickle_path, 'wb') as h:
             pickle.dump(all_dict, h)
 
-    def set_path(self, pickle_path, lvls_str):
-        self.sim_dict['data_path'] = os.path.join(os.path.dirname(pickle_path), lvls_str)
+    def set_path(self, pickle_path):
+        self.sim_dict['data_path'] = pickle_path.split('.')[0] + '/'
 
     def set_g(self, g):
         self.net_dict['g'] = -int(np.abs(int(g)))
@@ -133,7 +137,7 @@ class ScanParams:
     def load_conn(self, conn):
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
-    def vip_som(self, adjust):
+    def vip2som(self, adjust):
         if int(adjust) != 0:
             # vip-to-som all the same across layers
             print('adjust vip conn.')
@@ -144,6 +148,12 @@ class ScanParams:
             self.net_dict['U-compensate'] = False
         else:
             self.net_dict['U-compensate'] = True
+
+    # read parameters from given input string
+    def read_levels(self, in_str):
+        out_str = os.path.basename(in_str).replace('.pickle', '')    # filename with .
+        out_list = np.array(out_str.split('_')).astype(float)
+        return out_str, out_list
 
 '''
 preliminary settings
@@ -208,47 +218,20 @@ def print_all(all_dict):
                     f.write('\n')
             f.close()
 
-# read parameters from given input string
-def read_levels(in_str):
-    out_str = os.path.basename(in_str).replace('.pickle', '')    # filename with .
-    out_list = np.array(out_str.split('_')).astype(float)
-    return out_str, out_list
-
 # run scanning
 if __name__ == "__main__":
     # get output names from system input
-    outs = sys.argv[5:]
-    constants = sys.argv[1:5]
+    outs = sys.argv[1:]
 
     # create ScanParams object
     scanparams = ScanParams()
     scanparams.set_constant()
 
     # constant parameters
-    # scanparams.set_stp(constants[0])
-    # scanparams.set_vip(constants[1])
-    # scanparams.set_epsp(constants[2])
-    # scanparams.set_ipsp(constants[3])
-    scanparams.set_exc(constants[0])
-    scanparams.set_pv(constants[1])
-    scanparams.set_som(constants[2])
-    scanparams.set_vip(constants[3])
-    # scanparams.set_conn('PV', 'SOM', constants[0])
-    # scanparams.set_conn('SOM', 'PV', constants[1])
-    scanparams.vip_som(True)
+    scanparams.vip2som(True)
 
     # parameters to be scanned
     for out in outs:
         print(out)
-        lvls_str, lvls = read_levels(out)
-        scanparams.set_path(out, lvls_str)
-        # scanparams.set_exc(lvls[0])
-        # scanparams.set_pv(lvls[1])
-        # scanparams.set_som(lvls[2])
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
-        scanparams.set_epsp(lvls[2])
-        scanparams.set_ipsp(lvls[3])
-        # scanparams.set_weight('PV', 'SOM', lvls[0])
-        # scanparams.set_weight('SOM', 'PV', lvls[1])
+        scanparams.set_path(out)
         scanparams.save_pickle(out)
