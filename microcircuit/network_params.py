@@ -162,7 +162,7 @@ net_dict = {
     'ctsp_dependent_psc': True,
     # EPSPs: Lefort et al., 2009, Neuron
     'epsp': {
-        'use': True,
+        'use': False,
         'means':
             np.array([[0.7001, 0.7800, 0.4673, 0.3783],
                       [0.3433, 0.9500, 0.3767, 0.3783],
@@ -192,7 +192,22 @@ net_dict = {
         },
     # compensate w by U
     'U-compensate': True,
-    'dc_extra': np.zeros(13).astype(float)
+    # dc input
+    'dc_extra': np.zeros(13).astype(float),
+    # max firing rate
+    'fmax': False,
+    # cell-type specific parameters
+    'ctsp': True,
+    # STP
+    'stp_dict': {},
+    # selectivity
+    'orient_tuning': False,
+    'sel_inh_src': ['PV', 'SOM'],
+    'sel_inh_trg': ['PV', 'SOM'],
+    'k_th': 0.8,
+    'k_e2e': 0.8,
+    'k_e2i': 0.8,
+    'k_i2e': 0.2
     }
 
 

@@ -1,4 +1,4 @@
-g = [4, 6, 8]
+stp = [0]
 vip2som = [0, 1]
 epsp = 0
 ipsp = 0
@@ -7,10 +7,12 @@ localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=g, b=vip2som, c=epsp, d=ipsp)
+        expand('done_{a}_{b}_{c}_{d}', a=stp, b=vip2som, c=epsp, d=ipsp)
     shell:
         '''
         rm done*
+        mkdir -p png/
+        cp -r *.py *.yml Snakefile* microcircuit/ scans/ png/
         '''
 
 rule snakes:
@@ -30,7 +32,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=g, b=vip2som, c=epsp, d=ipsp))
+        directory(expand('{a}_{b}_{c}_{d}/', a=stp, b=vip2som, c=epsp, d=ipsp))
     shell:
         '''
         python create_snakes.py {output}

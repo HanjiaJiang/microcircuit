@@ -449,42 +449,33 @@ def filter_by_spike_n(data, ids, n_spk=4):
             rdata.append([])
     return rdata
 
-def sample_by_layer(data, ids, layers, n_sample=140):
+def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
     rdata = []  # return data
     set_selected_by_lyr = []    # selected id sets by layer
     set_leftover_by_lyr = []    # unselected id sets by layer
     cnt_by_lyr = []             # count of selected sets by layer
-
-    # sample n criteria: must >= 90% of desired number
-    sample_cri = 0.9
-    validity = np.ones(len(layers))     # validity with this criteria
-
+    validity = np.ones(len(layers))     # validity by layer
     for i, layer in enumerate(layers):
-        len_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1
-        cnt_lyr = 0
-        selected = np.array([])
-        leftover = np.array([])
-        flg_exc = False
+        len_lyr, cnt_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1, 0
+        selected, leftover = np.array([]), np.array([])
         for j, g in enumerate(layer):
             len_grp = ids[g][1] - ids[g][0] + 1
-            sample_ratio = float(len_grp)/len_lyr
-            d = data[g]
+            n, d = round(n_sample*float(len_grp)/len_lyr), data[g]
             if type(d) == np.ndarray and d.ndim == 2:
                 set_0 = set(d[:, 0])    # original
-                set_1 = sample(set_0, min(len(set_0), round(n_sample*sample_ratio))) # the set of this group that is selected
-                rdata.append(d[np.in1d(d[:, 0], set_1)])    # the part of data that is in set_1
-                selected = np.concatenate((selected, set_1))    # for this layer concatenate the sets that is selected
-                leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
-                cnt_lyr += len(set_1)
-                print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), round(n_sample*sample_ratio)))
-                if j == 0 and len(set_1) < n_sample*sample_ratio*sample_cri:
-                    flg_exc = True
+                if len(set_0) >= round(sample_cri*n):
+                    set_1 = sample(set_0, min(len(set_0), n)) # the set of this group that is selected
+                    rdata.append(d[np.in1d(d[:, 0], set_1)])    # the part of data that is in set_1
+                    selected = np.concatenate((selected, set_1))    # for this layer concatenate the sets that is selected
+                    leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
+                    cnt_lyr += len(set_1)
+                    print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), n))
+                else:
+                    rdata.append([])
+                    validity[i] = 0
             else:
                 rdata.append([])
-        # layer sample n must > 90% desired
-        if len(selected) < n_sample * sample_cri or flg_exc is True:
-            validity[i] = 0
-            print('layer of {} n < 90% desired; abandon this layer'.format(i))
+                validity[i] = 0
         set_selected_by_lyr.append(selected)
         set_leftover_by_lyr.append(leftover)
         cnt_by_lyr.append(cnt_lyr)
@@ -494,16 +485,17 @@ def sample_by_layer(data, ids, layers, n_sample=140):
         if validity[i] == 1:    # do it only if the layer is valid
             n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
             if n_diff > 0:
-                print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
+                # print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
                 n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
                 set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
-                print('sample_by_layer(): layer of {} added {} samples'.format(i, n_leftover))
+                print('layer of {} add {} samples'.format(i, n_leftover))
                 for g in layer:
                     d = data[g]
                     if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
                         rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
             elif n_diff < 0:
                 set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
+                print('layer of {} minus {} samples'.format(i, len(set_selected_by_lyr[i]) - n_sample))
                 for g in layer:
                     if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
                         rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]

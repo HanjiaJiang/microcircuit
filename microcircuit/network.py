@@ -6,7 +6,7 @@ from microcircuit.network_params import net_update
 np.set_printoptions(precision=4, suppress=True, linewidth=100)
 
 class Network:
-    def __init__(self, sim_dict, net_dict, stim_dict=None, spe_dict=None):
+    def __init__(self, sim_dict, net_dict, stim_dict=None):
         # net_update(net_dict, net_dict['g'])
         self.sim_dict = sim_dict
         self.net_dict = net_dict
@@ -14,8 +14,7 @@ class Network:
             self.stim_dict = stim_dict
         else:
             self.stim_dict = None
-        self.spe_dict = spe_dict
-        self.stp_dict = spe_dict['stp_dict']
+        self.stp_dict = net_dict['stp_dict']
         self.data_path = sim_dict['data_path']
         if nest.Rank() == 0:
             if os.path.isdir(self.sim_dict['data_path']):
@@ -66,7 +65,7 @@ class Network:
         self.synapses = get_total_number_of_synapses(self.net_dict) # not using
         self.K_ext = self.net_dict['K_ext']
         # self.w_ext = get_weight(self.net_dict['PSP_e'], self.net_dict)
-        self.weight_mat = get_weight_mtx(self.net_dict, self.spe_dict['ctsp'])
+        self.weight_mat = get_weight_mtx(self.net_dict)
         self.weight_mat_std = self.net_dict['psp_stds']
         self.dc_extra = self.net_dict['dc_extra']
         # if self.net_dict['poisson_input']:
@@ -93,7 +92,7 @@ class Network:
             population = nest.Create(
                 self.net_dict['neuron_model'], int(self.nr_neurons[i])
                 )
-            E_L, V_th, C_m, tau_m, V_reset = ctsp_assign(pop, self.net_dict, self.spe_dict)
+            E_L, V_th, C_m, tau_m, V_reset = assign_ctsp(pop, self.net_dict)
             # print('self.dc_extra[i] = {}'.format(self.dc_extra[i]))
             nest.SetStatus(
                 population, {
@@ -175,7 +174,7 @@ class Network:
                 self.stim_dict['th_start'] + self.stim_dict['th_duration']
                 )
             # plural poisson generator for orientation (to be improved?)
-            if self.spe_dict['orient_tuning']:
+            if self.net_dict['orient_tuning']:
                 n_poisson = self.stim_dict['n_thal']
             else:
                 n_poisson = 1
@@ -184,7 +183,7 @@ class Network:
                            self.stim_dict['th_start'], self.stop_th,
                            self.stim_dict['th_rate'],
                            self.stim_dict['orientation'],
-                           self.spe_dict)
+                           self.net_dict)
             # self.poisson_th = nest.Create('poisson_generator')
             # nest.SetStatus(
             #     self.poisson_th, {
@@ -289,7 +288,7 @@ class Network:
                                     syn_dict,
                                     source_pop,
                                     target_pop,
-                                    self.spe_dict,
+                                    self.net_dict,
                                     bernoulli_prob=p)
                 verify_collect('{} to {}: (w, w_sd, syn_dict) = {:.4f}, {:.4f}\n{}\n'.format(source_name, target_name, w, w_sd, syn_dict), 'lognormal')
 
@@ -302,7 +301,7 @@ class Network:
             print('Poisson background input is connected')
         for i, target_pop in enumerate(self.pops):
             conn_dict_poisson = {'rule': 'all_to_all'}
-            if self.spe_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
+            if self.net_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
                 cell_type = cell_types[i]
             else:
                 cell_type = 'default'
@@ -341,7 +340,7 @@ class Network:
         for i, target_pop in enumerate(self.pops):
             if self.stim_dict['conn_probs_th'][i] == 0.0:
                 continue
-            if self.spe_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
+            if self.net_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
                 cell_type = cell_types[i]
             else:
                 cell_type = 'default'
@@ -379,7 +378,7 @@ class Network:
                 self.net_dict['populations'][i],
                 self.nr_synapses_th[i],
                 syn_dict_th,
-                self.spe_dict,
+                self.net_dict,
                 self.stim_dict['conn_probs_th'][i])
             # nest.Connect(
             #     self.thalamic_population, target_pop,

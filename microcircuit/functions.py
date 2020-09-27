@@ -7,41 +7,6 @@ import microcircuit.raw_data as raw
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 '''
-Max firing rate:
-    use refractory period t_ref to constrain firing rate.
-
-Short-term plasticity:
-    Tsodyks synapse, see
-    Ashok Litwin-Kumar, Robert Rosenbaum, Brent Doiron, 2016
-    Tsodyks et al. 1997
-
-Relative strengths:
-    adjustment of relative PV and SOM inhibitory strength
-
-Selectivity:
-    orientation tuning by self-defined cosine functions
-
-Cell-type specific parameters:
-    Garrett T. Neske, Saundra L. Patrick, and Barry W. Connors, 2015
-'''
-
-special_dict = {
-    'fmax': False,
-    # cell-type specific parameters
-    'ctsp': True,
-    # STP
-    'stp_dict': {},
-    # selectivity
-    'orient_tuning': False,
-    'sel_inh_src': ['PV', 'SOM'],
-    'sel_inh_trg': ['PV', 'SOM'],
-    'k_th': 0.8,
-    'k_e2e': 0.8,
-    'k_e2i': 0.8,
-    'k_i2e': 0.2
-}
-
-'''
 Verification
 '''
 verify_dict = {}
@@ -64,6 +29,7 @@ def verify_print(path=None):
 '''
 Main functions
 '''
+# assign synapse dictionary
 def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net_dict, resol):
     syn_dict = {'model': 'static_synapse'}
     for pre_type in stp_dict.keys():
@@ -95,12 +61,12 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net
     syn_dict['delay'] = delay_dict
     return syn_dict
 
-
-def set_fmax(names, population, spe_dict):
+# set max firing rate by refractory (not using)
+def set_fmax(names, population, net_dict):
     # Fmax:
     # Two Dynamically Distinct Inhibitory Networks in
     # Layer 4 of the Neocortex
-    if spe_dict['fmax'] is True:
+    if net_dict['fmax'] is True:
         if 'Exc' in names:
             nest.SetStatus(population, {'t_ref': 35.7})
             # if 'L5' in pop:
@@ -116,7 +82,7 @@ def set_fmax(names, population, spe_dict):
         elif 'VIP' in names:
             nest.SetStatus(population, {'t_ref': 15.3})
 
-
+# set thalamic cells
 # clumsy, to be improved...
 def set_thalamus(th_pop,
                    poisson_pops,
@@ -124,9 +90,9 @@ def set_thalamus(th_pop,
                    stop_times,
                    rate_0,
                    stim_theta,
-                   spe_dict):
+                   net_dict):
     # tuning
-    if spe_dict['orient_tuning'] is True:
+    if net_dict['orient_tuning'] is True:
         # limits are +- pi/2
         base_theta = min(stim_theta, np.pi/2)
         base_theta = max(base_theta, -np.pi/2)
@@ -151,7 +117,7 @@ def set_thalamus(th_pop,
             # rates are distributed according to stimulus angle
             for j, node in enumerate(pop):
                 theta = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(len(pop)))
-                rate = rate_0 * (1.0 + spe_dict['k_th']
+                rate = rate_0 * (1.0 + net_dict['k_th']
                                  * np.cos(2.0 * (theta - current_theta)))
                 # print('node {}, rate = {}'.format(j, rate))
                 nest.SetStatus([node], {
@@ -173,16 +139,16 @@ def set_thalamus(th_pop,
             nest.Connect(pop, th_pop)
             # nest.Connect(pop, th_pop, conn_spec={'rule': 'one_to_one'})
 
-
+# connect thalamocortical
 def connect_tc(th_pop,
                  target_pop,
                  target_name,
                  total_conn_nr,
                  syn_dict_th,
-                 spe_dict,
+                 net_dict,
                  bernoulli_prob=None,
                  nr_cluster=8):
-    if spe_dict['orient_tuning'] and 'Exc' in target_name:
+    if net_dict['orient_tuning'] and 'Exc' in target_name:
         # size of population
         len_th = len(th_pop)
         len_target = len(target_pop)
@@ -225,7 +191,7 @@ def connect_tc(th_pop,
             for j, target_cluster in enumerate(target_cluster_list):
                 theta_th = -np.pi / 2.0 + np.pi * ((i + 0.5) / float(nr_cluster))
                 theta_target = -np.pi / 2.0 + np.pi * ((j + 0.5) / float(nr_cluster))
-                p = p_0 * (1.0 + spe_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
+                p = p_0 * (1.0 + net_dict['k_e2e'] * np.cos(2.0 * (theta_th - theta_target)))
                 conn_nr = int(round(len(th_cluster) * len(target_cluster) * p))
                 if isinstance(bernoulli_prob, float):
                     conn_dict = {'rule': 'pairwise_bernoulli', 'p': p}
@@ -258,14 +224,14 @@ def connect_tc(th_pop,
                 syn_spec=syn_dict_th
             )
 
-
+# connect recurrent
 def connect_recurrent(source_name,
                        target_name,
                        total_conn_nr,
                        syn_dict,
                        source_pop,
                        target_pop,
-                       spe_dict,
+                       net_dict,
                        bernoulli_prob=None,
                        nr_cluster=8):
     # get sizes and probability
@@ -279,16 +245,16 @@ def connect_recurrent(source_name,
     # get k (modulation constant)
     k = 0.0
     if 'Exc' in source_name and 'Exc' in target_name:
-        k = spe_dict['k_e2e']
-    for inh_target in spe_dict['sel_inh_trg']:
+        k = net_dict['k_e2e']
+    for inh_target in net_dict['sel_inh_trg']:
         if 'Exc' in source_name and inh_target in target_name:
-            k = spe_dict['k_e2i']
-    for inh_source in spe_dict['sel_inh_src']:
+            k = net_dict['k_e2i']
+    for inh_source in net_dict['sel_inh_src']:
         if inh_source in source_name and 'Exc' in target_name:
-            k = spe_dict['k_i2e']
+            k = net_dict['k_i2e']
 
     # connection
-    if spe_dict['orient_tuning'] is True and k != 0.0:
+    if net_dict['orient_tuning'] is True and k != 0.0:
         if p_0 != 0.0:
             # source clustering
             len_source_cluster = int(len_source / nr_cluster)
@@ -361,14 +327,14 @@ def connect_recurrent(source_name,
         )
     return total_conn_nr
 
-
-def ctsp_assign(pop, net_dict, spe_dict):
+# assign ctsp
+def assign_ctsp(pop, net_dict):
     E_L = net_dict['neuron_params']['E_L']['default']
     V_th = net_dict['neuron_params']['V_th']['default']
     C_m = net_dict['neuron_params']['C_m']['default']
     tau_m = net_dict['neuron_params']['tau_m']['default']
     V_reset = net_dict['neuron_params']['V_reset']['default']
-    if spe_dict['ctsp'] is True:
+    if net_dict['ctsp'] is True:
         for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
             if celltype in pop:
                 E_L = net_dict['neuron_params']['E_L'][celltype]
@@ -401,7 +367,7 @@ def get_weight(psp_val, net_dict):
 
 
 # get the psc matrix
-def get_weight_mtx(net_dict, ctsp):
+def get_weight_mtx(net_dict):
     np.set_printoptions(precision=2, linewidth=500, suppress=True)
     lyrs = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
     types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
@@ -416,7 +382,7 @@ def get_weight_mtx(net_dict, ctsp):
             if src_type != 'Exc':
                 tau_syn = net_dict['neuron_params']['tau_syn_in']
             taus[i, j] = tau_syn
-            if ctsp and net_dict['ctsp_dependent_psc']:
+            if net_dict['ctsp'] and net_dict['ctsp_dependent_psc']:
                 type = trg_type
             else:
                 type = 'default'
@@ -491,10 +457,6 @@ def renew_conn(conn_probs, exp_csv=None):
         exp=np.loadtxt(exp_csv, delimiter=',')
     print('conn. map before =\n{}'.format(conn_probs))
     conn_probs = conn_barrel_integrate(raw.mouse_dict, raw.bbp, exp, raw.allen, (exp>0)*1)  # flags: use exp. data if > 0
-    # make up for the data where connectivity = 0.0 in Lefort, 2009; to be improved
-    # conn_probs[10, 0] = 0.0
-    # conn_probs[0, 10] = 0.0
-    # conn_probs[4, 10] = 0.0
     np.savetxt(exp_csv.replace('raw', 'conn'), conn_probs, fmt='%.4f', delimiter=',')
     print('conn. map renewed =\n{}'.format(conn_probs))
     return conn_probs

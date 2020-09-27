@@ -24,7 +24,7 @@ if __name__ == "__main__":
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [750,1500,500,1250]
+    indgs = [1250,2000,1000,1000]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -55,6 +55,7 @@ if __name__ == "__main__":
 
     # initiate ScanParams
     scanparams = create.ScanParams()
+    # scanparams.set_stp(2)
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -64,15 +65,12 @@ if __name__ == "__main__":
         scanparams.load_pickle(pickle_path)
         lvls_str, lvls = scanparams.read_levels(pickle_path)
         # set parameters
-        scanparams.set_stp(2)
-        scanparams.set_g(sys.argv[3])
+        scanparams.set_stp(sys.argv[3])
         scanparams.vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_exc(lvls[0])
-        scanparams.set_pv(lvls[1])
-        scanparams.set_som(0)
-        scanparams.set_vip(0)
+        scanparams.set_g(lvls[0])
+        scanparams.set_bg(lvls[1])
         scanparams.save_pickle(pickle_path)
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
@@ -114,7 +112,7 @@ if __name__ == "__main__":
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                          para_dict['stim_dict'], para_dict['special_dict'])
+                          para_dict['stim_dict'])
     net.setup()
     if run_sim:
         # print parameters

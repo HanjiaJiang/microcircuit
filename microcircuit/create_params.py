@@ -7,7 +7,6 @@ import numpy as np
 from microcircuit.network_params import net_dict, net_update
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
-from microcircuit.functions import special_dict
 import microcircuit.functions as func
 from microcircuit.stp.stp_dicts import stps
 np.set_printoptions(suppress=True, precision=4)
@@ -20,7 +19,6 @@ class ScanParams:
         self.net_dict = copy.deepcopy(net_dict)
         self.sim_dict = copy.deepcopy(sim_dict)
         self.stim_dict = copy.deepcopy(stim_dict)
-        self.special_dict = copy.deepcopy(special_dict)
         self.stps = copy.deepcopy(stps)
 
     def load_pickle(self, p_path):
@@ -29,18 +27,14 @@ class ScanParams:
         self.net_dict = paradict['net_dict']
         self.sim_dict = paradict['sim_dict']
         self.stim_dict = paradict['stim_dict']
-        self.special_dict = paradict['special_dict']
 
     def set_constant(self, indgs=[750,1500,500,1250]):
         self.net_dict['g'] = -8.0
         self.net_dict['bg_rate'] = 4.0
-        self.net_dict['epsp']['use'] = False
-        self.net_dict['ipsp']['use'] = False
-        self.net_dict['U-compensate'] = True
-        self.special_dict['stp_dict'] = {}
-        self.special_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        # self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         self.load_conn('7-15')
+        self.vip2som(True)
         net_update(self.net_dict)
 
     def do_single(self, pickle_path, indgs=None):
@@ -76,13 +70,12 @@ class ScanParams:
             'net_dict': self.net_dict,
             'sim_dict': self.sim_dict,
             'stim_dict': self.stim_dict,
-            'special_dict': self.special_dict
         }
         with open(pickle_path, 'wb') as h:
             pickle.dump(all_dict, h)
 
     def set_path(self, pickle_path):
-        self.sim_dict['data_path'] = pickle_path.split('.')[0] + '/'
+        self.sim_dict['data_path'] = pickle_path.replace('.pickle', '/')
 
     def set_g(self, g):
         self.net_dict['g'] = -int(np.abs(int(g)))
@@ -104,15 +97,15 @@ class ScanParams:
 
     def set_ctsp(self, ctsp):
         if int(ctsp) == 0:
-            self.special_dict['ctsp'] = False
+            self.net_dict['ctsp'] = False
         else:
-            self.special_dict['ctsp'] = True
+            self.net_dict['ctsp'] = True
 
     def set_stp(self, stp):
         stp = int(stp)
         if 0 <= stp < len(self.stps):
             stp_name = list(self.stps)[stp]
-            self.special_dict['stp_dict'] = self.stps[stp_name]
+            self.net_dict['stp_dict'] = self.stps[stp_name]
             print('stp used = {}'.format(stp_name))
 
     def set_exc(self, exc):
@@ -192,7 +185,7 @@ def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration
         para_dict['stim_dict']['th_duration'] = duration
         # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
         para_dict['stim_dict']['conn_probs_th'] = np.array([0.062, 0.062, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
-    para_dict['special_dict']['orient_tuning'] = orient
+    para_dict['net_dict']['orient_tuning'] = orient
 
 '''
 tools
