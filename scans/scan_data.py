@@ -293,6 +293,7 @@ class ScanData:
                     cmap=self.cmaps[plotvar],
                     origin='lower', extent=extent1,
                     vmin=vmin, vmax=vmax, zorder=1)
+                im.cmap.set_over('k')
 
                 # patch to cover grid (shitty)
                 # rect = patches.Rectangle((xs[0],ys[0]),(xs[-1]-xs[0]),(ys[-1]-ys[0]), edgecolor='w',facecolor='w', zorder=2)
@@ -331,10 +332,12 @@ class ScanData:
                     # mark best RMSEs
                     if c == 0:
                         rmse_mtx = self.rmse[str(zb)][str(za)].T
-                        best_rmse = np.min(rmse_mtx)
-                        i_y, i_x = np.where(rmse_mtx==best_rmse)
-                        ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
-                        color='yellow', edgecolor='k', zorder=7)
+                        # diregard of triple-fit:
+                        # best_rmse = np.min(rmse_mtx)
+                        # i_y, i_x = np.where(rmse_mtx==best_rmse)
+                        # ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
+                        # color='yellow', edgecolor='k', zorder=7)
+
                         # best RMSE in the triple-fit area
                         if len(rmse_mtx[np.where(all_fits==1)]) > 0:
                             best_rmse = np.min(rmse_mtx[np.where(all_fits==1)])

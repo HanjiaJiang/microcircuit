@@ -427,6 +427,11 @@ if __name__ == '__main__':
     F = 200
     D = 0
 
+    # recording
+    # wr = nest.Create('weight_recorder', params={"withrport": True})
+    # nest.CopyModel('tsodyks_synapse', 'tsodyks_synapse_rec',
+    #                    {"weight_recorder": wr[0]})
+
     # scanning input
     try:
         pickle_path = sys.argv[1]
@@ -473,3 +478,11 @@ if __name__ == '__main__':
     conntest.run_sim(spk_n*spk_isi*1.5)
     conntest.run_analysis()
     # verify_print()
+
+    # wr_events = nest.GetStatus(wr, 'events')[0]
+    # senders = wr_events['senders']
+    # targets = wr_events['targets']
+    # times = wr_events['times']
+    # weights = wr_events['weights']
+    # data = list(zip(times, weights, senders, targets))
+    # print(data[:100])

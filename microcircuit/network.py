@@ -155,6 +155,10 @@ class Network:
                     }
                 volt = nest.Create('voltmeter', params=recdictmem)
                 self.voltmeter.append(volt)
+            # if 'weight_recorder' in self.net_dict['rec_div']:
+            #     wrdict = {
+            #
+            #     }
 
         if 'spike_detector' in self.net_dict['rec_dev']:
             if nest.Rank() == 0:

@@ -119,7 +119,7 @@ net_dict = {
     # Relative standard deviation of the postsynaptic potential.
     'PSP_sd': 0.27,
     # Relative inhibitory synaptic strength (in relative units).
-    'g': -4,
+    'g': -8,
     # Rate of the Poissonian spike generator (in Hz).
     'bg_rate': 4.0,
     # Turn Poisson input on or off (True or False).

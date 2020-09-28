@@ -455,6 +455,7 @@ def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
     set_leftover_by_lyr = []    # unselected id sets by layer
     cnt_by_lyr = []             # count of selected sets by layer
     validity = np.ones(len(layers))     # validity by layer
+    return_str = ''
     for i, layer in enumerate(layers):
         len_lyr, cnt_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1, 0
         selected, leftover = np.array([]), np.array([])
@@ -469,10 +470,11 @@ def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
                     selected = np.concatenate((selected, set_1))    # for this layer concatenate the sets that is selected
                     leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
                     cnt_lyr += len(set_1)
-                    print('sample_by_layer(): group {} collected/desired n = {}/{}'.format(g, len(set_1), n))
+                    return_str += 'pop {}: {}/{}\n'.format(g, len(set_1), n)
                 else:
                     rdata.append([])
                     validity[i] = 0
+                    return_str += 'pop {}: none/{}\n'.format(g, n)
             else:
                 rdata.append([])
                 validity[i] = 0
@@ -485,21 +487,24 @@ def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
         if validity[i] == 1:    # do it only if the layer is valid
             n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
             if n_diff > 0:
-                # print('sample_by_layer(): layer of {} leftover n = {}'.format(i, len(set_leftover_by_lyr[i])))
                 n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
                 set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
-                print('layer of {} add {} samples'.format(i, n_leftover))
+                return_str += 'layer {} OK (+{})\n'.format(i, n_leftover)
                 for g in layer:
                     d = data[g]
                     if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
                         rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
             elif n_diff < 0:
                 set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
-                print('layer of {} minus {} samples'.format(i, len(set_selected_by_lyr[i]) - n_sample))
+                return_str += 'layer {} OK (-{})\n'.format(i, len(set_selected_by_lyr[i]) - n_sample)
                 for g in layer:
                     if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
                         rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
-    return rdata, validity
+            else:
+                return_str += 'layer {} OK\n'.format(i)
+        else:
+            return_str += 'layer {} not enough\n'.format(i)
+    return rdata, validity, return_str
 
 # Asynchronous irregular state calculation
 def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
@@ -541,7 +546,9 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
         # filter
         data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
         # sample
-        data_seg, valids = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        data_seg, valids, sample_str = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        # output
+        ai_n.write(sample_str)
         # cache for layer data validity
         validity_by_seg.append(valids)
 
@@ -597,8 +604,8 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
                                 spikes.verify_collect('hist={}\n'.format(hist), 'gs')
                                 spikes.verify_collect('isi={}\n'.format(isi), 'gs')
                 # conclude this layer
-                print('seg {}, layer of {}, n of (corr, cv) = ({}, {})'.format(seg_head, j, cnt_corr, cnt_cv))
-                ai_n.write('{}, {}\n'.format(cnt_corr, cnt_cv))
+                ai_n.write('seg {}, layer {}, n of (corr, cv) = ({}, {})\n'.format(seg_head, j, cnt_corr, cnt_cv))
+
                 # set multiprocessing
                 proc = Process(target=get_corr, args=(hists, None, int(i * (len(layers)) + j), return_dict))
                 procs.append(proc)

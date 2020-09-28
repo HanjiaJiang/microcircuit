@@ -9,7 +9,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     run_analysis = True
     print_to_file = False
 
@@ -19,12 +19,12 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 5, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [1250,2000,1000,1000]
+    indgs = [750,1500,500,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
-    scanparams = create.ScanParams()
+    scanparams = create.ScanParams(indgs)
     # scanparams.set_stp(2)
 
     # get pickle, scan or single
@@ -66,11 +66,12 @@ if __name__ == "__main__":
         lvls_str, lvls = scanparams.read_levels(pickle_path)
         # set parameters
         scanparams.set_stp(sys.argv[3])
-        scanparams.vip2som(sys.argv[4])
+        scanparams.set_vip(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(lvls[2])
         scanparams.save_pickle(pickle_path)
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
@@ -84,7 +85,7 @@ if __name__ == "__main__":
 
         # create pickle file
         pickle_path = os.path.join(dpath, 'para_dict.pickle')
-        scanparams.do_single(pickle_path, indgs=indgs)
+        scanparams.save_pickle(pickle_path)
 
     # get parameters from pickle
     with open(pickle_path, 'rb') as handle:

@@ -1,5 +1,5 @@
-stp = [0]
-vip2som = [0, 1]
+stp = [0, 2]
+vip = range(0, 1001, 250)
 epsp = 0
 ipsp = 0
 
@@ -7,7 +7,7 @@ localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=stp, b=vip2som, c=epsp, d=ipsp)
+        expand('done_{a}_{b}_{c}_{d}', a=stp, b=vip, c=epsp, d=ipsp)
     shell:
         '''
         rm done*
@@ -32,7 +32,7 @@ rule snakes:
 
 rule create:
     output:
-        directory(expand('{a}_{b}_{c}_{d}/', a=stp, b=vip2som, c=epsp, d=ipsp))
+        directory(expand('{a}_{b}_{c}_{d}/', a=stp, b=vip, c=epsp, d=ipsp))
     shell:
         '''
         python create_snakes.py {output}

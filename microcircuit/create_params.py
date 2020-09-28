@@ -15,11 +15,12 @@ np.set_printoptions(suppress=True, precision=4)
 objects
 '''
 class ScanParams:
-    def __init__(self):
+    def __init__(self, indgs=[750,1500,500,1250]):
         self.net_dict = copy.deepcopy(net_dict)
         self.sim_dict = copy.deepcopy(sim_dict)
         self.stim_dict = copy.deepcopy(stim_dict)
         self.stps = copy.deepcopy(stps)
+        self.set_constant(indgs)
 
     def load_pickle(self, p_path):
         with open(p_path, 'rb') as p:
@@ -28,20 +29,21 @@ class ScanParams:
         self.sim_dict = paradict['sim_dict']
         self.stim_dict = paradict['stim_dict']
 
-    def set_constant(self, indgs=[750,1500,500,1250]):
+    def set_constant(self, indgs):
         self.net_dict['g'] = -8.0
         self.net_dict['bg_rate'] = 4.0
-        # self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
+        self.net_dict['stp_dict'] = {}
+        self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         self.load_conn('7-15')
         self.vip2som(True)
         net_update(self.net_dict)
 
-    def do_single(self, pickle_path, indgs=None):
-        self.set_constant(indgs)
-        # self.set_weight('Exc', 'Exc', 1.25)
-        # self.set_weight('SOM', 'PV', 1.25)
-        self.save_pickle(pickle_path)
+    # def do_single(self, pickle_path, indgs=None):
+    #     # self.set_constant(indgs)
+    #     # self.set_weight('Exc', 'Exc', 1.25)
+    #     # self.set_weight('SOM', 'PV', 1.25)
+    #     self.save_pickle(pickle_path)
 
     def set_weight(self, pre, post, factor):
         for i, prepop in enumerate(self.net_dict['populations']):
@@ -218,7 +220,7 @@ if __name__ == "__main__":
 
     # create ScanParams object
     scanparams = ScanParams()
-    scanparams.set_constant()
+    # scanparams.set_constant()
 
     # constant parameters
     scanparams.vip2som(True)
