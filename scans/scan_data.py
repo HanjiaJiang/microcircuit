@@ -13,9 +13,11 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, criteria=None, figsize=(16, 12), mark_flg=False):
+    def __init__(self, inputs, dims=None, plotvars=None, criteria=None,
+        figsize=(16, 12), mark_flg=False, xybounds=None):
         self.set_params(plotvars, figsize, criteria, mark_flg)
-        self.set_data(inputs, dims)
+        self.set_dataframe(inputs, dims)
+        self.set_plot(dims, xybounds)
 
     def set_params(self, plotvars, figsize, criteria, mark_flg):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
@@ -27,10 +29,11 @@ class ScanData:
         self.mtxs, self.fits, self.rmse, self.rmse_n = {}, {}, {}, {}
         # ground state criteria
         if criteria is None:
-            self.criteria = {r'$r_{Exc}$': [[0.0, 10.0], [0.0, 10.0], [0.0, 10.0], [0.0, 10.0]],
-                                'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001,0.008], [0.0001, 0.008]],
-                                'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]]
-                                }
+            self.criteria = {
+            r'$r_{Exc}$': [[0.0, 10.0], [0.0, 10.0], [0.0, 10.0], [0.0, 10.0]],
+            'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001, 0.008], [0.0001, 0.008]],
+            'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]]
+            }
         else:
             self.criteria = criteria
         # RMSE
@@ -59,7 +62,7 @@ class ScanData:
                         r'$r_{VIP}$': [0., 10.]
                         }
 
-    def set_data(self, inputs, dims):
+    def set_dataframe(self, inputs, dims):
         # dimensions
         if isinstance(dims, list) and len(dims) == 4:
             pass
@@ -95,20 +98,20 @@ class ScanData:
                     }
                 data_list.append(tmp_dict)
         self.df = pd.DataFrame(data_list)
-        self.update_data(dims)
 
     # set plot data: dimensions, coordinates, matrix
-    def update_data(self, dims):
+    def set_plot(self, dims, xybounds):
         self.update_dims(dims)
         xname, yname, zaname, zbname = self.dims['x'], self.dims['y'], self.dims['za'], self.dims['zb']
         xs, ys, zas, zbs = self.df[xname].tolist(), self.df[yname].tolist(), self.df[zaname].tolist(), self.df[zbname].tolist() # float
         lvls_s = self.get_lvls([xs, ys, zas, zbs])
-        xlvls, ylvls, zalvls, zblvls = lvls_s[0], lvls_s[1], lvls_s[2], lvls_s[3]
-        # x_intrv, y_intrv = (xlvls[1] - xlvls[0]), (ylvls[1] - ylvls[0])
-        # self.extent = [xlvls[0] - x_intrv/2, xlvls[-1] + x_intrv/2, ylvls[0] - y_intrv/2, ylvls[-1] + y_intrv/2]
-        self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls = xlvls, ylvls, zalvls, zblvls
+        self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls = lvls_s[0], lvls_s[1], lvls_s[2], lvls_s[3]
         print('levels =')
         print(self.x_lvls, self.y_lvls, self.za_lvls, self.zb_lvls)
+        if isinstance(xybounds, list) and len(xybounds) == 4:
+            self.xybounds = xybounds
+        else:
+            self.xybounds = [self.x_lvls[0], self.x_lvls[-1], self.y_lvls[0], self.y_lvls[-1]]
         self.make_data()
         self.make_plots()
 
@@ -235,10 +238,10 @@ class ScanData:
                 all_fits = np.multiply(all_fits, self.fits[str(zb)][str(za)][k][row].T)
         return fits, multi_fits, all_fits
 
-    def plot_fitpatch(self, ax, fits, multi_fits, extent):
-        fit_mtx = np.zeros(fits.shape)
-        fit_mtx[np.where(fits==1)] = 10.0 # single
-        fit_mtx[np.where(multi_fits==1)] = 20.0 # triple
+    def plot_fitpatch(self, ax, fits_easy, fits_hard, extent):
+        fit_mtx = np.zeros(fits_easy.shape)
+        fit_mtx[np.where(fits_easy==1)] = 10.0
+        fit_mtx[np.where(fits_hard==1)] = 20.0
         cf_fit = ax.contourf(fit_mtx,
             levels=[9., 19., 25.],
             origin='lower',
@@ -255,27 +258,63 @@ class ScanData:
             zorder=6,
             colors='k')
 
-    def plot_fitpoint(self, ax, fits, multi_fits):
-        iy, ix = np.where(fits == 1)
+    def plot_fitpoint(self, ax, fits_gray, fits_black, fits_green=None):
+        iy, ix = np.where(fits_gray == 1)
         xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
         ax.scatter(xs, ys, color='gray', s=8, marker='o', zorder=5)
-        iy, ix = np.where(multi_fits == 1)
+        iy, ix = np.where(fits_black == 1)
         xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
-        ax.scatter(xs, ys, color='k', s=8, marker='o', zorder=6)
+        ax.scatter(xs, ys, color='black', s=8, marker='o', zorder=6)
+        if fits_green is not None:
+            iy, ix = np.where(fits_green == 1)
+            xs, ys = np.array(self.x_lvls)[ix], np.array(self.y_lvls)[iy]
+            ax.scatter(xs, ys, color='green', s=8, marker='o', zorder=7)
         pass
+
+    def plot_contour(self, ax, data, extent, plotvar, vmin, vmax):
+        # contour
+        datamin, datamax = np.nanmin(data), np.nanmax(data)
+        if datamin == datamax or np.isnan(datamin) or np.isnan(datamax):
+            pass
+        else:
+            cf = ax.contourf(data,
+                levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
+                cmap=self.cmaps[plotvar],
+                origin='lower', extent=extent,
+                vmin=vmin, vmax=vmax, zorder=3,
+                extend='max')
+            cf.cmap.set_over('black')
+        ct = ax.contour(data,
+            levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
+            origin='lower', extent=extent,
+            colors='gray', linewidths=0.5,
+            vmin=vmin, vmax=vmax, zorder=4)
+        if self.mark_flg:
+            ax.clabel(ct, fmt=self.clabel_format[plotvar],
+            colors='k', inline=True, fontsize=10)
+
+    def mark_rmse(self, rmse_mtx, xs, ys, all_fits):
+        for a, y in enumerate(ys):
+            for b, x in enumerate(xs):
+                clr = 'gray'
+                if all_fits[a, b] == 1:
+                    clr = 'magenta'
+                ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
+                color=clr, fontsize=8,
+                horizontalalignment='center',
+                verticalalignment='center',
+                zorder=10)
 
     def colormap(self, za, zb, afx=None):
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
         extent1 = [xs[0], xs[-1], ys[0], ys[-1]]
-        extent2 = [xs[0]-(xs[1]-xs[0])/2, xs[-1]+(xs[1]-xs[0])/2,
-                   ys[0]-(ys[1]-ys[0])/2, ys[-1]+(ys[1]-ys[0])/2]
-        plt.xlim((xs[0], xs[-1]))
-        plt.ylim((ys[0], ys[-1]))
         plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
         xlbl, ylbl = self.dims['x'], self.dims['y']
-        ylbl = ylbl.replace('bg_rate', r'$r_{bg}$')
+        ylbl = ylbl.replace('bg', r'$r_{bg}$')
+        current_cmap = matplotlib.cm.get_cmap()
+        current_cmap.set_bad(color='gray')
         # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = self.vlims[plotvar][0], self.vlims[plotvar][1]
@@ -293,52 +332,21 @@ class ScanData:
                     cmap=self.cmaps[plotvar],
                     origin='lower', extent=extent1,
                     vmin=vmin, vmax=vmax, zorder=1)
-                im.cmap.set_over('k')
-
-                # patch to cover grid (shitty)
-                # rect = patches.Rectangle((xs[0],ys[0]),(xs[-1]-xs[0]),(ys[-1]-ys[0]), edgecolor='w',facecolor='w', zorder=2)
-                # ax.add_patch(rect)
-
-                # contour
-                # datamin, datamax = np.nanmin(data), np.nanmax(data)
-                # if datamin == datamax or np.isnan(datamin) or np.isnan(datamax):
-                #     pass
-                # else:
-                #     cf = ax.contourf(data,
-                #         levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
-                #         cmap=self.cmaps[plotvar],
-                #         origin='lower', extent=extent1,
-                #         vmin=vmin, vmax=vmax, zorder=3,
-                #         extend='max')
-                #     cf.cmap.set_over('black')
-                # ct = ax.contour(data,
-                #     levels=np.linspace(np.nanmin(data), np.nanmax(data), 11),
-                #     origin='lower', extent=extent1,
-                #     colors='gray', linewidths=0.5,
-                #     vmin=vmin, vmax=vmax, zorder=4)
-                # if self.mark_flg:
-                #     ax.clabel(ct, fmt=self.clabel_format[plotvar],
-                #     colors='k', inline=True, fontsize=10)
+                im.cmap.set_over('midnightblue')
+                # self.plot_contour(ax, data, extent1, plotvar, vmin, vmax)
 
                 # single- & triple-fit (not interpolated)
                 if plotvar in self.criteria:
                     fits, tri_fits, all_fits = self.get_multifit(za, zb, plotvar, r)
-                    self.plot_fitpoint(ax, fits, tri_fits)
+                    self.plot_fitpoint(ax, fits, tri_fits, all_fits)
                     # self.plot_fitpatch(ax, fits, tri_fits, extent2)
 
                 # RMSE
                 if self.mark_flg:
                     rmse_mtx = self.rmse[str(zb)][str(za)].T  # (y, x)
-                    # mark best RMSEs
+                    # mark best RMSEs in the triple-fit area
                     if c == 0:
                         rmse_mtx = self.rmse[str(zb)][str(za)].T
-                        # diregard of triple-fit:
-                        # best_rmse = np.min(rmse_mtx)
-                        # i_y, i_x = np.where(rmse_mtx==best_rmse)
-                        # ax.scatter(xs[i_x], ys[i_y], s=100, marker='o',
-                        # color='yellow', edgecolor='k', zorder=7)
-
-                        # best RMSE in the triple-fit area
                         if len(rmse_mtx[np.where(all_fits==1)]) > 0:
                             best_rmse = np.min(rmse_mtx[np.where(all_fits==1)])
                             i_y, i_x = np.where(rmse_mtx==best_rmse)
@@ -349,19 +357,12 @@ class ScanData:
                             color='r', fontsize=10, zorder=9)
                     # text RMSE values
                     # if plotvar == r'$r_{PV}$':
-                    #     for a, y in enumerate(ys):
-                    #         for b, x in enumerate(xs):
-                    #             clr = 'gray'
-                    #             if all_fits[a, b] == 1:
-                    #                 clr = 'magenta'
-                    #             ax.text(x, y, '{:.1f}'.format(rmse_mtx[a, b]),
-                    #             color=clr, fontsize=8,
-                    #             horizontalalignment='center',
-                    #             verticalalignment='center',
-                    #             zorder=10)
+                    #     self.mark_rmse(rmse_mtx, xs, ys, all_fits)
 
                 # many settings
-                ax.set_aspect(float((xs[-1] - xs[0])/(ys[-1] - ys[0])))
+                ax.set_xlim(self.xybounds[0], self.xybounds[1])
+                ax.set_ylim(self.xybounds[2], self.xybounds[3])
+                ax.set_aspect(float((self.xybounds[1] - self.xybounds[0])/(self.xybounds[3] - self.xybounds[2])))
 
                 # titles
                 if r == 0:
@@ -389,6 +390,6 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims, mark_flg=True)
+    scandata = ScanData(inputs, dims=dims, xybounds=[4., 8., 2., 6.])
     # scandata.mark_flg = True
     # scandata.make_plots(afx='mark_')

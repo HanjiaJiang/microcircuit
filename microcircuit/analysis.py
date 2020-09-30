@@ -1,5 +1,6 @@
 import os
 import copy
+import pandas
 import pickle
 import numpy as np
 from random import sample
@@ -21,14 +22,15 @@ class Spikes:
         self.load()
 
     def setup(self, path, name):
+        # data
         self.path = path
-        self.name = name
+        self.device_name = name
         self.gids = []
-        self.detectors = []
+        self.devices = []
         self.data = []
-        self.react_lines = []
-        self.veri_dict = {}
+        # results
         self.fr_result = []
+        # criteria
         self.fr_musig = [(2.7, 3.7), (13.8, 8.9), (2.6, 3.6),
                          (14.6, 7.3),
                          (0.5, 0.8), (10.2, 7.2), (2.6, 3.2),
@@ -39,6 +41,8 @@ class Spikes:
                         (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
                         (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
                         (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)]
+        # others
+        self.veri_dict = {}
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
@@ -49,22 +53,22 @@ class Spikes:
     def read_name(self):
         # Import filenames
         for file in os.listdir(self.path):
-            if file.endswith('.gdf') and file.startswith(self.name):
+            if file.endswith('.gdf') and file.startswith(self.device_name):
                 temp = file.split('-')[0] + '-' + file.split('-')[1]
-                if temp not in self.detectors:
-                    self.detectors.append(temp)
+                if temp not in self.devices:
+                    self.devices.append(temp)
         # Import GIDs
         gidfile = open(os.path.join(self.path, 'population_GIDs.dat'), 'r')
         for l in gidfile:
             a = l.split()
             self.gids.append([int(a[0]), int(a[1])])
-        self.detectors = sorted(self.detectors)
-        self.verify_collect('self.detectors={}\n'.format(self.detectors), 'reading')
+        self.devices = sorted(self.devices)
+        self.verify_collect('self.devices={}\n'.format(self.devices), 'reading')
 
     def load(self):
         self.read_name()
-        if len(self.detectors) > 0 and len(self.gids) > 0:
-            for i in list(range(len(self.detectors))):
+        if len(self.devices) > 0 and len(self.gids) > 0:
+            for i in list(range(len(self.devices))):
                 all_filenames = os.listdir(self.path)
                 thread_filenames = [
                     all_filenames[x] for x in list(range(len(all_filenames)))
@@ -72,7 +76,7 @@ class Spikes:
                        all_filenames[x].startswith('spike') and
                        (all_filenames[x].split('-')[0]
                         + '-' + all_filenames[x].split('-')[1]) in
-                       self.detectors[i]
+                       self.devices[i]
                 ]
                 self.verify_collect('thread_filenames:\n', 'reading')
                 data_temp = []
@@ -99,7 +103,7 @@ class Spikes:
                     self.data.append([])
                     self.verify_collect('data_final=[]\n', 'reading')
         else:
-            print('Spikes.load_spikes_all(): detectors or gids not found')
+            print('Spikes.load_spikes_all(): devices or gids not found')
 
     def get_data(self, begin, end):
         data_ret = []
@@ -787,8 +791,6 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
         mean_ltcs = np.sort(np.divide(neuron_ltc_cache[:, 1], neuron_ltc_cache[:, 2]))
         # layer average latency
         lyr_avg_ltc = np.mean(mean_ltcs)
-        # for raster plot vline marking (not using)
-        spikes.react_lines.append(lyr_avg_ltc + win_begin)
 
         # plot:
         hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, bw))

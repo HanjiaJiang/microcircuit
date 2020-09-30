@@ -223,7 +223,7 @@ if __name__ == "__main__":
     # scanparams.set_constant()
 
     # constant parameters
-    scanparams.vip2som(True)
+    # scanparams.vip2som(True)
 
     # parameters to be scanned
     for out in outs:
