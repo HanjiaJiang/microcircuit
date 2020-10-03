@@ -9,7 +9,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     run_analysis = True
     print_to_file = False
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 2, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 

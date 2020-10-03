@@ -535,61 +535,63 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
     # multiprocessing
     return_dict, procs = Manager().dict(), []
 
-    # calculation
-    df_cv = pd.DataFrame(columns=['cv', 'segment', 'layer'])
+    # prepare calculation
+    df = copy.deepcopy(spikes.df)
     df_corr = pd.DataFrame(columns=['corr', 'segment', 'layer'])
+    df_cv = pd.DataFrame(columns=['cv', 'segment', 'layer'])
+
+    # filter by spike n
+    set_keep = set(df.id)
+    for i, (seg_head, seg_tail) in enumerate(segs):
+        df_seg = df[(df.time >= seg_head) & (df.time < seg_tail)]
+        val_cnts = df_seg.id.value_counts()
+        set_keep = set_keep & set(val_cnts[val_cnts >= n_spk_thr].index)
+    df = df[df.id.isin(set_keep)]
+
+    # sample
+    df_sp = pd.DataFrame(columns=['id', 'time', 'population', 'layer'])
+    for k in range(4):
+        set_total = set(df[df.layer==k].id)
+        if len(set_total) >= n_sample:
+            set_sampled = sample(set_total, n_sample)
+            df_sp = df_sp.append(df[df.id.isin(set_sampled)], ignore_index=True)
+
     # loop by segment
     for i, (seg_head, seg_tail) in enumerate(segs):
-        # filter by spike n
-        df_seg = copy.deepcopy(spikes.df[(spikes.df.time >= seg_head) & (spikes.df.time < seg_tail)])
-        val_cnts = df_seg.id.value_counts()
-        to_remove = val_cnts[val_cnts < n_spk_thr].index
-        # print(to_remove)
-        df_seg = df_seg[~df_seg.id.isin(to_remove)]
-        # if i==0:
-        #     df_seg.to_csv(os.path.join(spikes.path, '0.csv'))
-
+        df_seg = df_sp[(df_sp.time >= seg_head) & (df_sp.time < seg_tail)]
         # loop by layer
         for k in range(4):
-            # total set
-            set_total = set(df_seg[df_seg.layer==k].id)
-            # caches
             hists, cvs = [], []
-            if len(set_total) >= n_sample:
-                # sampled set
-                set_sampled = sample(set_total, n_sample)
-                df_lyr = df_seg[df_seg.id.isin(set_sampled)]
-                # df_lyr.to_csv(os.path.join(spikes.path, '{}-{}.csv'.format(i,k)))
-                # obtain histogram and calculate pair-corr and cv-isi
-                for id in list(set_sampled):   # each id in the sampled
-                    ts = df_lyr[df_lyr.id == id].time.values
-                    # print(ts)
-                    if len(ts) > 0:
-                        hist_bins = np.arange(seg_head, seg_tail + bw, bw)
-                        hist = np.histogram(ts, bins=hist_bins)[0]
-                        # correlation
-                        if np.all(hist == hist[0]):
-                            # report monotone histogram
-                            ai_xcpt.write('seg {}, layer {}, id {}: monotone histogram\n'.format(i, k, id))
-                        else:
-                            hists.append(hist)
-                        # CV ISI
-                        if len(ts) < n_spk_thr:
-                            # report ISI n < threshould
-                            ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n<threshold\n'.format(i, k, id))
-                        else:
-                            isi = np.diff(ts)
-                            cvs.append(np.std(isi) / np.mean(isi))
+            df_lyr = df_seg[df_seg.layer==k]
+            for id in list(set(df_lyr.id)):
+                ts = df_lyr[df_lyr.id == id].time.values
+                # print(ts)
+                if len(ts) > 0:
+                    hist_bins = np.arange(seg_head, seg_tail + bw, bw)
+                    hist = np.histogram(ts, bins=hist_bins)[0]
+                    # correlation
+                    if np.all(hist == hist[0]):
+                        # report monotone histogram
+                        ai_xcpt.write('seg {}, layer {}, id {}: monotone histogram\n'.format(i, k, id))
                     else:
-                        # report n = 0
-                        ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n=0\n'.format(i, k, id))
+                        hists.append(hist)
+                    # CV ISI
+                    if len(ts) < n_spk_thr:
+                        # report ISI n < threshould
+                        ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n<threshold\n'.format(i, k, id))
+                    else:
+                        isi = np.diff(ts)
+                        cvs.append(np.std(isi) / np.mean(isi))
+                else:
+                    # report n = 0
+                    ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n=0\n'.format(i, k, id))
 
-                # set multiprocessing
-                proc = Process(target=get_corr, args=(hists, None, int(i*4 + k), return_dict))
-                procs.append(proc)
-                proc.start()
-            else:
-                cvs = []
+            # set multiprocessing for correlation
+            proc = Process(target=get_corr, args=(hists, None, int(i*4 + k), return_dict))
+            procs.append(proc)
+            proc.start()
+
+            # get cv
             df_cv = df_cv.append({'cv': np.mean(cvs), 'segment': i, 'layer': k}, ignore_index=True)
             ai_n.write('seg {} layer {} n of (corr, cv) = ({}, {})\n'.format(i, k, len(hists), len(cvs)))
         ai_n.write('\n')
