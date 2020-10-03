@@ -1,7 +1,7 @@
 import os
 import copy
-import pandas
 import pickle
+import pandas as pd
 import numpy as np
 from random import sample
 import scipy.stats as stats
@@ -20,6 +20,7 @@ class Spikes:
     def __init__(self, path, name):
         self.setup(path, name)
         self.load()
+        self.to_pandas()
 
     def setup(self, path, name):
         # data
@@ -105,6 +106,15 @@ class Spikes:
         else:
             print('Spikes.load_spikes_all(): devices or gids not found')
 
+    def to_pandas(self):
+        self.df = pd.DataFrame(columns=['id', 'time', 'population', 'layer'])
+        for i, data in enumerate(self.data):
+            if type(data) == np.ndarray and data.ndim == 2:
+                df = pd.DataFrame(data=data, columns=['id', 'time'])
+                df['population'] = i
+                df['layer'] = self.layers[i]
+                self.df = self.df.append(df, ignore_index=True)
+
     def get_data(self, begin, end):
         data_ret = []
         for data in self.data:
@@ -154,6 +164,8 @@ class Spikes:
         self.positions = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
 
         self.layers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+        self.pops_by_layer = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
 
         self.colors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
@@ -263,7 +275,6 @@ From the original helpers.py
 '''
 def fire_rate(spikes, begin, end):
     data = spikes.get_data(begin, end)
-    spikes.verify_collect('data[2]=\n{}\n'.format(data[2]), 'fr')
     gids = spikes.gids
     rates_averaged_all = []
     rates_std_all = []
@@ -280,7 +291,8 @@ def fire_rate(spikes, begin, end):
             rates_std_all.append(float('%.3f' % rate_std))
             np.save(os.path.join(spikes.path, ('rate' + str(h) + '.npy')), rate_each_n)
             if h == 2:
-                spikes.verify_collect('gids[2]=\n{}\n'.format(gids[2]), 'fr')
+                spikes.verify_collect('data[{}]=\n{}\n'.format(h, data[h]), 'fr')
+                spikes.verify_collect('gids[{}]=\n{}\n'.format(h, gids[h]), 'fr')
                 spikes.verify_collect('len(n_fil)={}, values=\n'.format(len(n_fil)), 'fr')
                 for n in n_fil:
                     spikes.verify_collect('{} '.format(n), 'fr')
@@ -435,6 +447,7 @@ def fr_plot(spikes):
 '''
 Other analysis
 '''
+# old
 def filter_by_spike_n(data, ids, n_spk=4):
     rdata = []
     for i in range(len(data)):
@@ -453,6 +466,7 @@ def filter_by_spike_n(data, ids, n_spk=4):
             rdata.append([])
     return rdata
 
+# old
 def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
     rdata = []  # return data
     set_selected_by_lyr = []    # selected id sets by layer
@@ -510,10 +524,104 @@ def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
             return_str += 'layer {} not enough\n'.format(i)
     return rdata, validity, return_str
 
-# Asynchronous irregular state calculation
-def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=140, n_spk=4):
-    if layers is None:
-        layers = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+# Ground state calculation
+def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_thr=4):
+    # setup
+    segs = list(zip(np.arange(begin, end, seg_len), np.arange(begin, end, seg_len) + seg_len))
+    ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
+    ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
+    ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
+
+    # multiprocessing
+    return_dict, procs = Manager().dict(), []
+
+    # calculation
+    df_cv = pd.DataFrame(columns=['cv', 'segment', 'layer'])
+    df_corr = pd.DataFrame(columns=['corr', 'segment', 'layer'])
+    # loop by segment
+    for i, (seg_head, seg_tail) in enumerate(segs):
+        # filter by spike n
+        df_seg = copy.deepcopy(spikes.df[(spikes.df.time >= seg_head) & (spikes.df.time < seg_tail)])
+        val_cnts = df_seg.id.value_counts()
+        to_remove = val_cnts[val_cnts < n_spk_thr].index
+        # print(to_remove)
+        df_seg = df_seg[~df_seg.id.isin(to_remove)]
+        # if i==0:
+        #     df_seg.to_csv(os.path.join(spikes.path, '0.csv'))
+
+        # loop by layer
+        for k in range(4):
+            # total set
+            set_total = set(df_seg[df_seg.layer==k].id)
+            # caches
+            hists, cvs = [], []
+            if len(set_total) >= n_sample:
+                # sampled set
+                set_sampled = sample(set_total, n_sample)
+                df_lyr = df_seg[df_seg.id.isin(set_sampled)]
+                # df_lyr.to_csv(os.path.join(spikes.path, '{}-{}.csv'.format(i,k)))
+                # obtain histogram and calculate pair-corr and cv-isi
+                for id in list(set_sampled):   # each id in the sampled
+                    ts = df_lyr[df_lyr.id == id].time.values
+                    # print(ts)
+                    if len(ts) > 0:
+                        hist_bins = np.arange(seg_head, seg_tail + bw, bw)
+                        hist = np.histogram(ts, bins=hist_bins)[0]
+                        # correlation
+                        if np.all(hist == hist[0]):
+                            # report monotone histogram
+                            ai_xcpt.write('seg {}, layer {}, id {}: monotone histogram\n'.format(i, k, id))
+                        else:
+                            hists.append(hist)
+                        # CV ISI
+                        if len(ts) < n_spk_thr:
+                            # report ISI n < threshould
+                            ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n<threshold\n'.format(i, k, id))
+                        else:
+                            isi = np.diff(ts)
+                            cvs.append(np.std(isi) / np.mean(isi))
+                    else:
+                        # report n = 0
+                        ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n=0\n'.format(i, k, id))
+
+                # set multiprocessing
+                proc = Process(target=get_corr, args=(hists, None, int(i*4 + k), return_dict))
+                procs.append(proc)
+                proc.start()
+            else:
+                cvs = []
+            df_cv = df_cv.append({'cv': np.mean(cvs), 'segment': i, 'layer': k}, ignore_index=True)
+            ai_n.write('seg {} layer {} n of (corr, cv) = ({}, {})\n'.format(i, k, len(hists), len(cvs)))
+        ai_n.write('\n')
+
+    # join multiprocessing for correlation
+    for proc in procs:
+        proc.join()
+
+    # collect data
+    for k in range(4):
+        for i, seg_head in enumerate(segs):
+            # get segment-layer correlation
+            try:
+                corr_proc = np.mean(return_dict[str(int(i*4 + k))])
+            except KeyError:
+                corr_proc = np.nan
+            df_corr = df_corr.append({'corr': corr_proc, 'segment': i, 'layer': k}, ignore_index=True)
+        corr_avg = np.mean(df_corr[df_corr['layer']==k]['corr'].values)
+        cv_avg = np.mean(df_cv[df_cv['layer']==k]['cv'].values)
+        ai.write('{}, {}\n'.format(str(corr_avg), str(cv_avg)))
+
+    ai.close()
+    ai_n.close()
+    ai_xcpt.close()
+    ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'r')
+    if len(ai_xcpt.read()) == 0:
+        ai_xcpt.close()
+        os.remove('{}'.format(os.path.join(spikes.path, 'ai_xcpt.dat')))
+    ai_xcpt.close()
+
+# old
+def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk=4):
     data_all = spikes.get_data(begin, end)
     gids = spikes.gids
     seg_list = np.arange(begin, end, seg_len)
@@ -550,7 +658,7 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
         # filter
         data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
         # sample
-        data_seg, valids, sample_str = sample_by_layer(data_seg, gids, layers, n_sample=n_sample)
+        data_seg, valids, sample_str = sample_by_layer(data_seg, gids, spikes.pops_by_layer, n_sample=n_sample)
         # output
         ai_n.write(sample_str)
         # cache for layer data validity
@@ -563,7 +671,7 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
         # calculation:
         cvs_by_layer = []
         # by layer
-        for j, layer in enumerate(layers):
+        for j, layer in enumerate(spikes.pops_by_layer):
             layer_ids = np.array([])
             layer_ts = np.array([])
             hists = []
@@ -611,7 +719,7 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
                 ai_n.write('seg {}, layer {}, n of (corr, cv) = ({}, {})\n'.format(seg_head, j, cnt_corr, cnt_cv))
 
                 # set multiprocessing
-                proc = Process(target=get_corr, args=(hists, None, int(i * (len(layers)) + j), return_dict))
+                proc = Process(target=get_corr, args=(hists, None, int(i * (len(spikes.pops_by_layer)) + j), return_dict))
                 procs.append(proc)
                 proc.start()
             cvs_by_layer.append(cvs)
@@ -623,14 +731,14 @@ def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, layers=None, n_sample=14
         proc.join()
 
     # collect data and save
-    for j in range(len(layers)):
+    for j in range(len(spikes.pops_by_layer)):
         corr_means_by_seg = []
         cv_means_by_seg = []
         for i in range(len(seg_list)):
             n_corrs = np.nan
             n_cvs = np.nan
             if validity_by_seg[i][j] == 1:
-                corrs = return_dict[str(int(i * (len(layers)) + j))]
+                corrs = return_dict[str(int(i * (len(spikes.pops_by_layer)) + j))]
                 corr_means_by_seg.append(np.mean(corrs))
                 cvs = cvs_by_seg_by_layer[i][j]
                 cv_means_by_seg.append(np.mean(cvs))

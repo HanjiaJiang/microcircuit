@@ -57,8 +57,8 @@ class ScanData:
         self.vlims = {r'$r_{Exc}$': [0., 10.],
                         'pairwise\ncorrelation': [-0.02, 0.02],
                         'CV(ISI)': [0.5, 1.5],
-                        r'$r_{PV}$': [0., None],
-                        r'$r_{SOM}$': [0., None],
+                        r'$r_{PV}$': [0., 50],
+                        r'$r_{SOM}$': [0., 50],
                         r'$r_{VIP}$': [0., 10.]
                         }
 
@@ -313,8 +313,6 @@ class ScanData:
         plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg', r'$r_{bg}$')
-        current_cmap = matplotlib.cm.get_cmap()
-        current_cmap.set_bad(color='gray')
         # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = self.vlims[plotvar][0], self.vlims[plotvar][1]
@@ -327,6 +325,9 @@ class ScanData:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
 
+                current_cmap = matplotlib.cm.get_cmap()
+                current_cmap.set_bad(color='gray')
+
                 # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
@@ -338,7 +339,7 @@ class ScanData:
                 # single- & triple-fit (not interpolated)
                 if plotvar in self.criteria:
                     fits, tri_fits, all_fits = self.get_multifit(za, zb, plotvar, r)
-                    self.plot_fitpoint(ax, fits, tri_fits, all_fits)
+                    self.plot_fitpoint(ax, tri_fits, all_fits)
                     # self.plot_fitpatch(ax, fits, tri_fits, extent2)
 
                 # RMSE
@@ -390,6 +391,6 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims, xybounds=[4., 8., 2., 6.])
+    scandata = ScanData(inputs, dims=dims)
     # scandata.mark_flg = True
     # scandata.make_plots(afx='mark_')

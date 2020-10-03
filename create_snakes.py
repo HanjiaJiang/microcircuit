@@ -3,7 +3,7 @@ import sys
 
 if __name__ == '__main__':
     inputs = sys.argv[1:]
-    with open('Snakefile_template', 'r') as f:
+    with open('Snakefile_tp', 'r') as f:
         snake_template = f.read()
     for input in inputs:
         dirname = os.path.dirname(input)

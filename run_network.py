@@ -19,7 +19,7 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 5, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -55,8 +55,8 @@ if __name__ == "__main__":
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
-    # scanparams.set_g(6.)
-    # scanparams.set_bg(6.)
+    scanparams.set_g(8.)
+    scanparams.set_bg(4.)
     # scanparams.set_stp(2)
 
     # get pickle, scan or single
@@ -69,18 +69,17 @@ if __name__ == "__main__":
         # set parameters
         scanparams.set_stp(sys.argv[3])
         # to be improved
-        if int(sys.argv[3]) == 0:
-            scanparams.set_indgs([1000,2000,1000,1000])
-            # scanparams.set_indgs([1000,1500,750,1000]) # when cri = 0.9
-        elif int(sys.argv[3]) == 2:
-            scanparams.set_indgs([750,1500,500,1250])
-        scanparams.vip2som(sys.argv[4])
-        # scanparams.set_vip(sys.argv[4])
+        # if int(sys.argv[3]) == 0:
+        #     scanparams.set_indgs([1000,2000,1000,1000])
+        #     # scanparams.set_indgs([1000,1500,750,1000]) # when cri = 0.9
+        # elif int(sys.argv[3]) == 2:
+        #     scanparams.set_indgs([750,1500,500,1250])
+        scanparams.set_vip(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
-        # scanparams.set_som(lvls[2])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(lvls[2])
         scanparams.save_pickle(pickle_path)
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
@@ -136,8 +135,9 @@ if __name__ == "__main__":
             analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
             t0 = time.time()
-            analysis.ai_score(spikes, start_ai, start_ai + len_ai, bw=10.0, seg_len=seg_ai)
-            print('ai_score() running time = {}'.format(time.time() - t0))
+            # analysis.ai_score(spikes, start_ai, start_ai + len_ai, bw=10.0, seg_len=seg_ai)
+            analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
+            print('ground state running time = {}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
             if do_response:

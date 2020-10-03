@@ -32,7 +32,7 @@ class ScanParams:
     def set_constant(self, indgs):
         self.net_dict['g'] = -8.0
         self.net_dict['bg_rate'] = 4.0
-        self.net_dict['stp_dict'] = {}
+        # self.net_dict['stp_dict'] = {}
         self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         self.load_conn('7-15')
