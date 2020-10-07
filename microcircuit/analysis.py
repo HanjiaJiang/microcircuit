@@ -528,9 +528,12 @@ def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
 def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_thr=4):
     # setup
     segs = list(zip(np.arange(begin, end, seg_len), np.arange(begin, end, seg_len) + seg_len))
-    ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
-    ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
-    ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
+    # ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
+    # ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
+    # ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
+    ai = np.full((4, 2), np.nan)
+    ai_n = ''
+    ai_xcpt = ''
 
     # multiprocessing
     return_dict, procs = Manager().dict(), []
@@ -572,19 +575,19 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
                     # correlation
                     if np.all(hist == hist[0]):
                         # report monotone histogram
-                        ai_xcpt.write('seg {}, layer {}, id {}: monotone histogram\n'.format(i, k, id))
+                        ai_xcpt += 'seg {}, layer {}, id {}: monotone histogram\n'.format(i, k, id)
                     else:
                         hists.append(hist)
                     # CV ISI
                     if len(ts) < n_spk_thr:
                         # report ISI n < threshould
-                        ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n<threshold\n'.format(i, k, id))
+                        ai_xcpt += 'seg {}, layer {}, id {}: CV-ISI n<threshold\n'.format(i, k, id)
                     else:
                         isi = np.diff(ts)
                         cvs.append(np.std(isi) / np.mean(isi))
                 else:
                     # report n = 0
-                    ai_xcpt.write('seg {}, layer {}, id {}: CV-ISI n=0\n'.format(i, k, id))
+                    ai_xcpt += 'seg {}, layer {}, id {}: CV-ISI n=0\n'.format(i, k, id)
 
             # set multiprocessing for correlation
             proc = Process(target=get_corr, args=(hists, None, int(i*4 + k), return_dict))
@@ -593,8 +596,8 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
 
             # get cv
             df_cv = df_cv.append({'cv': np.mean(cvs), 'segment': i, 'layer': k}, ignore_index=True)
-            ai_n.write('seg {} layer {} n of (corr, cv) = ({}, {})\n'.format(i, k, len(hists), len(cvs)))
-        ai_n.write('\n')
+            ai_n += '{}, {}\n'.format(len(hists), len(cvs))
+        ai_n += '\n'
 
     # join multiprocessing for correlation
     for proc in procs:
@@ -611,16 +614,25 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
             df_corr = df_corr.append({'corr': corr_proc, 'segment': i, 'layer': k}, ignore_index=True)
         corr_avg = np.mean(df_corr[df_corr['layer']==k]['corr'].values)
         cv_avg = np.mean(df_cv[df_cv['layer']==k]['cv'].values)
-        ai.write('{}, {}\n'.format(str(corr_avg), str(cv_avg)))
+        ai[k, :] = [corr_avg, cv_avg]
+        # ai.write('{}, {}\n'.format(str(corr_avg), str(cv_avg)))
 
-    ai.close()
-    ai_n.close()
-    ai_xcpt.close()
-    ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'r')
-    if len(ai_xcpt.read()) == 0:
-        ai_xcpt.close()
-        os.remove('{}'.format(os.path.join(spikes.path, 'ai_xcpt.dat')))
-    ai_xcpt.close()
+    np.savetxt(os.path.join(spikes.path, 'ai.dat'), ai, fmt='%.10f', delimiter=',')
+    f1 = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
+    f1.write(ai_n)
+    f1.close()
+    if len(ai_xcpt) > 0:
+        f2 = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
+        f2.write(ai_xcpt)
+        f2.close()
+    # ai.close()
+    # ai_n.close()
+    # ai_xcpt.close()
+    # ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'r')
+    # if len(ai_xcpt.read()) == 0:
+        # ai_xcpt.close()
+        # os.remove('{}'.format(os.path.join(spikes.path, 'ai_xcpt.dat')))
+    # ai_xcpt.close()
 
 # old
 def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk=4):

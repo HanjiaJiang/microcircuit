@@ -1,6 +1,7 @@
 import os
 import sys
 import pickle
+import numpy as np
 import multiprocessing as mp
 import time
 import microcircuit.network as network
@@ -9,7 +10,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = False
+    run_sim = True
     run_analysis = True
     print_to_file = False
 
@@ -19,12 +20,13 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 2, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
-    indgs = [750,1500,500,1250]
+    # indgs = [1000,1500,800,1000]
+    indgs = [750,1750,500,1000]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -55,9 +57,14 @@ if __name__ == "__main__":
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
-    scanparams.set_g(8.)
-    scanparams.set_bg(4.)
-    # scanparams.set_stp(2)
+    # scanparams.vip2som(True)
+    # scanparams.set_g(8.)
+    # scanparams.set_bg(4.)
+    # scanparams.set_stp(0)
+    # scanparams.net_dict['K_ext'] = np.array([750, 1750, 750, 1750,
+    #                                          750, 1750, 750,
+    #                                          750, 1750, 750,
+    #                                          750, 1750, 750])
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -69,17 +76,16 @@ if __name__ == "__main__":
         # set parameters
         scanparams.set_stp(sys.argv[3])
         # to be improved
-        # if int(sys.argv[3]) == 0:
-        #     scanparams.set_indgs([1000,2000,1000,1000])
-        #     # scanparams.set_indgs([1000,1500,750,1000]) # when cri = 0.9
-        # elif int(sys.argv[3]) == 2:
-        #     scanparams.set_indgs([750,1500,500,1250])
-        scanparams.set_vip(sys.argv[4])
+        if int(sys.argv[3]) == 0:
+            scanparams.set_indgs([1000,1500,750,1000])
+        elif int(sys.argv[3]) == 2:
+            scanparams.set_indgs([750,1500,500,250])
+        scanparams.vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_exc(lvls[0])
-        scanparams.set_pv(lvls[1])
-        scanparams.set_som(lvls[2])
+        scanparams.set_g(lvls[0])
+        scanparams.set_bg(lvls[1])
+        # scanparams.set_som(lvls[2])
         scanparams.save_pickle(pickle_path)
     except IndexError:  # single-run if no path input
         print('No scanning input; do single simulation')
@@ -168,3 +174,11 @@ if __name__ == "__main__":
 
     if print_to_file:
         exec(analysis.end2txt())
+
+    # copy exception
+    xcpt_path = os.path.join(data_path, 'ai_xcpt.dat')
+    xcpt_cp_path = xcpt_path.replace('/', '_')
+    print(xcpt_cp_path)
+    if os.path.isfile(xcpt_path):
+        os.system('mkdir ../exception/')
+        os.system('cp {} ../exception/{}'.format(xcpt_path, xcpt_cp_path))

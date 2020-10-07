@@ -132,6 +132,7 @@ class Network:
     def create_devices(self):
         self.spike_detector = []
         self.voltmeter = []
+        self.weight_recorder = []
         for i, pop in enumerate(self.pops):
             if 'spike_detector' in self.net_dict['rec_dev']:
                 recdict = {
@@ -155,10 +156,14 @@ class Network:
                     }
                 volt = nest.Create('voltmeter', params=recdictmem)
                 self.voltmeter.append(volt)
-            # if 'weight_recorder' in self.net_dict['rec_div']:
-            #     wrdict = {
-            #
-            #     }
+            if 'weight_recorder' in self.net_dict['rec_div']:
+                wrdict = {
+                    'to_memory': False,
+                    'to_file': True,
+                    'label': os.path.join(self.data_path, 'wr'),
+                    }
+                wr = nest.Create('weight_recorder', params=wrdict)
+                self.weight_recorder.append(wr)
 
         if 'spike_detector' in self.net_dict['rec_dev']:
             if nest.Rank() == 0:

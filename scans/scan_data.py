@@ -76,11 +76,10 @@ class ScanData:
         for p in inputs:
             path_str = os.path.dirname(p)
             params_list = np.array(path_str.split('/')[-1].split('_')).astype(float)
-            fr_arr, ai_arr = np.full((4, 2), np.nan), np.full((4, 2), np.nan)
-            if os.path.isfile(os.path.join(path_str, 'fr.dat')):
-                fr_arr = np.loadtxt(os.path.join(path_str, 'fr.dat'), delimiter=',')
-            if os.path.isfile(os.path.join(path_str, 'ai.dat')):
-                ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')
+            fr_arr = np.loadtxt(os.path.join(path_str, 'fr.dat'), delimiter=',')
+            ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')
+            if fr_arr.shape != (13, 2) or ai_arr.shape != (4, 2):
+                print('{} failed'.format(path_str))
             for i, lyr in enumerate(self.lyrs):
                 # include items in the dataframe
                 tmp_dict = {
@@ -391,6 +390,6 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims)
+    scandata = ScanData(inputs, dims=dims, xybounds=[4., 8., 2., 6.])
     # scandata.mark_flg = True
     # scandata.make_plots(afx='mark_')

@@ -1,16 +1,16 @@
-F1 = range(500, 1501, 250)
-F2 = range(1000, 2001, 250)
-F3 = range(0, 1001, 250)
+F1 = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5]
+F2 = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5]
+F3 = 0
 F4 = 0
 
 localrules: all, create
 
 rule all:
     input:
-        expand('scans/{a}_{b}_{c}_{d}/', a=F1, b=F2, c=F3, d=F4)
+        expand('scans/{a}_{b}_{c}_{d}/ai.dat', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python scans/scan_data.py exc pv som none {input}
+        python scans/scan_data.py g bg none none {input}
         mkdir -p ../png/
         mv *.png ../png/
         cp ../*.txt ../png/
@@ -23,11 +23,12 @@ rule create:
     shell:
         '''
         python microcircuit/create_params.py {output}
+        mkdir -p ../exception/
         '''
 
 rule simulate:
     input: 'scans/{a}_{b}_{c}_{d}.pickle'
-    output: directory('scans/{a}_{b}_{c}_{d}/')
+    output: 'scans/{a}_{b}_{c}_{d}/ai.dat'
     shell:
         '''
         python -W ignore run_network.py {input} {output} {f1} {f2} {f3} {f4}
