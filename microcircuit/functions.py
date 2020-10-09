@@ -30,8 +30,11 @@ def verify_print(path=None):
 Main functions
 '''
 # assign synapse dictionary
-def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net_dict, resol):
+def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
     syn_dict = {'model': 'static_synapse'}
+    net_dict = network.net_dict
+    stp_dict = network.net_dict['stp_dict']
+    resol = network.sim_resolution
     for pre_type in stp_dict.keys():
         for post_type in stp_dict[pre_type].keys():
             if pre_type in source_name and post_type in target_name:
@@ -59,6 +62,16 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, stp_dict, net
         }
     syn_dict['weight'] = weight_dict
     syn_dict['delay'] = delay_dict
+    # weight recorder
+    x = net_dict['populations'].index(source_name)
+    y = net_dict['populations'].index(target_name)
+    if 'weight_recorder' in net_dict['rec_dev'] and x < 4 and y < 4:
+        copy_name = syn_dict['model'] + '_' + source_name
+        if copy_name not in network.copysynapses:
+            print(copy_name)
+            nest.CopyModel(syn_dict['model'], syn_dict['model'] + '_' + source_name, {'weight_recorder': network.weight_recorder[x][0]})
+            network.copysynapses.append(copy_name)
+        syn_dict['model'] = copy_name
     return syn_dict
 
 # set max firing rate by refractory (not using)

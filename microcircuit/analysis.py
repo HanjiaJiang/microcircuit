@@ -447,90 +447,10 @@ def fr_plot(spikes):
 '''
 Other analysis
 '''
-# old
-def filter_by_spike_n(data, ids, n_spk=4):
-    rdata = []
-    for i in range(len(data)):
-        d = data[i]
-        if type(d) == np.ndarray and d.ndim == 2:
-            cache = None
-            for id in range(ids[i][0], ids[i][1]+1):
-                tmp = d[d[:, 0] == id]
-                if len(tmp) >= n_spk:
-                    if cache is None:
-                        cache = tmp
-                    else:
-                        cache = np.concatenate((cache, tmp))
-            rdata.append(cache)
-        else:
-            rdata.append([])
-    return rdata
-
-# old
-def sample_by_layer(data, ids, layers, n_sample=140, sample_cri = 1.0):
-    rdata = []  # return data
-    set_selected_by_lyr = []    # selected id sets by layer
-    set_leftover_by_lyr = []    # unselected id sets by layer
-    cnt_by_lyr = []             # count of selected sets by layer
-    validity = np.ones(len(layers))     # validity by layer
-    return_str = ''
-    for i, layer in enumerate(layers):
-        len_lyr, cnt_lyr = ids[layer[-1]][1] - ids[layer[0]][0] + 1, 0
-        selected, leftover = np.array([]), np.array([])
-        for j, g in enumerate(layer):
-            len_grp = ids[g][1] - ids[g][0] + 1
-            n, d = round(n_sample*float(len_grp)/len_lyr), data[g]
-            if type(d) == np.ndarray and d.ndim == 2:
-                set_0 = set(d[:, 0])    # original
-                if len(set_0) >= round(sample_cri*n):
-                    set_1 = sample(set_0, min(len(set_0), n)) # the set of this group that is selected
-                    rdata.append(d[np.in1d(d[:, 0], set_1)])    # the part of data that is in set_1
-                    selected = np.concatenate((selected, set_1))    # for this layer concatenate the sets that is selected
-                    leftover = np.concatenate((leftover, list(set_0.difference(set(set_1)))))   # for this layer concatenate the sets that is left over
-                    cnt_lyr += len(set_1)
-                    return_str += 'pop {}: {}/{}\n'.format(g, len(set_1), n)
-                else:
-                    rdata.append([])
-                    validity[i] = 0
-                    return_str += 'pop {}: none/{}\n'.format(g, n)
-            else:
-                rdata.append([])
-                validity[i] = 0
-        set_selected_by_lyr.append(selected)
-        set_leftover_by_lyr.append(leftover)
-        cnt_by_lyr.append(cnt_lyr)
-
-    # makeup so that collected = desired (n_layer)
-    for i, layer in enumerate(layers):
-        if validity[i] == 1:    # do it only if the layer is valid
-            n_diff = n_sample - cnt_by_lyr[i]    # difference of desired vs. collected
-            if n_diff > 0:
-                n_leftover = min(len(set_leftover_by_lyr[i]), n_diff)
-                set_makeup = sample(list(set_leftover_by_lyr[i]), n_leftover)
-                return_str += 'layer {} OK (+{})\n'.format(i, n_leftover)
-                for g in layer:
-                    d = data[g]
-                    if type(d) == np.ndarray and d.ndim == 2 and type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
-                        rdata[g] = np.concatenate((rdata[g], d[np.in1d(d[:, 0], set_makeup)]))
-            elif n_diff < 0:
-                set_preserve = sample(list(set_selected_by_lyr[i]), n_sample)
-                return_str += 'layer {} OK (-{})\n'.format(i, len(set_selected_by_lyr[i]) - n_sample)
-                for g in layer:
-                    if type(rdata[g]) == np.ndarray and rdata[g].ndim == 2:
-                        rdata[g] = rdata[g][np.in1d(rdata[g][:, 0], set_preserve)]
-            else:
-                return_str += 'layer {} OK\n'.format(i)
-        else:
-            return_str += 'layer {} not enough\n'.format(i)
-    return rdata, validity, return_str
-
 # Ground state calculation
 def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_thr=4):
     # setup
     segs = list(zip(np.arange(begin, end, seg_len), np.arange(begin, end, seg_len) + seg_len))
-    # ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
-    # ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
-    # ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
     ai = np.full((4, 2), np.nan)
     ai_n = ''
     ai_xcpt = ''
@@ -615,7 +535,6 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
         corr_avg = np.mean(df_corr[df_corr['layer']==k]['corr'].values)
         cv_avg = np.mean(df_cv[df_cv['layer']==k]['cv'].values)
         ai[k, :] = [corr_avg, cv_avg]
-        # ai.write('{}, {}\n'.format(str(corr_avg), str(cv_avg)))
 
     np.savetxt(os.path.join(spikes.path, 'ai.dat'), ai, fmt='%.10f', delimiter=',')
     f1 = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
@@ -625,146 +544,6 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
         f2 = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
         f2.write(ai_xcpt)
         f2.close()
-    # ai.close()
-    # ai_n.close()
-    # ai_xcpt.close()
-    # ai_xcpt = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'r')
-    # if len(ai_xcpt.read()) == 0:
-        # ai_xcpt.close()
-        # os.remove('{}'.format(os.path.join(spikes.path, 'ai_xcpt.dat')))
-    # ai_xcpt.close()
-
-# old
-def ai_score(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk=4):
-    data_all = spikes.get_data(begin, end)
-    gids = spikes.gids
-    seg_list = np.arange(begin, end, seg_len)
-
-    # multiprocessing
-    return_dict = Manager().dict()
-    procs = []
-
-    # ai calculation
-    ai = open(os.path.join(spikes.path, 'ai.dat'), 'w')
-    ai_n = open(os.path.join(spikes.path, 'ai_n.dat'), 'w')
-    cvs_by_seg_by_layer = []
-    validity_by_seg = []
-    grp = 2
-    lyr = 0
-    # by segment
-    for i, seg_head in enumerate(seg_list):
-        seg_end = seg_head + seg_len
-        data_seg = []
-
-        # filter and sample data:
-        # get segment data
-        for j in range(len(data_all)):
-            data_group = data_all[j]
-            if type(data_group) == np.ndarray and data_group.ndim == 2:
-                data_seg.append(data_group[(data_group[:, 1] >= seg_head) & (data_group[:, 1] < seg_end)])
-            else:
-                data_seg.append([])
-        #
-        if i == 0:
-            spikes.verify_collect('data[grp]=\n{}\n'.format(data_all[grp]), 'gs')
-            spikes.verify_collect('data_seg[grp]=\n{}\n'.format(data_seg[grp]), 'gs')
-
-        # filter
-        data_seg = filter_by_spike_n(data_seg, gids, n_spk=n_spk)
-        # sample
-        data_seg, valids, sample_str = sample_by_layer(data_seg, gids, spikes.pops_by_layer, n_sample=n_sample)
-        # output
-        ai_n.write(sample_str)
-        # cache for layer data validity
-        validity_by_seg.append(valids)
-
-        #
-        if i == 0:
-            spikes.verify_collect('data_seg[grp](sampled)=\n{}\n'.format(data_seg[grp]), 'gs')
-
-        # calculation:
-        cvs_by_layer = []
-        # by layer
-        for j, layer in enumerate(spikes.pops_by_layer):
-            layer_ids = np.array([])
-            layer_ts = np.array([])
-            hists = []
-            cvs = []
-            cnt_corr = cnt_cv = 0
-            # do it only if layer data is valid
-            if valids[j] == 1:
-                # get data
-                for k in layer:
-                    data = data_seg[k]
-                    if type(data) == np.ndarray and data.ndim == 2:
-                        layer_ids = np.concatenate((layer_ids, data[:, 0]))
-                        layer_ts = np.concatenate((layer_ts, data[:, 1]))
-
-                #
-                if i==0 and j == lyr:
-                    spikes.verify_collect('layer_ids=\n', 'gs')
-                    for id in layer_ids:
-                        spikes.verify_collect('{} '.format(id), 'gs')
-                        spikes.verify_collect('\n', 'gs')
-                    spikes.verify_collect('layer_ts=\n', 'gs')
-                    for t in layer_ts:
-                        spikes.verify_collect('{:.1f} '.format(t), 'gs')
-                        spikes.verify_collect('\n', 'gs')
-
-                # obtain histogram and calculate pair-corr and cv-isi
-                for gid in list(set(layer_ids)):   # each id in the selected
-                    ts = layer_ts[layer_ids == gid]
-                    if len(ts) > 0:
-                        hist_bins = np.arange(seg_head, seg_end + bw, bw)
-                        hist = np.histogram(ts, bins=hist_bins)[0]
-                        if not np.all(hist == hist[0]):
-                            hists.append(hist)
-                            cnt_corr += 1
-                        if len(ts) > 3:
-                            isi = np.diff(ts)
-                            cvs.append(np.std(isi) / np.mean(isi))
-                            cnt_cv += 1
-                            #
-                            if i==0 and j == lyr and gid == layer_ids[0]:
-                                spikes.verify_collect('hist_bins={}\n'.format(hist_bins), 'gs')
-                                spikes.verify_collect('hist={}\n'.format(hist), 'gs')
-                                spikes.verify_collect('isi={}\n'.format(isi), 'gs')
-                # conclude this layer
-                ai_n.write('seg {}, layer {}, n of (corr, cv) = ({}, {})\n'.format(seg_head, j, cnt_corr, cnt_cv))
-
-                # set multiprocessing
-                proc = Process(target=get_corr, args=(hists, None, int(i * (len(spikes.pops_by_layer)) + j), return_dict))
-                procs.append(proc)
-                proc.start()
-            cvs_by_layer.append(cvs)
-        ai_n.write('\n')
-        cvs_by_seg_by_layer.append(cvs_by_layer)
-
-    # join multiprocessing for correlation
-    for proc in procs:
-        proc.join()
-
-    # collect data and save
-    for j in range(len(spikes.pops_by_layer)):
-        corr_means_by_seg = []
-        cv_means_by_seg = []
-        for i in range(len(seg_list)):
-            n_corrs = np.nan
-            n_cvs = np.nan
-            if validity_by_seg[i][j] == 1:
-                corrs = return_dict[str(int(i * (len(spikes.pops_by_layer)) + j))]
-                corr_means_by_seg.append(np.mean(corrs))
-                cvs = cvs_by_seg_by_layer[i][j]
-                cv_means_by_seg.append(np.mean(cvs))
-                n_corrs = len(corrs)
-                n_cvs = len(cvs)
-                for a, corr in enumerate(corrs):
-                    if np.isnan(corr):
-                        print('corr no. {} is nan'.format(a))
-        ai.write('{}, {}\n'.format(str(np.mean(corr_means_by_seg)), str(np.mean(cv_means_by_seg))))
-
-    ai.close()
-    ai_n.close()
 
 def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
     n_stim = len(stims)

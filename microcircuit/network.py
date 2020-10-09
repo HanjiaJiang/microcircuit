@@ -1,8 +1,6 @@
 import os
 from microcircuit.functions import *
 from microcircuit.network_params import net_update
-# from stp.stp_dicts import bbp_stp
-# import copy
 np.set_printoptions(precision=4, suppress=True, linewidth=100)
 
 class Network:
@@ -14,7 +12,6 @@ class Network:
             self.stim_dict = stim_dict
         else:
             self.stim_dict = None
-        self.stp_dict = net_dict['stp_dict']
         self.data_path = sim_dict['data_path']
         if nest.Rank() == 0:
             if os.path.isdir(self.sim_dict['data_path']):
@@ -156,13 +153,15 @@ class Network:
                     }
                 volt = nest.Create('voltmeter', params=recdictmem)
                 self.voltmeter.append(volt)
-            if 'weight_recorder' in self.net_dict['rec_div']:
+            if 'weight_recorder' in self.net_dict['rec_dev']:
+                self.copysynapses = []
                 wrdict = {
                     'to_memory': False,
                     'to_file': True,
-                    'label': os.path.join(self.data_path, 'wr'),
+                    'label': os.path.join(self.data_path, 'weight_recorder'),
                     }
                 wr = nest.Create('weight_recorder', params=wrdict)
+                # nest.CopyModel('tsodyks_synapse', 'tsodyks_synapse_wr{}'.format(i), {"weight_recorder": wr})
                 self.weight_recorder.append(wr)
 
         if 'spike_detector' in self.net_dict['rec_dev']:
@@ -288,9 +287,7 @@ class Network:
                                         w_sd,
                                         delay,
                                         delay_sd,
-                                        self.stp_dict,
-                                        self.net_dict,
-                                        self.sim_resolution)
+                                        self)
                 connect_recurrent(source_name,
                                     target_name,
                                     synapse_nr,

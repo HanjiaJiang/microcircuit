@@ -20,13 +20,13 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 1000., 1000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
     # indgs = [1000,1500,800,1000]
-    indgs = [750,1750,500,1000]
+    indgs = [750,1500,500,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -57,10 +57,11 @@ if __name__ == "__main__":
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
-    # scanparams.vip2som(True)
-    # scanparams.set_g(8.)
-    # scanparams.set_bg(4.)
-    # scanparams.set_stp(0)
+    scanparams.vip2som(True)
+    scanparams.set_g(8.)
+    scanparams.set_bg(4.)
+    scanparams.set_stp(2)
+    scanparams.net_dict['rec_dev'].append('weight_recorder')
     # scanparams.net_dict['K_ext'] = np.array([750, 1750, 750, 1750,
     #                                          750, 1750, 750,
     #                                          750, 1750, 750,
@@ -141,7 +142,6 @@ if __name__ == "__main__":
             analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
             t0 = time.time()
-            # analysis.ai_score(spikes, start_ai, start_ai + len_ai, bw=10.0, seg_len=seg_ai)
             analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
             print('ground state running time = {}'.format(time.time() - t0))
         if n_stim > 0:
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     # delete .gdf files to save space
     if on_server and os.path.isdir(data_path):
-        os.system('rm {}/*.gdf'.format(data_path))
+        os.system('rm {}/*.gdf {}/*.csv'.format(data_path, data_path))
         if n_paradox > 0:
             affix = cwd.replace('/', '-') + '-' + data_path.replace('/', '-')
             os.chdir(data_path)
