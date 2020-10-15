@@ -1,5 +1,6 @@
 import os
 import copy
+import time
 import pickle
 import pandas as pd
 import numpy as np
@@ -17,18 +18,26 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 20.0
 
 class Spikes:
-    def __init__(self, path, name):
-        self.setup(path, name)
+    def __init__(self, path, names=['spike_detector']):
+        self.setup(path, names)
+        # t0 = time.time()
+        self.read_name()
+        # t1 = time.time()
         self.load()
-        self.to_pandas()
+        # t2 = time.time()
+        # self.to_pandas()
+        # t3 = time.time()
+        # print('read_name(): {:.3f}'.format(t1-t0))
+        # print('load(): {:.3f}'.format(t2-t1))
+        # print('to_pandas(): {:.3f}'.format(t3-t2))
 
-    def setup(self, path, name):
+    def setup(self, path, names):
         # data
         self.path = path
-        self.device_name = name
+        self.device_types = names
         self.gids = []
-        self.devices = []
-        self.data = []
+        self.devices = {}
+        self.data = {}
         # results
         self.fr_result = []
         # criteria
@@ -54,74 +63,132 @@ class Spikes:
     def read_name(self):
         # Import filenames
         for file in os.listdir(self.path):
-            if file.endswith('.gdf') and file.startswith(self.device_name):
-                temp = file.split('-')[0] + '-' + file.split('-')[1]
-                if temp not in self.devices:
-                    self.devices.append(temp)
+            # print(self.device_types)
+            for i, name in enumerate(self.device_types):
+                if name not in self.devices:
+                    self.devices[name] = []
+                # print(name)
+                if file.startswith(name):
+                    # print(file)
+                    device = file.split('-')[0] + '-' + file.split('-')[1]
+                    if device not in self.devices[name]:
+                        self.devices[name].append(device)
+        for key, value in self.devices.items():
+            self.devices[key] = sorted(self.devices[key])
+            # print(key, value)
+
         # Import GIDs
         gidfile = open(os.path.join(self.path, 'population_GIDs.dat'), 'r')
         for l in gidfile:
             a = l.split()
             self.gids.append([int(a[0]), int(a[1])])
-        self.devices = sorted(self.devices)
-        self.verify_collect('self.devices={}\n'.format(self.devices), 'reading')
+
+        self.verify_collect('self.devices=\n{}\n'.format(self.devices), 'reading')
+
+    def get_threadfns(self, device_type, device):
+        all_fns = os.listdir(self.path)
+        thread_fns = [
+            all_fns[x] for x in list(range(len(all_fns)))
+            if all_fns[x].startswith(device_type) and
+               (all_fns[x].split('-')[0] + '-' + all_fns[x].split('-')[1]) == device
+        ]
+        return thread_fns
 
     def load(self):
-        self.read_name()
-        if len(self.devices) > 0 and len(self.gids) > 0:
-            for i in list(range(len(self.devices))):
-                all_filenames = os.listdir(self.path)
-                thread_filenames = [
-                    all_filenames[x] for x in list(range(len(all_filenames)))
-                    if all_filenames[x].endswith('gdf') and
-                       all_filenames[x].startswith('spike') and
-                       (all_filenames[x].split('-')[0]
-                        + '-' + all_filenames[x].split('-')[1]) in
-                       self.devices[i]
-                ]
-                self.verify_collect('thread_filenames:\n', 'reading')
-                data_temp = []
-                for f in thread_filenames:
-                    self.verify_collect('{}\n'.format(f), 'reading')
-                    load_tmp = np.array([])
-                    try:
-                        load_tmp = np.loadtxt(os.path.join(self.path, f))
-                    except ValueError:
-                        print(os.path.join(self.path, f))
-                    else:
-                        pass
-                    if len(load_tmp.shape) == 2:
-                        data_temp.append(load_tmp)
-                if len(data_temp) > 0:
-                    data = np.concatenate(data_temp)
-                    data = data[np.argsort(data[:, 1])]
-                    self.data.append(data)
-                    self.verify_collect('data_final:\n', 'reading')
-                    self.verify_collect('{}...\n'.format(data[:100]), 'reading')
-                    # for d in data_final:
-                    #     self.verify_collect('{}\n'.format(d), 'reading')
-                else:
-                    self.data.append([])
-                    self.verify_collect('data_final=[]\n', 'reading')
-        else:
-            print('Spikes.load_spikes_all(): devices or gids not found')
+        self.df = {}
+        self.df_columns={
+            'spike_detector': ['id', 'time', 'population', 'layer'],
+            'weight_recorder': ['source', 'target', 'time', 'weight', 'population', 'layer']
+        }
+        # loop device type
+        for i, dev_type in enumerate(self.device_types):
+            if dev_type not in self.devices \
+                or len(self.devices[dev_type]) == 0 \
+                or len(self.gids) == 0:
+                print('load(): {} devices or gids not found'.format(i))
+                continue
+            if dev_type not in self.df:
+                self.df[dev_type] = pd.DataFrame(columns=self.df_columns[dev_type])
+            # loop device/population
+            for i, device in enumerate(self.devices[dev_type]):
+                data, thread_fns = [], self.get_threadfns(dev_type, device)
+                for j, fn in enumerate(thread_fns):
+                    data_thread, abs_fn = [], os.path.join(self.path, fn)
+                    t0 = time.time()
+                    if os.path.isfile(abs_fn) and os.stat(abs_fn).st_size > 0:
+                        data_thread = np.loadtxt(abs_fn)
+                    # print('{}-{}: {:.4f}'.format(device, j, time.time()-t0))
+                    data.append(data_thread)
+                    t2 = time.time()
+                data = np.concatenate(data)
+                if data.ndim == 2:
+                    data = data[np.argsort(data[:, 1])]  # time consuming
+                    data = np.concatenate((data, np.full((len(data), 1), i),
+                        np.full((len(data), 1), self.layers[i])), axis=1)
+                    df = pd.DataFrame(data=data, columns=self.df_columns[dev_type])
+                    self.df[dev_type] = self.df[dev_type].append(df, ignore_index=True)
+                    # print('{}: {:.4f}'.format(device, time.time()-t2))
+        for src_pop in self.populations[:4]:
+            self.plot_weight(self.df['weight_recorder'], src_pop=src_pop)
 
-    def to_pandas(self):
-        self.df = pd.DataFrame(columns=['id', 'time', 'population', 'layer'])
-        for i, data in enumerate(self.data):
-            if type(data) == np.ndarray and data.ndim == 2:
-                df = pd.DataFrame(data=data, columns=['id', 'time'])
-                df['population'] = i
-                df['layer'] = self.layers[i]
-                self.df = self.df.append(df, ignore_index=True)
+    def plot_weight(self, df, src_pop='L2/3 Exc', trg_pop='L2/3 Exc', n_pre=40, n_post=10, bw=1.):
+        t0 = time.time()
+        src = self.populations.index(src_pop)
+        trg = self.populations.index(trg_pop)
+        src_ids = np.array(list(set(df['source'])))
+        src_ids = src_ids[(self.gids[src][0]<=src_ids)&(src_ids<=self.gids[src][-1])].tolist()
+        if len(src_ids) == 0:
+            return
+        src_ids = sample(src_ids, min(n_pre, len(src_ids)))
+        # print('src_ids = {}'.format(list(map(int, src_ids))))
+        fig, axs = plt.subplots(2, 1, figsize=(16, 16), sharex=True)
+        axs[0].set_ylabel('weight (pA)')
+        axs[1].set_ylabel('average weight (pA)')
+        # samples
+        for i, src_id in enumerate(src_ids):
+            trg_ids = np.array(list(set(df[df['source']==src_id].target.values)))
+            trg_ids = trg_ids[(self.gids[trg][0]<=trg_ids)&(trg_ids<=self.gids[trg][-1])].tolist()
+            if len(trg_ids) == 0:
+                continue
+            trg_ids = sample(trg_ids, min(n_post, len(trg_ids)))
+            # if i < 10:
+            #     print('trg_ids={}'.format(list(map(int, trg_ids))))
+            for j, trg_id in enumerate(trg_ids):
+                tmp = df[(df['source']==src_id)&(df['target']==trg_id)]
+                data = np.array([tmp.time.values, tmp.weight.values]).T
+                data = data[np.argsort(data[:, 0])]
+                axs[0].scatter(data[:, 0], data[:, 1], s=4, color='black')
+                # if i < 10 and j == 0:
+                #     ax.plot(data[:, 0], data[:, 1], color=self.colors_10[i])
+        # mean
+        mws, mws_pop, bins = [], [], np.arange(0., max(df.time.values), bw)
+        df_roi = df[(self.gids[src][0]<=df.source)&(df.source<=self.gids[src][-1]) \
+            &(self.gids[trg][0]<=df.target)&(df.target<=self.gids[trg][-1])]
+        # print(df_roi)
+        for i, bhead in enumerate(bins):
+            ws = df_roi[(df_roi.time>bhead)&(df_roi.time<=bhead+bw)].weight.values
+            # print('len(ws) = {}'.format(len(ws)))
+            mws.append(np.mean(ws))
+            mws_pop.append(np.sum(ws)/(self.gids[src][-1]-self.gids[src][0]+1))
+        axs[1].plot(bins+bw/2, mws, color='g')
+        axs[1].plot(bins+bw/2, mws_pop, color='b')
+        t1 = time.time()
+        plt.xlabel('time (ms)')
+        plt.savefig('weight_{}->{}.png'.format(src_pop.replace(' ','').replace('/',''), trg_pop.replace(' ', '').replace('/','')), bbox_inches='tight')
+        plt.close()
+        # print('time plot_weight(): {:.4f}, {:.4f}'.format(t1-t0, time.time()-t1))
 
-    def get_data(self, begin, end):
+    def get_data(self, begin, end, dev_type='spike_detector'):
+        t0 = time.time()
         data_ret = []
-        for data in self.data:
-            if isinstance(data, np.ndarray):
-                data_ret.append(data[(data[:, 1] > begin) & (data[:, 1] <= end)])
-            else:
-                data_ret.append([])
+        for i, pop in enumerate(self.populations):
+            df = self.df[dev_type]
+            columns = df.columns.tolist()
+            data = df[(df.population==i)&(df.time>begin)&(df.time<=end)][columns[:-2]].values
+            if 'time' in columns:
+                data = data[np.argsort(data[:, columns.index('time')])]
+            data_ret.append(data)
+        # print('get_data(): {}'.format(time.time()-t0))
         return data_ret
 
     def get_ts_by_id(self, data, id):
@@ -171,6 +238,11 @@ class Spikes:
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
                         (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
+
+        self.colors_10 = [(51/255,34/255,136/255), (136/255,204/255,238/255), (68/255,170/255,153/255),
+                          (17/255,119/255,51/255), (153/255,153/255,51/255), (221/255,204/255,119/255),
+                          (204/255,102/255,119/255), (136/255,34/255,85/255), (170/255,68/255,153/255),
+                          (187/255,187/255,187/255)]
 
 
 '''
@@ -459,7 +531,8 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
     return_dict, procs = Manager().dict(), []
 
     # prepare calculation
-    df = copy.deepcopy(spikes.df)
+    df = copy.deepcopy(spikes.df['spike_detector'])
+    # df = copy.deepcopy(spikes.df[])
     df_corr = pd.DataFrame(columns=['corr', 'segment', 'layer'])
     df_cv = pd.DataFrame(columns=['cv', 'segment', 'layer'])
 

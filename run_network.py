@@ -20,13 +20,13 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 1000., 1000.
+    n_seg_ai, start_ai, seg_ai = 1, 0., 1000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
     # indgs = [1000,1500,800,1000]
-    indgs = [750,1500,500,1250]
+    indgs = [750,1500,500,250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
     scanparams.vip2som(True)
-    scanparams.set_g(8.)
+    scanparams.set_g(4.)
     scanparams.set_bg(4.)
     scanparams.set_stp(2)
     scanparams.net_dict['rec_dev'].append('weight_recorder')
@@ -137,13 +137,13 @@ if __name__ == "__main__":
 
     # analysis
     if run_analysis:
-        spikes = analysis.Spikes(data_path, 'spike_detector')
+        spikes = analysis.Spikes(data_path, ['spike_detector', 'weight_recorder'])
         mean_fr, std_fr = \
             analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
             t0 = time.time()
             analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
-            print('ground state running time = {}'.format(time.time() - t0))
+            print('gs_analysis() running time = {}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
             if do_response:
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # copy exception
     xcpt_path = os.path.join(data_path, 'ai_xcpt.dat')
     xcpt_cp_path = xcpt_path.replace('/', '_')
-    print(xcpt_cp_path)
+    # print(xcpt_cp_path)
     if os.path.isfile(xcpt_path):
-        os.system('mkdir ../exception/')
+        os.system('mkdir -p ../exception/')
         os.system('cp {} ../exception/{}'.format(xcpt_path, xcpt_cp_path))

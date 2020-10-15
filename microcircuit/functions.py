@@ -68,7 +68,7 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
     if 'weight_recorder' in net_dict['rec_dev'] and x < 4 and y < 4:
         copy_name = syn_dict['model'] + '_' + source_name
         if copy_name not in network.copysynapses:
-            print(copy_name)
+            # print(copy_name)
             nest.CopyModel(syn_dict['model'], syn_dict['model'] + '_' + source_name, {'weight_recorder': network.weight_recorder[x][0]})
             network.copysynapses.append(copy_name)
         syn_dict['model'] = copy_name
