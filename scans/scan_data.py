@@ -390,6 +390,7 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims, xybounds=[4., 8., 2., 6.])
+    scandata = ScanData(inputs, dims=dims)
+    # scandata = ScanData(inputs, dims=dims, xybounds=[3.8., 8.2, 3.8, 7.2])
     # scandata.mark_flg = True
     # scandata.make_plots(afx='mark_')

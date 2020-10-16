@@ -36,7 +36,6 @@ class ScanParams:
         self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         self.load_conn('7-15')
-        net_update(self.net_dict)
 
     # def do_single(self, pickle_path, indgs=None):
     #     # self.set_constant(indgs)

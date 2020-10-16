@@ -110,31 +110,36 @@ class Spikes:
             if dev_type not in self.df:
                 self.df[dev_type] = pd.DataFrame(columns=self.df_columns[dev_type])
             # loop device/population
-            for i, device in enumerate(self.devices[dev_type]):
+            for j, device in enumerate(self.devices[dev_type]):
                 data, thread_fns = [], self.get_threadfns(dev_type, device)
-                for j, fn in enumerate(thread_fns):
+                for k, fn in enumerate(thread_fns):
                     data_thread, abs_fn = [], os.path.join(self.path, fn)
-                    t0 = time.time()
                     if os.path.isfile(abs_fn) and os.stat(abs_fn).st_size > 0:
                         data_thread = np.loadtxt(abs_fn)
-                    # print('{}-{}: {:.4f}'.format(device, j, time.time()-t0))
-                    data.append(data_thread)
-                    t2 = time.time()
-                data = np.concatenate(data)
-                if data.ndim == 2:
-                    data = data[np.argsort(data[:, 1])]  # time consuming
-                    data = np.concatenate((data, np.full((len(data), 1), i),
-                        np.full((len(data), 1), self.layers[i])), axis=1)
+                        # if data_thread.ndim < 2:
+                        #     print(abs_fn, data_thread.shape)
+                    if isinstance(data_thread, np.ndarray) and len(data_thread) > 0:
+                        if data_thread.ndim == 1:
+                            data.append(np.array([data_thread]))
+                        elif data_thread.ndim == 2:
+                            data.append(data_thread)
+                        else:
+                            print('bug: data_thread.ndim != 1 or 2')
+                if len(data) > 0:
+                    data = np.concatenate(data)
+                if isinstance(data, np.ndarray) and data.ndim == 2:
+                    # data = data[np.argsort(data[:, 1])]  # time consuming
+                    lyr = self.layers[j]
+                    data = np.concatenate((data, np.full((len(data), 1), j),
+                        np.full((len(data), 1), lyr)), axis=1)
                     df = pd.DataFrame(data=data, columns=self.df_columns[dev_type])
                     self.df[dev_type] = self.df[dev_type].append(df, ignore_index=True)
-                    # print('{}: {:.4f}'.format(device, time.time()-t2))
-        for src_pop in self.populations[:4]:
-            self.plot_weight(self.df['weight_recorder'], src_pop=src_pop)
 
-    def plot_weight(self, df, src_pop='L2/3 Exc', trg_pop='L2/3 Exc', n_pre=40, n_post=10, bw=1.):
+    def plot_weight(self, dev_type='weight_recorder', src_pop='L2/3 Exc', trg_pop='L2/3 Exc', n_pre=40, n_post=10, bw=10.):
         t0 = time.time()
         src = self.populations.index(src_pop)
         trg = self.populations.index(trg_pop)
+        df = self.df[dev_type]
         src_ids = np.array(list(set(df['source'])))
         src_ids = src_ids[(self.gids[src][0]<=src_ids)&(src_ids<=self.gids[src][-1])].tolist()
         if len(src_ids) == 0:
@@ -177,6 +182,33 @@ class Spikes:
         plt.savefig('weight_{}->{}.png'.format(src_pop.replace(' ','').replace('/',''), trg_pop.replace(' ', '').replace('/','')), bbox_inches='tight')
         plt.close()
         # print('time plot_weight(): {:.4f}, {:.4f}'.format(t1-t0, time.time()-t1))
+
+    def compare_musig(self, begin, endin, bw=100., pop_name='L2/3 Exc'):
+        pop = self.populations.index(pop_name)
+        ids = np.arange(self.gids[pop][0], self.gids[pop][-1]+1)
+        dev_type='weight_recorder'
+        bheads, btails = np.arange(begin, endin, bw), np.arange(begin, endin, bw) + bw
+        df = self.df[dev_type][(begin<self.df[dev_type].time)& \
+            (self.df[dev_type].time<=endin)& \
+            (self.df[dev_type].population==pop)]
+        means_all, vars_all = [], []
+        for i, (bhead, btail) in enumerate(zip(bheads, btails)):
+            df_bin = df[(bhead<df.time)&(df.time<=btail)]
+            means_bin, vars_bin = [], []
+            for j, id in enumerate(ids):
+                ws = df_bin[(df_bin.target==id)].weight.values
+                means_bin.append(np.mean(ws))
+                vars_bin.append(np.var(ws))
+            means_all.append(means_bin)
+            vars_all.append(vars_all)
+        fig, axs = plt.subplots(1, 1, figsize=(16, 8))
+        plt.xlabel('time (ms)')
+        plt.ylabel('weight (pA)')
+        xss = np.tile(bheads, (len(means_all[0]), 1)).T + bw/2
+        axs.scatter(xss, means_all)
+        plt.savefig('compare_musig.png', bbox_inches='tight')
+        # plt.show()
+        plt.close()
 
     def get_data(self, begin, end, dev_type='spike_detector'):
         t0 = time.time()

@@ -20,13 +20,13 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 0., 1000.
+    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
     # indgs = [1000,1500,800,1000]
-    indgs = [750,1500,500,250]
+    indgs = [750,1500,500,1250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     scanparams.set_g(4.)
     scanparams.set_bg(4.)
     scanparams.set_stp(2)
-    scanparams.net_dict['rec_dev'].append('weight_recorder')
+    # scanparams.net_dict['rec_dev'].append('weight_recorder')
     # scanparams.net_dict['K_ext'] = np.array([750, 1750, 750, 1750,
     #                                          750, 1750, 750,
     #                                          750, 1750, 750,
@@ -77,10 +77,10 @@ if __name__ == "__main__":
         # set parameters
         scanparams.set_stp(sys.argv[3])
         # to be improved
-        if int(sys.argv[3]) == 0:
-            scanparams.set_indgs([1000,1500,750,1000])
-        elif int(sys.argv[3]) == 2:
-            scanparams.set_indgs([750,1500,500,250])
+        # if int(sys.argv[3]) == 0:
+        #     scanparams.set_indgs([1000,1500,750,1000])
+        # elif int(sys.argv[3]) == 2:
+        #     scanparams.set_indgs([750,1500,500,250])
         scanparams.vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     # analysis
     if run_analysis:
-        spikes = analysis.Spikes(data_path, ['spike_detector', 'weight_recorder'])
+        spikes = analysis.Spikes(data_path, para_dict['net_dict']['rec_dev'])
         mean_fr, std_fr = \
             analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
@@ -160,6 +160,8 @@ if __name__ == "__main__":
         # if not on_server:
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
+        # spikes.plot_weight()
+        # spikes.compare_musig(start_ai, start_ai + len_ai)
 
         spikes.verify_print(data_path)
 

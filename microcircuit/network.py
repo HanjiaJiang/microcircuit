@@ -5,7 +5,7 @@ np.set_printoptions(precision=4, suppress=True, linewidth=100)
 
 class Network:
     def __init__(self, sim_dict, net_dict, stim_dict=None):
-        # net_update(net_dict, net_dict['g'])
+        net_update(net_dict)
         self.sim_dict = sim_dict
         self.net_dict = net_dict
         if stim_dict is not None:
