@@ -10,7 +10,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = True
+    run_sim = False
     run_analysis = True
     print_to_file = False
 
@@ -20,13 +20,13 @@ if __name__ == "__main__":
     do_selectivity = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 10, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 0., 1000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # set background input
     # indgs = [1000,1500,800,1000]
-    indgs = [750,1500,500,1250]
+    indgs = [750,1500,500,250]
 
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -50,18 +50,18 @@ if __name__ == "__main__":
     dc_extra_targets, dc_extra_amps = [], []
 
     # set others
-    plot_half_len = 100.0
-    plot_center = start_ai
+    plot_half_len = 500.0
+    plot_center = 500.
     # plot_center = stims[0]
     # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
     scanparams.vip2som(True)
-    scanparams.set_g(4.)
+    scanparams.set_g(8.)
     scanparams.set_bg(4.)
     scanparams.set_stp(2)
-    # scanparams.net_dict['rec_dev'].append('weight_recorder')
+    scanparams.net_dict['rec_dev'].append('weight_recorder')
     # scanparams.net_dict['K_ext'] = np.array([750, 1750, 750, 1750,
     #                                          750, 1750, 750,
     #                                          750, 1750, 750,
@@ -126,6 +126,10 @@ if __name__ == "__main__":
         para_dict['net_dict']['dc_extra'][target] = amp
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
 
+    # delete existing files
+    if run_sim == True and os.path.isdir(data_path):
+        os.system('rm {}/*.gdf {}/*.csv'.format(data_path, data_path))
+
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
                           para_dict['stim_dict'])
@@ -161,7 +165,7 @@ if __name__ == "__main__":
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
         # spikes.plot_weight()
-        # spikes.compare_musig(start_ai, start_ai + len_ai)
+        spikes.compare_musig(start_ai, start_ai + len_ai)
 
         spikes.verify_print(data_path)
 

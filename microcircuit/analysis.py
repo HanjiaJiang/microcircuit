@@ -191,23 +191,51 @@ class Spikes:
         df = self.df[dev_type][(begin<self.df[dev_type].time)& \
             (self.df[dev_type].time<=endin)& \
             (self.df[dev_type].population==pop)]
-        means_all, vars_all = [], []
+        means_all, vars_all, pvals_mean, pvals_var = [], [], [], []
         for i, (bhead, btail) in enumerate(zip(bheads, btails)):
+            print('bhead={}'.format(bhead))
             df_bin = df[(bhead<df.time)&(df.time<=btail)]
             means_bin, vars_bin = [], []
             for j, id in enumerate(ids):
                 ws = df_bin[(df_bin.target==id)].weight.values
-                means_bin.append(np.mean(ws))
-                vars_bin.append(np.var(ws))
+                if len(ws) > 0:
+                    means_bin.append(np.mean(ws))
+                    vars_bin.append(np.var(ws))
+            if i > 0:
+                stat, pval_mean = stats.ttest_ind(means_all[-1], means_bin)
+                stat, pval_var = stats.ttest_ind(vars_all[-1], vars_bin)
+                pvals_mean.append(pval_mean)
+                pvals_var.append(pval_var)
             means_all.append(means_bin)
-            vars_all.append(vars_all)
-        fig, axs = plt.subplots(1, 1, figsize=(16, 8))
+            vars_all.append(vars_bin)
+        fig, axs = plt.subplots(2, 1, figsize=(16, 16))
         plt.xlabel('time (ms)')
-        plt.ylabel('weight (pA)')
-        xss = np.tile(bheads, (len(means_all[0]), 1)).T + bw/2
-        axs.scatter(xss, means_all)
+        xs = bheads + bw/2
+
+        axs[0].boxplot(means_all, positions=xs, widths=bw/4, sym='.', showfliers=False)
+        axs[1].boxplot(vars_all, positions=xs, widths=bw/4, sym='.', showfliers=False)
+
+        # statistics
+        mbot, mtop = axs[0].get_ylim()
+        vbot, vtop = axs[1].get_ylim()
+        for i, btail in enumerate(btails[:-1]):
+            if pvals_mean[i] <= 0.05:
+                axs[0].text(btail, mbot+(0.9+0.01*(i%10))*(mtop-mbot), \
+                    '{:.3f}'.format(pvals_mean[i]), horizontalalignment='center', fontsize=10)
+            if pvals_var[i] <= 0.05:
+                axs[0].text(btail, vbot+(0.9+0.01*(i%10))*(vtop-vbot), \
+                    '{:.3f}'.format(pvals_var[i]), horizontalalignment='center', fontsize=10)
+
+        xticks = np.append(bheads, endin).astype(int)
+        xticklabels = xticks.astype(str)
+        axs[0].set_xticks(xticks)
+        axs[0].set_xticklabels(xticklabels)
+        axs[1].set_xticks(xticks)
+        axs[1].set_xticklabels(xticklabels)
+
+        axs[0].set_ylabel('weight mean (pA)')
+        axs[1].set_ylabel('weight variance (pA)')
         plt.savefig('compare_musig.png', bbox_inches='tight')
-        # plt.show()
         plt.close()
 
     def get_data(self, begin, end, dev_type='spike_detector'):
