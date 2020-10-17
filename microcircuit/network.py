@@ -160,9 +160,11 @@ class Network:
                     'to_file': True,
                     'label': os.path.join(self.data_path, 'weight_recorder'),
                     }
-                wr = nest.Create('weight_recorder', params=wrdict)
-                # nest.CopyModel('tsodyks_synapse', 'tsodyks_synapse_wr{}'.format(i), {"weight_recorder": wr})
-                self.weight_recorder.append(wr)
+                # one for recurrent, one for background input
+                wr1 = nest.Create('weight_recorder', params=wrdict)
+                wr2 = nest.Create('weight_recorder', params=wrdict)
+                self.weight_recorder.append(wr1)
+                self.weight_recorder.append(wr2)
 
         if 'spike_detector' in self.net_dict['rec_dev']:
             if nest.Rank() == 0:
@@ -299,7 +301,7 @@ class Network:
                 verify_collect('{} to {}: (w, w_sd, syn_dict) = {:.4f}, {:.4f}\n{}\n'.format(source_name, target_name, w, w_sd, syn_dict), 'lognormal')
 
 
-    def connect_poisson(self):
+    def connect_poisson(self, test=True):
         """ Connects the Poisson generators to the microcircuit."""
         cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
         # w = self.w_ext
@@ -331,6 +333,19 @@ class Network:
                  'weight': w,
                 'delay': self.net_dict['poisson_delay']
                 }
+            # weight_recorder
+            if 'weight_recorder' in self.net_dict['rec_dev']:
+                if test==True and i != 0:
+                    pass
+                else:
+                    copysynapse = syn_dict_poisson['model'] + '_bg_' + self.net_dict['populations'][i]
+                    if copysynapse not in self.copysynapses:
+                        print(copysynapse)
+                        nest.CopyModel(syn_dict_poisson['model'], copysynapse, \
+                            {'weight_recorder': self.weight_recorder[13+i][0]})
+                        print('bg wr = ', self.weight_recorder[13+i][0])
+                        self.copysynapses.append(copysynapse)
+                    syn_dict_poisson['model'] = copysynapse
             nest.Connect(
                 self.poisson[i], target_pop,
                 conn_spec=conn_dict_poisson,

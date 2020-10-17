@@ -179,7 +179,8 @@ class Spikes:
         axs[1].plot(bins+bw/2, mws_pop, color='b')
         t1 = time.time()
         plt.xlabel('time (ms)')
-        plt.savefig('weight_{}->{}.png'.format(src_pop.replace(' ','').replace('/',''), trg_pop.replace(' ', '').replace('/','')), bbox_inches='tight')
+        plt.tight_layout()
+        plt.savefig('weight_{}->{}.png'.format(src_pop.replace(' ','').replace('/',''), trg_pop.replace(' ', '').replace('/','')))
         plt.close()
         # print('time plot_weight(): {:.4f}, {:.4f}'.format(t1-t0, time.time()-t1))
 
@@ -235,7 +236,8 @@ class Spikes:
 
         axs[0].set_ylabel('weight mean (pA)')
         axs[1].set_ylabel('weight variance (pA)')
-        plt.savefig('compare_musig.png', bbox_inches='tight')
+        plt.tight_layout()
+        plt.savefig('compare_musig.png')
         plt.close()
 
     def get_data(self, begin, end, dev_type='spike_detector'):

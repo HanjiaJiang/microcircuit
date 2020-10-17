@@ -10,17 +10,18 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # simulation settings
-    run_sim = False
+    run_sim = True
     run_analysis = True
     print_to_file = False
 
     #  settings
     do_ai = True
-    do_response = False
+    do_response = True
     do_selectivity = False
+    weight_record = False
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 0., 1000.
+    n_seg_ai, start_ai, seg_ai = 1, 1000., 1000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 0, 120., 1000.
+    n_stim, th_rate, stim_intrv = 10, 200., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
@@ -50,9 +51,10 @@ if __name__ == "__main__":
     dc_extra_targets, dc_extra_amps = [], []
 
     # set others
-    plot_half_len = 500.0
+    plot_half_len = 100.0
     plot_center = 500.
-    # plot_center = stims[0]
+    if len(stims) > 0:
+        plot_center = stims[0]
     # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
@@ -61,11 +63,12 @@ if __name__ == "__main__":
     scanparams.set_g(8.)
     scanparams.set_bg(4.)
     scanparams.set_stp(2)
-    scanparams.net_dict['rec_dev'].append('weight_recorder')
-    # scanparams.net_dict['K_ext'] = np.array([750, 1750, 750, 1750,
-    #                                          750, 1750, 750,
-    #                                          750, 1750, 750,
-    #                                          750, 1750, 750])
+    if weight_record:
+        scanparams.net_dict['rec_dev'].append('weight_recorder')
+    scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
+                                             750, 1500, 500,
+                                             1500, 1500, 0,
+                                             1500, 1500, 0])
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -164,8 +167,9 @@ if __name__ == "__main__":
         # if not on_server:
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
-        # spikes.plot_weight()
-        spikes.compare_musig(start_ai, start_ai + len_ai)
+        if weight_record:
+            spikes.plot_weight()
+            spikes.compare_musig(start_ai, start_ai + len_ai)
 
         spikes.verify_print(data_path)
 
