@@ -129,7 +129,7 @@ class Spikes:
                     data = np.concatenate(data)
                 if isinstance(data, np.ndarray) and data.ndim == 2:
                     # data = data[np.argsort(data[:, 1])]  # time consuming
-                    lyr = self.layers[j]
+                    lyr = self.layers[j%13]
                     data = np.concatenate((data, np.full((len(data), 1), j),
                         np.full((len(data), 1), lyr)), axis=1)
                     df = pd.DataFrame(data=data, columns=self.df_columns[dev_type])
@@ -190,8 +190,7 @@ class Spikes:
         dev_type='weight_recorder'
         bheads, btails = np.arange(begin, endin, bw), np.arange(begin, endin, bw) + bw
         df = self.df[dev_type][(begin<self.df[dev_type].time)& \
-            (self.df[dev_type].time<=endin)& \
-            (self.df[dev_type].population==pop)]
+            (self.df[dev_type].time<=endin)]
         means_all, vars_all, pvals_mean, pvals_var = [], [], [], []
         for i, (bhead, btail) in enumerate(zip(bheads, btails)):
             print('bhead={}'.format(bhead))

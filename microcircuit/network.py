@@ -4,7 +4,7 @@ from microcircuit.network_params import net_update
 np.set_printoptions(precision=4, suppress=True, linewidth=100)
 
 class Network:
-    def __init__(self, sim_dict, net_dict, stim_dict=None):
+    def __init__(self, sim_dict, net_dict, stim_dict=None, test=True):
         net_update(net_dict)
         self.sim_dict = sim_dict
         self.net_dict = net_dict
@@ -20,6 +20,7 @@ class Network:
                 os.mkdir(self.sim_dict['data_path'])
                 print('data directory created')
             print('Data will be written to %s' % self.data_path)
+        self.test = test
 
     def setup_nest(self):
         nest.ResetKernel()
@@ -215,10 +216,12 @@ class Network:
         if self.net_dict['poisson_input']:
             if nest.Rank() == 0:
                 print('Poisson background input created')
+            # rate_ext = self.net_dict['bg_rate']
             rate_ext = self.net_dict['bg_rate'] * self.K_ext
             self.poisson = []
             for i, target_pop in enumerate(self.pops):
                 poisson = nest.Create('poisson_generator')
+                # nest.SetStatus(poisson, {'rate': rate_ext})
                 nest.SetStatus(poisson, {'rate': rate_ext[i]})
                 self.poisson.append(poisson)
 
@@ -301,9 +304,10 @@ class Network:
                 verify_collect('{} to {}: (w, w_sd, syn_dict) = {:.4f}, {:.4f}\n{}\n'.format(source_name, target_name, w, w_sd, syn_dict), 'lognormal')
 
 
-    def connect_poisson(self, test=True):
+    def connect_poisson(self):
         """ Connects the Poisson generators to the microcircuit."""
         cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+        self.bg_parrots = []
         # w = self.w_ext
         if nest.Rank() == 0:
             print('Poisson background input is connected')
@@ -335,7 +339,7 @@ class Network:
                 }
             # weight_recorder
             if 'weight_recorder' in self.net_dict['rec_dev']:
-                if test==True and i != 0:
+                if self.test==True and i != 0:
                     pass
                 else:
                     copysynapse = syn_dict_poisson['model'] + '_bg_' + self.net_dict['populations'][i]
@@ -343,14 +347,20 @@ class Network:
                         print(copysynapse)
                         nest.CopyModel(syn_dict_poisson['model'], copysynapse, \
                             {'weight_recorder': self.weight_recorder[13+i][0]})
-                        print('bg wr = ', self.weight_recorder[13+i][0])
+                        # print('bg wr = ', self.weight_recorder[13+i][0])
                         self.copysynapses.append(copysynapse)
                     syn_dict_poisson['model'] = copysynapse
+            #
+            bg_parrot = nest.Create('parrot_neuron', self.net_dict['N_full'][i])
+            nest.Connect(self.poisson[i], bg_parrot, conn_spec=conn_dict_poisson)
             nest.Connect(
-                self.poisson[i], target_pop,
-                conn_spec=conn_dict_poisson,
+                bg_parrot, target_pop,
+                # self.poisson[i], target_pop,
+                conn_spec={'rule': 'one_to_one'},
+                # conn_spec=conn_dict_poisson,
                 syn_spec=syn_dict_poisson
                 )
+            self.bg_parrots.append(bg_parrot)
 
     def connect_thalamus(self):
         """ Connects the thalamic population to the microcircuit."""

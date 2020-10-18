@@ -16,12 +16,13 @@ if __name__ == "__main__":
 
     #  settings
     do_ai = True
-    do_response = True
+    do_response = False
     do_selectivity = False
-    weight_record = False
+    weight_record = True
+    test = True
 
     # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 1000., 1000.
+    n_seg_ai, start_ai, seg_ai = 1, 0., 200.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     # set thalamic input:
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 10, 200., 1000.
+    n_stim, th_rate, stim_intrv = 0, 200., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
@@ -52,7 +53,7 @@ if __name__ == "__main__":
 
     # set others
     plot_half_len = 100.0
-    plot_center = 500.
+    plot_center = 100.
     if len(stims) > 0:
         plot_center = stims[0]
     # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
@@ -65,10 +66,10 @@ if __name__ == "__main__":
     scanparams.set_stp(2)
     if weight_record:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
-    scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
-                                             750, 1500, 500,
-                                             1500, 1500, 0,
-                                             1500, 1500, 0])
+    # scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
+    #                                          750, 1500, 500,
+    #                                          1500, 1500, 0,
+    #                                          1500, 1500, 0])
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -135,7 +136,7 @@ if __name__ == "__main__":
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                          para_dict['stim_dict'])
+                          para_dict['stim_dict'], test=test)
     net.setup()
     if run_sim:
         # print parameters

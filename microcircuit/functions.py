@@ -30,7 +30,7 @@ def verify_print(path=None):
 Main functions
 '''
 # assign synapse dictionary
-def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network, test=True):
+def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
     syn_dict = {'model': 'static_synapse'}
     net_dict = network.net_dict
     stp_dict = network.net_dict['stp_dict']
@@ -66,14 +66,14 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network, test
     x = net_dict['populations'].index(source_name)
     y = net_dict['populations'].index(target_name)
     if 'weight_recorder' in net_dict['rec_dev']:
-        if test==True and (x != 0 or y != 0):
+        if network.test==True and (x != 0 or y != 0):
             pass
         else:
             copysynapse = syn_dict['model'] + '_' + source_name
             if copysynapse not in network.copysynapses:
                 print(copysynapse)
                 nest.CopyModel(syn_dict['model'], copysynapse, {'weight_recorder': network.weight_recorder[x][0]})
-                print('wr = {}'.format(network.weight_recorder[x][0]))
+                # print('wr = {}'.format(network.weight_recorder[x][0]))
                 network.copysynapses.append(copysynapse)
             syn_dict['model'] = copysynapse
     return syn_dict
