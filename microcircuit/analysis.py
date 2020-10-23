@@ -184,59 +184,100 @@ class Spikes:
         plt.close()
         # print('time plot_weight(): {:.4f}, {:.4f}'.format(t1-t0, time.time()-t1))
 
-    def compare_musig(self, begin, endin, bw=100., pop_name='L2/3 Exc'):
+    def stationary_musig(self, begin, endin, sw=100., bw=1.0, pop_name='L2/3 Exc', verify=False):
+        # index of population
         pop = self.populations.index(pop_name)
+        # ids of this population
         ids = np.arange(self.gids[pop][0], self.gids[pop][-1]+1)
+        # segments
+        sheads, stails = np.arange(begin, endin, sw), np.arange(begin, endin, sw) + sw
+        # get data
         dev_type='weight_recorder'
-        bheads, btails = np.arange(begin, endin, bw), np.arange(begin, endin, bw) + bw
         df = self.df[dev_type][(begin<self.df[dev_type].time)& \
             (self.df[dev_type].time<=endin)]
+        # caches
         means_all, vars_all, pvals_mean, pvals_var = [], [], [], []
-        for i, (bhead, btail) in enumerate(zip(bheads, btails)):
-            print('bhead={}'.format(bhead))
-            df_bin = df[(bhead<df.time)&(df.time<=btail)]
-            means_bin, vars_bin = [], []
+        # by segment
+        for i, (shead, stail) in enumerate(zip(sheads, stails)):
+            # for progress-watching
+            print('shead: {}'.format(shead))
+            # get segment data
+            df_seg = df[(shead<df.time)&(df.time<=stail)]
+            # bins
+            bheads, btails = np.arange(shead, stail, bw), np.arange(shead, stail, bw) + bw
+            # caches
+            means_bin, vars_bin, verify_means = [], [], []
+            # verify
+            if verify:
+                df_veri = df_seg[df_seg.target.isin(ids)]
+            # by neuron
             for j, id in enumerate(ids):
-                ws = df_bin[(df_bin.target==id)].weight.values
-                if len(ws) > 0:
-                    means_bin.append(np.mean(ws))
-                    vars_bin.append(np.var(ws))
+                ts = df_seg[df_seg.target==id].time.values
+                ws = df_seg[df_seg.target==id].weight.values
+                # weight sums of this segment
+                wsums = np.full(len(bheads), 0.)
+                # by bin
+                for k, (bhead, btail) in enumerate(zip(bheads, btails)):
+                    # weights in this bin
+                    ws_bin = ws[(bhead<ts)&(ts<=btail)]
+                    # sum of weights in this bin
+                    if len(ws_bin) > 0:
+                        wsums[k] += np.sum(ws_bin)
+                if verify:
+                    ws_verify = df_veri[(df_veri.source==id)].weight.values
+                means_bin.append(np.mean(wsums))
+                vars_bin.append(np.var(wsums))
+                if verify and len(ws_verify) > 0:
+                    # self.verify_collect('{}: in-weights = {}\n'.format(id, wsums), 'wr')
+                    verify_means.append(np.mean(ws_verify))
+                    self.verify_collect('{}: out-weight-mu = {:.2f}\n'.format(id, np.mean(ws_verify)), 'wr')
+            # t test
             if i > 0:
                 stat, pval_mean = stats.ttest_ind(means_all[-1], means_bin)
                 stat, pval_var = stats.ttest_ind(vars_all[-1], vars_bin)
                 pvals_mean.append(pval_mean)
                 pvals_var.append(pval_var)
+            # data to be plotted
             means_all.append(means_bin)
             vars_all.append(vars_bin)
+            if verify:
+                self.verify_collect('mean: {:.2f}\n\n'.format(np.mean(verify_means)), 'wr')
+        # plot
         fig, axs = plt.subplots(2, 1, figsize=(16, 16))
         plt.xlabel('time (ms)')
-        xs = bheads + bw/2
+        xs = sheads + sw/2
+        flierprops = dict(marker='+', markerfacecolor='k', markersize=5,
+                  linestyle='none', markeredgecolor='k')
+        axs[0].boxplot(means_all, positions=xs, widths=sw/4, sym='.', flierprops=flierprops)
+        axs[1].boxplot(vars_all, positions=xs, widths=sw/4, sym='.', flierprops=flierprops)
 
-        axs[0].boxplot(means_all, positions=xs, widths=bw/4, sym='.', showfliers=False)
-        axs[1].boxplot(vars_all, positions=xs, widths=bw/4, sym='.', showfliers=False)
-
-        # statistics
+        # plot significant p-values
         mbot, mtop = axs[0].get_ylim()
         vbot, vtop = axs[1].get_ylim()
-        for i, btail in enumerate(btails[:-1]):
+        for i, stail in enumerate(stails[:-1]):
             if pvals_mean[i] <= 0.05:
-                axs[0].text(btail, mbot+(0.9+0.01*(i%10))*(mtop-mbot), \
+                axs[0].text(stail, mbot+(0.9+0.01*(i%10))*(mtop-mbot), \
                     '{:.3f}'.format(pvals_mean[i]), horizontalalignment='center', fontsize=10)
             if pvals_var[i] <= 0.05:
-                axs[0].text(btail, vbot+(0.9+0.01*(i%10))*(vtop-vbot), \
+                axs[0].text(stail, vbot+(0.9+0.01*(i%10))*(vtop-vbot), \
                     '{:.3f}'.format(pvals_var[i]), horizontalalignment='center', fontsize=10)
 
-        xticks = np.append(bheads, endin).astype(int)
-        xticklabels = xticks.astype(str)
+        xticks = np.append(sheads, endin).astype(int)
+        xticklabels, tick_interval = [], int(len(sheads)/10)
+        tick_interval = 1 if tick_interval == 0 else tick_interval
+        for i, tick in enumerate(xticks):
+            lbl = str(int(tick)) if i%(tick_interval) == 0 else ''
+            xticklabels.append(lbl)
+        # xticklabels = xticks.astype(str)
         axs[0].set_xticks(xticks)
-        axs[0].set_xticklabels(xticklabels)
+        axs[0].set_xticklabels(xticklabels, rotation=30)
         axs[1].set_xticks(xticks)
-        axs[1].set_xticklabels(xticklabels)
+        axs[1].set_xticklabels(xticklabels, rotation=30)
 
-        axs[0].set_ylabel('weight mean (pA)')
-        axs[1].set_ylabel('weight variance (pA)')
+        axs[0].set_ylabel(r'weight mean ($pA$)')
+        axs[1].set_ylabel(r'weight variance ($pA^{2}$)')
         plt.tight_layout()
-        plt.savefig('compare_musig.png')
+        plt.savefig(os.path.join(self.path, 'stationary_musig.png'))
         plt.close()
 
     def get_data(self, begin, end, dev_type='spike_detector'):

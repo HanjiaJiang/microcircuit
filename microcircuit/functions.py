@@ -69,11 +69,12 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
         if network.test==True and (x != 0 or y != 0):
             pass
         else:
-            copysynapse = syn_dict['model'] + '_' + source_name
+            copysynapse = syn_dict['model'] + '_wr'
+            # copysynapse = syn_dict['model'] + '_' + source_name
             if copysynapse not in network.copysynapses:
-                print(copysynapse)
-                nest.CopyModel(syn_dict['model'], copysynapse, {'weight_recorder': network.weight_recorder[x][0]})
-                # print('wr = {}'.format(network.weight_recorder[x][0]))
+                print('copysynapse = {}'.format(copysynapse))
+                nest.CopyModel(syn_dict['model'], copysynapse, {'weight_recorder': network.weight_recorder['recurrent'][0]})
+                # nest.CopyModel(syn_dict['model'], copysynapse, {'weight_recorder': network.weight_recorder[x][0]})
                 network.copysynapses.append(copysynapse)
             syn_dict['model'] = copysynapse
     return syn_dict

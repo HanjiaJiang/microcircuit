@@ -2,7 +2,7 @@
     "__default__":
     {
         "account": "hanjia",
-        "mem": "10G",
+        "mem": "20G",
         "time": "02:00:0",
         "n": 1,
         "nCPUs": 24

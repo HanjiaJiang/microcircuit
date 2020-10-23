@@ -15,7 +15,7 @@ np.set_printoptions(suppress=True, precision=4)
 objects
 '''
 class ScanParams:
-    def __init__(self, indgs=[750,1500,500,1250]):
+    def __init__(self, indgs=[750,1500,500,1000]):
         self.net_dict = copy.deepcopy(net_dict)
         self.sim_dict = copy.deepcopy(sim_dict)
         self.stim_dict = copy.deepcopy(stim_dict)
@@ -35,13 +35,8 @@ class ScanParams:
         # self.net_dict['stp_dict'] = {}
         self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
-        self.load_conn('7-15')
-
-    # def do_single(self, pickle_path, indgs=None):
-    #     # self.set_constant(indgs)
-    #     # self.set_weight('Exc', 'Exc', 1.25)
-    #     # self.set_weight('SOM', 'PV', 1.25)
-    #     self.save_pickle(pickle_path)
+        self.load_conn(conn='7-15')
+        self.vip2som(True)
 
     def set_weight(self, pre, post, factor):
         for i, prepop in enumerate(self.net_dict['populations']):
@@ -127,14 +122,16 @@ class ScanParams:
     def renew_conn(self, raw):
         self.net_dict['conn_probs'] = func.renew_conn(net_dict['conn_probs'], 'microcircuit/conn_probs/raw_{}.csv'.format(raw))
 
-    def load_conn(self, conn):
+    def load_conn(self, conn='7-15'):
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
     def vip2som(self, adjust):
         if int(adjust) != 0:
             # vip-to-som all the same across layers
-            print('adjust vip conn.')
+            print('adjust vip-to-som conn.')
             self.net_dict['conn_probs'][[6, 9, 12], 3] = self.net_dict['conn_probs'][2, 3]
+        else:
+            self.load_conn()
 
     def set_ucomp(self, input):
         if int(input) == 0:
@@ -176,15 +173,17 @@ def set_paradox(para_dict, paradox_type, n, pops, offsets, start, duration, intr
     return n*len(offsets)*(duration+intrv)
 
 # set layer-specific thalamic input
-def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10):
+def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10, conn_probs=None):
     th_dict = {}
     if type(th_starts) is list and len(th_starts) > 0 and type(th_rate) is float:
+        if isinstance(conn_probs, np.ndarray) is not True:
+            # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
+            conn_probs = np.array([0.062, 0.062, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
         para_dict['stim_dict']['thalamic_input'] = True
         para_dict['stim_dict']['th_rate'] = th_rate
         para_dict['stim_dict']['th_start'] = np.array(th_starts).astype(float)
         para_dict['stim_dict']['th_duration'] = duration
-        # Bruno, Simons, 2002; Oberlaender et al., 2011; Sermet et al., 2019; Constantinople, Bruno, 2013
-        para_dict['stim_dict']['conn_probs_th'] = np.array([0.062, 0.062, 0.0, 0.0, 0.4, 0.4, 0.0, 0.259, 0.259, 0.0, 0.09, 0.09, 0.0])
+        para_dict['stim_dict']['conn_probs_th'] = conn_probs
     para_dict['net_dict']['orient_tuning'] = orient
 
 '''
@@ -200,14 +199,10 @@ def print_all(all_dict):
                     for k3, v3 in v2.items():
                         f.write(k3 + '=\n')
                         f.write('{}\n'.format(v3))
-                        # if isinstance(v3, np.ndarray):
-                        #     f.write('hash={}\n'.format(hash(bytes(v3))))
                     f.write('\n')
                 else:
                     f.write(k2 + ':\n')
                     f.write('{}\n'.format(v2))
-                    # if isinstance(v2, np.ndarray):
-                    #     f.write('hash={}\n'.format(hash(bytes(v2))))
                     f.write('\n')
             f.close()
 
@@ -218,10 +213,6 @@ if __name__ == "__main__":
 
     # create ScanParams object
     scanparams = ScanParams()
-    # scanparams.set_constant()
-
-    # constant parameters
-    # scanparams.vip2som(True)
 
     # parameters to be scanned
     for out in outs:

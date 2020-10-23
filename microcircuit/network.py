@@ -130,7 +130,7 @@ class Network:
     def create_devices(self):
         self.spike_detector = []
         self.voltmeter = []
-        self.weight_recorder = []
+        self.weight_recorder = {}
         for i, pop in enumerate(self.pops):
             if 'spike_detector' in self.net_dict['rec_dev']:
                 recdict = {
@@ -154,18 +154,18 @@ class Network:
                     }
                 volt = nest.Create('voltmeter', params=recdictmem)
                 self.voltmeter.append(volt)
-            if 'weight_recorder' in self.net_dict['rec_dev']:
-                self.copysynapses = []
-                wrdict = {
-                    'to_memory': False,
-                    'to_file': True,
-                    'label': os.path.join(self.data_path, 'weight_recorder'),
-                    }
-                # one for recurrent, one for background input
-                wr1 = nest.Create('weight_recorder', params=wrdict)
-                wr2 = nest.Create('weight_recorder', params=wrdict)
-                self.weight_recorder.append(wr1)
-                self.weight_recorder.append(wr2)
+        if 'weight_recorder' in self.net_dict['rec_dev']:
+            self.copysynapses = []
+            wrdict = {
+                'to_memory': False,
+                'to_file': True,
+                'label': os.path.join(self.data_path, 'weight_recorder'),
+                }
+            # one for recurrent, one for background input
+            wr_recrr = nest.Create('weight_recorder', params=wrdict)
+            wr_bg = nest.Create('weight_recorder', params=wrdict)
+            self.weight_recorder['recurrent'] = wr_recrr
+            self.weight_recorder['background'] = wr_bg
 
         if 'spike_detector' in self.net_dict['rec_dev']:
             if nest.Rank() == 0:
@@ -308,7 +308,13 @@ class Network:
         """ Connects the Poisson generators to the microcircuit."""
         cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
         self.bg_parrots = []
-        # w = self.w_ext
+        copysynapse = 'static_synapse_wr_bg'
+        if 'weight_recorder' in self.net_dict['rec_dev']:
+            if copysynapse not in self.copysynapses:
+                print('copysynapse = {}'.format(copysynapse))
+                nest.CopyModel('static_synapse', copysynapse, \
+                    {'weight_recorder': self.weight_recorder['background'][0]})
+                self.copysynapses.append(copysynapse)
         if nest.Rank() == 0:
             print('Poisson background input is connected')
         for i, target_pop in enumerate(self.pops):
@@ -321,36 +327,16 @@ class Network:
                 self.net_dict['neuron_params']['C_m'][cell_type],
                 self.net_dict['neuron_params']['tau_m'][cell_type],
                 self.net_dict['neuron_params']['tau_syn_ex'])
-            # currently inconvenient to implement STPs
-            # because dinstinction of connections from
-            # different external neurons is not available
-            # (lognormal)
-            # w_sd = w
-            # var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
-            # mu_n = np.log(abs(w)) - var_n / 2.
-            # weight_dict = {
-            #    'distribution': 'lognormal', 'mu': mu_n,
-            #    'sigma': np.sign(w)*np.sqrt(var_n)
-            #    }
             syn_dict_poisson = {
                 'model': 'static_synapse',
                  'weight': w,
                 'delay': self.net_dict['poisson_delay']
                 }
-            # weight_recorder
             if 'weight_recorder' in self.net_dict['rec_dev']:
                 if self.test==True and i != 0:
                     pass
                 else:
-                    copysynapse = syn_dict_poisson['model'] + '_bg_' + self.net_dict['populations'][i]
-                    if copysynapse not in self.copysynapses:
-                        print(copysynapse)
-                        nest.CopyModel(syn_dict_poisson['model'], copysynapse, \
-                            {'weight_recorder': self.weight_recorder[13+i][0]})
-                        # print('bg wr = ', self.weight_recorder[13+i][0])
-                        self.copysynapses.append(copysynapse)
                     syn_dict_poisson['model'] = copysynapse
-            #
             bg_parrot = nest.Create('parrot_neuron', self.net_dict['N_full'][i])
             nest.Connect(self.poisson[i], bg_parrot, conn_spec=conn_dict_poisson)
             nest.Connect(

@@ -1,0 +1,42 @@
+{
+"Exc": {
+   "PV": {"Kapfer07"},
+   "SOM": {"Kapfer07"}
+},
+"PV": {
+  "Exc": {"Ma12"},
+  "PV": {"Ma12"},
+  "SOM": {"Ma12"},
+  "VIP": {"Karnani16"}
+},
+"SOM": {
+   "Exc": {"Ma12"},
+  "PV": {"Ma12"},
+  "VIP": {"Karnani16"}
+},
+"VIP": {
+  "SOM": {"Karnani16"},
+  "VIP": {"Karnani16"}
+},
+"L23_Exc": {
+  "L23_Exc": {"Lefort17"},
+  "L4_Exc": {"Lefort17"},
+  "L5_Exc": {"Lefort17"},
+},
+"L4_Exc": {
+  "L23_Exc": {"Lefort17"},
+  "L4_Exc": {"Lefort17"},
+  "L5_Exc": {"Lefort17"},
+   "L6_Exc": {"Lefort17"}
+},
+"L5_Exc": {
+  "L23_Exc": {"Lefort17"},
+  "L4_Exc": {"Lefort17"},
+  "L5_Exc": {"Lefort17"},
+  "L6_Exc": {"Lefort17"}
+},
+"L6_Exc": {
+  "L5_Exc": {"Lefort17"},
+  "L6_Exc": {"Lefort17"}
+}
+}

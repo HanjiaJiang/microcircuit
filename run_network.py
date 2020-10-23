@@ -9,37 +9,39 @@ import microcircuit.analysis as analysis
 import microcircuit.create_params as create
 
 if __name__ == "__main__":
-    # simulation settings
+    # running settings
     run_sim = True
     run_analysis = True
     print_to_file = False
 
-    #  settings
+    #  model settings
     do_ai = True
     do_response = False
     do_selectivity = False
-    weight_record = True
-    test = True
+    do_weight = True
+    model_test = False
 
-    # set ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 0., 200.
+    # ai segments
+    n_seg_ai, start_ai, seg_ai = 1, 0., 8000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
-    # set background input
-    # indgs = [1000,1500,800,1000]
-    indgs = [750,1500,500,250]
+    # background input
+    # indgs = [1000,1500,750,1000]
+    indgs = [750,1500,500,1000]
 
-    # set thalamic input:
+    # thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 0, 200., 1000.
+    n_stim, th_rate, stim_intrv = 0, 120., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
+    conn_probs_th = None
+    # conn_probs_th = np.array([0., 0., 0., 0., 0.4, 0.4, 0., 0., 0., 0.0, 0., 0., 0.0])
     t_sim += len_stim
 
-    # set paradox effect input
+    # paradox effect
     paradox_type = 'dc'
     n_paradox, paradox_start, = 0, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
@@ -48,24 +50,26 @@ if __name__ == "__main__":
     # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
     paradox_freq, paradox_ac_amp = 10., 0.1 # ac
 
-    # set dc_extra
+    # dc_extra of all populations
     dc_extra_targets, dc_extra_amps = [], []
 
-    # set others
-    plot_half_len = 100.0
-    plot_center = 100.
+    # others
+    plot_center, plot_half_len = start_ai, 100.
     if len(stims) > 0:
         plot_center = stims[0]
-    # plot_center = (paradox_start+n_paradox*(len(paradox_offsets)-1)*paradox_duration*2 if n_stim == 0 else stims[0])
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
-    scanparams.vip2som(True)
     scanparams.set_g(8.)
     scanparams.set_bg(4.)
     scanparams.set_stp(2)
-    if weight_record:
+    if do_weight:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
+    # scanparams.net_dict['mean_delay_exc'] = 0.2
+    # scanparams.net_dict['mean_delay_inh'] = 0.2
+    # scanparams.net_dict['poisson_delay'] = 0.2
+    # scanparams.stim_dict['delay_th'] = np.full(13, 0.2)
+    # scanparams.stim_dict['delay_th_sd'] = np.full(13, 0.1)
     # scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
     #                                          750, 1500, 500,
     #                                          1500, 1500, 0,
@@ -74,36 +78,32 @@ if __name__ == "__main__":
     # get pickle, scan or single
     cwd = os.getcwd()
     try:
-        # load pickle file
+        # scan, load pickle file
         pickle_path = sys.argv[1]
         scanparams.load_pickle(pickle_path)
         lvls_str, lvls = scanparams.read_levels(pickle_path)
-        # set parameters
+        # set constant parameters
+        scanparams.set_indgs(indgs) # use the defined, if not scanned
+        # set scanned parameters
         scanparams.set_stp(sys.argv[3])
-        # to be improved
-        # if int(sys.argv[3]) == 0:
-        #     scanparams.set_indgs([1000,1500,750,1000])
-        # elif int(sys.argv[3]) == 2:
-        #     scanparams.set_indgs([750,1500,500,250])
-        scanparams.vip2som(sys.argv[4])
+        scanparams.set_vip(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_g(lvls[0])
-        scanparams.set_bg(lvls[1])
-        # scanparams.set_som(lvls[2])
+        scanparams.set_exc(lvls[0])
+        scanparams.set_pv(lvls[1])
+        scanparams.set_som(lvls[2])
         scanparams.save_pickle(pickle_path)
-    except IndexError:  # single-run if no path input
+    # single
+    except IndexError:
         print('No scanning input; do single simulation')
-
         # handle data path and copy files
-        dpath = os.path.join(cwd, 'data')
-        os.system('mkdir -p ' + dpath)
-        os.system('cp run_network.py ' + dpath)
-        os.system('cp config.yml ' + dpath)
-        os.system('cp -r microcircuit/ ' + dpath)
-
+        single_path = os.path.join(cwd, 'data')
+        os.system('mkdir -p ' + single_path)
+        os.system('cp run_network.py ' + single_path)
+        os.system('cp config.yml ' + single_path)
+        os.system('cp -r microcircuit/ ' + single_path)
         # create pickle file
-        pickle_path = os.path.join(dpath, 'para_dict.pickle')
+        pickle_path = os.path.join(single_path, 'para_dict.pickle')
         scanparams.save_pickle(pickle_path)
 
     # get parameters from pickle
@@ -119,16 +119,19 @@ if __name__ == "__main__":
     if print_to_file:
         exec(analysis.set2txt(data_path))
 
-    # set simulation condition
-    create.set_thalamic(para_dict, stims, th_rate, orient=orient, duration=duration)
+    # set other parameters
+    create.set_thalamic(para_dict, stims, th_rate, orient=orient,
+        duration=duration, conn_probs=conn_probs_th)
     t_sim += create.set_paradox(para_dict, paradox_type, n_paradox, paradox_pops,
         paradox_offsets, paradox_start, paradox_duration, paradox_intrv,
         paradox_ac_amp, paradox_freq)
-    para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
-    para_dict['sim_dict']['t_sim'] = t_sim
     for target, amp in zip(dc_extra_targets, dc_extra_amps):
         para_dict['net_dict']['dc_extra'][target] = amp
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
+
+    # set simulation
+    para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
+    para_dict['sim_dict']['t_sim'] = t_sim
 
     # delete existing files
     if run_sim == True and os.path.isdir(data_path):
@@ -136,7 +139,7 @@ if __name__ == "__main__":
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                          para_dict['stim_dict'], test=test)
+                          para_dict['stim_dict'], test=model_test)
     net.setup()
     if run_sim:
         # print parameters
@@ -151,7 +154,7 @@ if __name__ == "__main__":
         if do_ai and n_seg_ai > 0:
             t0 = time.time()
             analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
-            print('gs_analysis() running time = {}'.format(time.time() - t0))
+            print('gs_analysis() running time = {:.3f}'.format(time.time() - t0))
         if n_stim > 0:
             t1 = time.time()
             if do_response:
@@ -161,20 +164,16 @@ if __name__ == "__main__":
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
             t3 = time.time()
-            print('response() runing time = {}'.format(t2 - t1))
-            print('selectivity() runing time = {}'.format(t3 - t2))
+            print('response() runing time = {:.3f}'.format(t2 - t1))
+            print('selectivity() runing time = {:.3f}'.format(t3 - t2))
         analysis.paradox_calc(spikes, para_dict['stim_dict']['paradox'])
-
-        # if not on_server:
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
-        if weight_record:
-            spikes.plot_weight()
-            spikes.compare_musig(start_ai, start_ai + len_ai)
-
+        if do_weight:
+            spikes.stationary_musig(start_ai, start_ai + len_ai, sw=1000., verify=False)
         spikes.verify_print(data_path)
 
-    # delete .gdf files to save space
+    # delete recording files, move .png files
     if on_server and os.path.isdir(data_path):
         os.system('rm {}/*.gdf {}/*.csv'.format(data_path, data_path))
         if n_paradox > 0:
@@ -189,7 +188,6 @@ if __name__ == "__main__":
     # copy exception
     xcpt_path = os.path.join(data_path, 'ai_xcpt.dat')
     xcpt_cp_path = xcpt_path.replace('/', '_')
-    # print(xcpt_cp_path)
     if os.path.isfile(xcpt_path):
         os.system('mkdir -p ../exception/')
         os.system('cp {} ../exception/{}'.format(xcpt_path, xcpt_cp_path))
