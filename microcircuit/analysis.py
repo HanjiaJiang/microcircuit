@@ -18,41 +18,36 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 20.0
 
 class Spikes:
-    def __init__(self, path, names=['spike_detector']):
-        self.setup(path, names)
-        # t0 = time.time()
+    def __init__(self, path, net_dict):
+        self.setup(path, net_dict)
+        t0 = time.time()
         self.read_name()
-        # t1 = time.time()
+        t1 = time.time()
         self.load()
-        # t2 = time.time()
-        # self.to_pandas()
-        # t3 = time.time()
-        # print('read_name(): {:.3f}'.format(t1-t0))
-        # print('load(): {:.3f}'.format(t2-t1))
-        # print('to_pandas(): {:.3f}'.format(t3-t2))
+        t2 = time.time()
+        print('read_name(): {:.3f}'.format(t1-t0))
+        print('load(): {:.3f}'.format(t2-t1))
 
-    def setup(self, path, names):
+    def setup(self, path, net_dict):
         # data
         self.path = path
-        self.device_types = names
-        self.gids = []
-        self.devices = {}
-        self.data = {}
-        # results
+        self.device_types, self.devices = net_dict['rec_dev'], {}
+        self.gids, self.data = [], {}
+        # net_dict
+        self.net_dict = net_dict
+        # firing rate results
         self.fr_result = []
-        # criteria
-        self.fr_musig = [(2.7, 3.7), (13.8, 8.9), (2.6, 3.6),
-                         (14.6, 7.3),
+        # firing rate criteria
+        self.fr_musig = [(2.7, 3.7), (13.8, 8.9), (2.6, 3.6), (14.6, 7.3),
                          (0.5, 0.8), (10.2, 7.2), (2.6, 3.2),
                          (6.8, 5.2), (7.5, 5.2), (2.8, 4.5),
                          (6.1, 6.9), (16.9, 14.3), (3.9, 4.9)]
-        self.fr_qrt = [ (0.5, 0.6, 4.5), (7.5, 11.7, 23.3), (0.03, 0.4, 4.1),
-                        (8.5, 11.1, 21.0),
-                        (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
-                        (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
-                        (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)]
+        self.fr_qaurters = [(0.5, 0.6, 4.5), (7.5, 11.7, 23.3), (0.03, 0.4, 4.1), (8.5, 11.1, 21.0),
+                            (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
+                            (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
+                            (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)]
         # others
-        self.veri_dict = {}
+        self.verify_dict = {}
         if os.path.isdir(self.path):
             print('Spikes.__init__(): data directory already exists')
         else:
@@ -171,7 +166,7 @@ class Spikes:
             &(self.gids[trg][0]<=df.target)&(df.target<=self.gids[trg][-1])]
         # print(df_roi)
         for i, bhead in enumerate(bins):
-            ws = df_roi[(df_roi.time>bhead)&(df_roi.time<=bhead+bw)].weight.values
+            ws = df_roi[(df_roi.time>=bhead)&(df_roi.time<bhead+bw)].weight.values
             # print('len(ws) = {}'.format(len(ws)))
             mws.append(np.mean(ws))
             mws_pop.append(np.sum(ws)/(self.gids[src][-1]-self.gids[src][0]+1))
@@ -184,7 +179,48 @@ class Spikes:
         plt.close()
         # print('time plot_weight(): {:.4f}, {:.4f}'.format(t1-t0, time.time()-t1))
 
-    def stationary_musig(self, begin, endin, sw=100., bw=1.0, pop_name='L2/3 Exc', verify=False):
+    def seg_musig(self, ids, df, shead, stail, bw, id_str, return_dict):
+        # multiprocessing
+        if type(id_str) != str:
+            print('seg_musig(): id_str must be str!')
+            return
+        print('seg_musig() proc {} start'.format(id_str))
+        t0 = time.time()
+        # get segment data
+        data_seg = df[(shead<=df[:, 1])&(df[:, 1]<stail)]
+        # data_seg = df[(shead<=df.time)&(df.time<stail)][['target', 'time', 'weight']].values
+        # bins
+        bheads, btails = np.arange(shead, stail, bw), np.arange(shead, stail, bw) + bw
+        # caches
+        means, vars = [], []
+        # by neuron
+        for j, id in enumerate(ids):
+            data = data_seg[data_seg[:, 0]==id]
+            ts, ws = data[:, 1], data[:, 2]
+            # sums of weights*taus of nueron j in this segment
+            wsums = np.full(len(bheads), 0.)
+            # by bin
+            for k, (bhead, btail) in enumerate(zip(bheads, btails)):
+                # weights in bin k
+                ws_bin = ws[(bhead<=ts)&(ts<btail)]
+                # sum of weights*taus in bin k
+                if len(ws_bin) > 0:
+                    taus = np.full(ws_bin.shape, 0.)
+                    taus[ws_bin>=0.] = self.net_dict['neuron_params']['tau_syn_ex']
+                    taus[ws_bin<0.] = self.net_dict['neuron_params']['tau_syn_in']
+                    wsums[k] = np.sum(np.multiply(taus, ws_bin))
+                    # if j < 5:
+                    #     print('taus={}'.format(taus))
+                    #     print('ws_bin={}'.format(ws_bin))
+            means.append(np.mean(wsums))
+            vars.append(np.var(wsums))
+            # if j < 100:
+            #     self.verify_collect('{:04d}: {:2d},{:2d},{:2d}\n'.format(id, t3-t2,t4-t3,t5-t4), 'musig')
+        return_dict[id_str] = (means, vars)
+        print('seg_musig() proc {} end, total time = {} ms'.format(id_str, round((time.time()-t0)*1000)))
+
+    def stationary_musig(self, begin, endin, sw=100., bw=1.0, pop_name='L2/3 Exc', verify=False, mp=False):
+        t0 = time.time()
         # index of population
         pop = self.populations.index(pop_name)
         # ids of this population
@@ -193,55 +229,43 @@ class Spikes:
         sheads, stails = np.arange(begin, endin, sw), np.arange(begin, endin, sw) + sw
         # get data
         dev_type='weight_recorder'
-        df = self.df[dev_type][(begin<self.df[dev_type].time)& \
-            (self.df[dev_type].time<=endin)]
+        df = self.df[dev_type][(begin<=self.df[dev_type].time)&(self.df[dev_type].time<endin)][['target', 'time', 'weight']].values
+        # df = self.df[dev_type][(begin<=self.df[dev_type].time)&(self.df[dev_type].time<endin)]
+        # self.verify_collect('sources = \n{}'.format(list(set(self.df[dev_type].source.values))), 'musig')
         # caches
         means_all, vars_all, pvals_mean, pvals_var = [], [], [], []
+        # multiprocessing or not
+        if mp:
+            re_dict, procs = Manager().dict(), []
+        else:
+            re_dict = {}
         # by segment
         for i, (shead, stail) in enumerate(zip(sheads, stails)):
-            # for progress-watching
-            print('shead: {}'.format(shead))
-            # get segment data
-            df_seg = df[(shead<df.time)&(df.time<=stail)]
-            # bins
-            bheads, btails = np.arange(shead, stail, bw), np.arange(shead, stail, bw) + bw
-            # caches
-            means_bin, vars_bin, verify_means = [], [], []
-            # verify
-            if verify:
-                df_veri = df_seg[df_seg.target.isin(ids)]
-            # by neuron
-            for j, id in enumerate(ids):
-                ts = df_seg[df_seg.target==id].time.values
-                ws = df_seg[df_seg.target==id].weight.values
-                # weight sums of this segment
-                wsums = np.full(len(bheads), 0.)
-                # by bin
-                for k, (bhead, btail) in enumerate(zip(bheads, btails)):
-                    # weights in this bin
-                    ws_bin = ws[(bhead<ts)&(ts<=btail)]
-                    # sum of weights in this bin
-                    if len(ws_bin) > 0:
-                        wsums[k] += np.sum(ws_bin)
-                if verify:
-                    ws_verify = df_veri[(df_veri.source==id)].weight.values
-                means_bin.append(np.mean(wsums))
-                vars_bin.append(np.var(wsums))
-                if verify and len(ws_verify) > 0:
-                    # self.verify_collect('{}: in-weights = {}\n'.format(id, wsums), 'wr')
-                    verify_means.append(np.mean(ws_verify))
-                    self.verify_collect('{}: out-weight-mu = {:.2f}\n'.format(id, np.mean(ws_verify)), 'wr')
+            if mp:
+                proc = Process(target=self.seg_musig, args=(ids, df, shead, stail, bw, str(shead), re_dict))
+                procs.append(proc)
+                proc.start()
+            else:
+                self.seg_musig(ids, df, shead, stail, bw, str(shead), re_dict)
+
+        # join multiprocessing for correlation
+        if mp:
+            for proc in procs:
+                proc.join()
+
+        # collect data
+        for i, (shead, stail) in enumerate(zip(sheads, stails)):
+            means, vars = re_dict[str(shead)]
             # t test
             if i > 0:
-                stat, pval_mean = stats.ttest_ind(means_all[-1], means_bin)
-                stat, pval_var = stats.ttest_ind(vars_all[-1], vars_bin)
+                stat, pval_mean = stats.ttest_ind(means_all[-1], means)
+                stat, pval_var = stats.ttest_ind(vars_all[-1], vars)
                 pvals_mean.append(pval_mean)
                 pvals_var.append(pval_var)
-            # data to be plotted
-            means_all.append(means_bin)
-            vars_all.append(vars_bin)
-            if verify:
-                self.verify_collect('mean: {:.2f}\n\n'.format(np.mean(verify_means)), 'wr')
+            # collect
+            means_all.append(means)
+            vars_all.append(vars)
+
         # plot
         fig, axs = plt.subplots(2, 1, figsize=(16, 16))
         plt.xlabel('time (ms)')
@@ -255,12 +279,17 @@ class Spikes:
         mbot, mtop = axs[0].get_ylim()
         vbot, vtop = axs[1].get_ylim()
         for i, stail in enumerate(stails[:-1]):
+            mean_seg, var_seg = np.mean(means_all[i]), np.mean(vars_all[i])
+            axs[0].text(stail-sw/2, mbot+(0.5+0.01*(i%10))*(mtop-mbot), \
+                '{:.3f}'.format(mean_seg), horizontalalignment='center', fontsize=12, color='b')
+            axs[1].text(stail-sw/2, vbot+(0.5+0.01*(i%10))*(vtop-vbot), \
+                '{:.0f}'.format(var_seg), horizontalalignment='center', fontsize=12, color='b')
             if pvals_mean[i] <= 0.05:
                 axs[0].text(stail, mbot+(0.9+0.01*(i%10))*(mtop-mbot), \
-                    '{:.3f}'.format(pvals_mean[i]), horizontalalignment='center', fontsize=10)
+                    '{:.3f}'.format(pvals_mean[i]), horizontalalignment='center', fontsize=12, color='g')
             if pvals_var[i] <= 0.05:
-                axs[0].text(stail, vbot+(0.9+0.01*(i%10))*(vtop-vbot), \
-                    '{:.3f}'.format(pvals_var[i]), horizontalalignment='center', fontsize=10)
+                axs[1].text(stail, vbot+(0.9+0.01*(i%10))*(vtop-vbot), \
+                    '{:.3f}'.format(pvals_var[i]), horizontalalignment='center', fontsize=12, color='g')
 
         xticks = np.append(sheads, endin).astype(int)
         xticklabels, tick_interval = [], int(len(sheads)/10)
@@ -274,11 +303,12 @@ class Spikes:
         axs[1].set_xticks(xticks)
         axs[1].set_xticklabels(xticklabels, rotation=30)
 
-        axs[0].set_ylabel(r'weight mean ($pA$)')
-        axs[1].set_ylabel(r'weight variance ($pA^{2}$)')
-        plt.tight_layout()
+        axs[0].set_ylabel(r'weight mean ($ms\cdot pA$)')
+        axs[1].set_ylabel(r'weight variance ($ms^{2}\cdot pA^{2}$)')
+        # plt.tight_layout()
         plt.savefig(os.path.join(self.path, 'stationary_musig.png'))
         plt.close()
+        print('stationary_musig() running time = {:.3f}'.format(time.time()-t0))
 
     def get_data(self, begin, end, dev_type='spike_detector'):
         t0 = time.time()
@@ -286,7 +316,7 @@ class Spikes:
         for i, pop in enumerate(self.populations):
             df = self.df[dev_type]
             columns = df.columns.tolist()
-            data = df[(df.population==i)&(df.time>begin)&(df.time<=end)][columns[:-2]].values
+            data = df[(df.population==i)&(df.time>=begin)&(df.time<end)][columns[:-2]].values
             if 'time' in columns:
                 data = data[np.argsort(data[:, columns.index('time')])]
             data_ret.append(data)
@@ -302,17 +332,17 @@ class Spikes:
         return return_data
 
     def verify_collect(self, in_str, tag):
-        if tag in self.veri_dict.keys():
-            self.veri_dict[tag] += in_str
+        if tag in self.verify_dict.keys():
+            self.verify_dict[tag] += in_str
         else:
-            self.veri_dict[tag] = in_str
+            self.verify_dict[tag] = in_str
 
     def verify_print(self, path=None):
         if os.path.isdir(path):
             path_flg = True
         else:
             path_flg = False
-        for key, value in self.veri_dict.items():
+        for key, value in self.verify_dict.items():
             if path_flg:
                 fpath = os.path.join(path, 'verify-{}.txt'.format(key))
             else:
@@ -448,6 +478,7 @@ def make_folder(folder_name):
 From the original helpers.py
 '''
 def fire_rate(spikes, begin, end):
+    t0 = time.time()
     data = spikes.get_data(begin, end)
     gids = spikes.gids
     rates_averaged_all = []
@@ -490,10 +521,12 @@ def fire_rate(spikes, begin, end):
         f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
     spikes.fr_result = np.array([rates_averaged_all, rates_std_all])
+    print('fire_rate() running time = {:.3f} s'.format(time.time()-t0))
     return rates_averaged_all, rates_std_all
 
 
 def plot_raster(spikes, begin, end):
+    t0 = time.time()
     data = spikes.get_data(begin, end)
     gids = spikes.gids
     highest_gid = gids[-1][-1]
@@ -535,7 +568,7 @@ def plot_raster(spikes, begin, end):
     fig.tight_layout()
     plt.savefig(os.path.join(spikes.path, 'raster_plot.png'), dpi=300)
     plt.close()
-
+    print('plot_raster() running time = {:.3f} s'.format(time.time()-t0))
 
 def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
     layers = ['L2/3', 'L4', 'L5', 'L6']
@@ -610,19 +643,22 @@ def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
     plt.close()
 
 def fr_plot(spikes):
+    t0 = time.time()
     rates = []
     for i in range(len(spikes.populations)):
         fpath = os.path.join(spikes.path, ('rate' + str(i) + '.npy'))
         if os.path.isfile(fpath):
             rates.append(np.load(fpath))
-    # do_boxplot(rates[::-1], spikes.fr_qrt[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
+    # do_boxplot(rates[::-1], spikes.fr_qaurters[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
     do_bars(spikes.fr_result, np.array(spikes.fr_musig).T, spikes.path, 'fr', spikes.colors, 'spikes/s')
+    print('fr_plot() running time = {:.3f} s'.format(time.time()-t0))
 
 '''
 Other analysis
 '''
 # Ground state calculation
 def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_thr=4):
+    t0 = time.time()
     # setup
     segs = list(zip(np.arange(begin, end, seg_len), np.arange(begin, end, seg_len) + seg_len))
     ai = np.full((4, 2), np.nan)
@@ -719,6 +755,7 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
         f2 = open(os.path.join(spikes.path, 'ai_xcpt.dat'), 'w')
         f2.write(ai_xcpt)
         f2.close()
+    print('gs_analysis() running time = {:.3f} s'.format(time.time()-t0))
 
 def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
     n_stim = len(stims)
@@ -746,7 +783,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
                 ts = spikes.get_ts_by_id(data=data_pop, id=gid)
                 for b in range(n_bin):
                     # get spike counts and stds by stims
-                    cnts_by_stim = np.array([len(np.where((ts > stim + b*bin_w) & (ts <= stim + (b + 1)*bin_w))[0]) for stim in stims])
+                    cnts_by_stim = np.array([len(np.where((ts >= stim + b*bin_w) & (ts < stim + (b + 1)*bin_w))[0]) for stim in stims])
                     pooled_std = np.sqrt((np.var(cnts_by_stim[0::2], ddof=1) + np.var(cnts_by_stim[1::2], ddof=1))/2)
                     if pooled_std != 0: # set some more criteria, e.g. spike number must > 0 ...?
                         if raw is True:
@@ -808,6 +845,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
 # responses to transient/thalamic input
 def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=False):
+    t0 = time.time()
     n_stim = len(stims)
     if len(stims) > 1:
         interval = stims[1] - stims[0]
@@ -845,13 +883,13 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
             win_begin = stims[j]
             win_end = stims[j] + window
             # spread and amplitude
-            ts_stim = ts[(ts > win_begin) & (ts <= win_end)]
+            ts_stim = ts[(ts >= win_begin) & (ts < win_end)]
             rsp_amp.append(len(ts_stim))
             if len(ts_stim) >= 3:
                 std = np.std(ts_stim)
                 rsp_spread.append(std)
             # latency by neurons
-            ids_stim = ids[(ts > win_begin) & (ts <= win_end)]
+            ids_stim = ids[(ts >= win_begin) & (ts < win_end)]
             neuron_ltcs = []
             for k, id in enumerate(id_set):
                 if id not in ids_stim:
@@ -900,6 +938,7 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
     if empty_flg:
         xy_by_layer = []
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
+    print('response() running time = {:.3f} s'.format(time.time()-t0))
 
 
 def paradox_plot(spikes, xs, frs_all, normalize=False, ylims=(0.0, 5.0), shrink=8, frs_ei=None):
@@ -934,6 +973,7 @@ def paradox_plot(spikes, xs, frs_all, normalize=False, ylims=(0.0, 5.0), shrink=
     plt.close()
 
 def paradox_calc(spikes, prdx_dict):
+    t0 = time.time()
     if prdx_dict['n'] <= 0:
         return
     # f = open(os.path.join(spikes.path, 'paradox.dat'), 'w')
@@ -982,3 +1022,4 @@ def paradox_calc(spikes, prdx_dict):
     # f.close()
     paradox_plot(spikes, prdx_dict['offsets'], frs_all, normalize=False, frs_ei=frs_by_ei)
     paradox_plot(spikes, prdx_dict['offsets'], frs_all_norm, normalize=True, frs_ei=frs_by_ei_norm)
+    print('paradox_calc() running time = {} s'.format(time.time()-t0))

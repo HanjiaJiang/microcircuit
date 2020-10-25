@@ -66,7 +66,7 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
     x = net_dict['populations'].index(source_name)
     y = net_dict['populations'].index(target_name)
     if 'weight_recorder' in net_dict['rec_dev']:
-        if network.test==True and (x != 0 or y != 0):
+        if network.test==True and (x not in [0, 1] or y != 0):
             pass
         else:
             copysynapse = syn_dict['model'] + '_wr'

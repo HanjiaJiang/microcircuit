@@ -3,7 +3,6 @@ import sys
 import pickle
 import numpy as np
 import multiprocessing as mp
-import time
 import microcircuit.network as network
 import microcircuit.analysis as analysis
 import microcircuit.create_params as create
@@ -18,11 +17,10 @@ if __name__ == "__main__":
     do_ai = True
     do_response = False
     do_selectivity = False
-    do_weight = True
-    model_test = False
+    do_weight, testmode_weight, weight_seg_width = False, True, 100.
 
     # ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 0., 8000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -45,7 +43,7 @@ if __name__ == "__main__":
     paradox_type = 'dc'
     n_paradox, paradox_start, = 0, t_sim
     paradox_duration, paradox_intrv = 600., 1000.
-    paradox_pops = [1, 5, 8, 11]
+    paradox_pops = [3] #[1, 5, 8, 11]
     paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
     # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
     paradox_freq, paradox_ac_amp = 10., 0.1 # ac
@@ -61,7 +59,7 @@ if __name__ == "__main__":
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
     scanparams.set_g(8.)
-    scanparams.set_bg(4.)
+    scanparams.set_bg(4.5)
     scanparams.set_stp(2)
     if do_weight:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
@@ -139,7 +137,7 @@ if __name__ == "__main__":
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                          para_dict['stim_dict'], test=model_test)
+                          para_dict['stim_dict'], test=testmode_weight)
     net.setup()
     if run_sim:
         # print parameters
@@ -148,34 +146,29 @@ if __name__ == "__main__":
 
     # analysis
     if run_analysis:
-        spikes = analysis.Spikes(data_path, para_dict['net_dict']['rec_dev'])
+        spikes = analysis.Spikes(data_path, para_dict['net_dict'])
         mean_fr, std_fr = \
             analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
         if do_ai and n_seg_ai > 0:
-            t0 = time.time()
             analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
-            print('gs_analysis() running time = {:.3f}'.format(time.time() - t0))
         if n_stim > 0:
-            t1 = time.time()
             if do_response:
                 analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True, bw=1.)
-            t2 = time.time()
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
-            t3 = time.time()
-            print('response() runing time = {:.3f}'.format(t2 - t1))
-            print('selectivity() runing time = {:.3f}'.format(t3 - t2))
         analysis.paradox_calc(spikes, para_dict['stim_dict']['paradox'])
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
         if do_weight:
-            spikes.stationary_musig(start_ai, start_ai + len_ai, sw=1000., verify=False)
+            spikes.stationary_musig(start_ai, start_ai + len_ai, sw=weight_seg_width, verify=testmode_weight)
         spikes.verify_print(data_path)
 
     # delete recording files, move .png files
     if on_server and os.path.isdir(data_path):
-        os.system('rm {}/*.gdf {}/*.csv'.format(data_path, data_path))
+        os.system('rm {}/*.gdf'.format(data_path))
+        if testmode_weight is True:
+            os.system('rm {}/*.csv'.format(data_path))
         if n_paradox > 0:
             affix = cwd.replace('/', '-') + '-' + data_path.replace('/', '-')
             os.chdir(data_path)
