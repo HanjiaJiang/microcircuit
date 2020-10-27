@@ -9,7 +9,7 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # running settings
-    run_sim = True
+    run_sim = False
     run_analysis = True
     print_to_file = False
 
@@ -70,8 +70,8 @@ if __name__ == "__main__":
     # scanparams.stim_dict['delay_th_sd'] = np.full(13, 0.1)
     # scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
     #                                          750, 1500, 500,
-    #                                          1500, 1500, 0,
-    #                                          1500, 1500, 0])
+    #                                          1250, 1250, 0,
+    #                                          750, 1500, 500])
 
     # get pickle, scan or single
     cwd = os.getcwd()

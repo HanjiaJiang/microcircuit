@@ -16,6 +16,7 @@ from multiprocessing import Manager
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 20.0
+matplotlib.rcParams['hatch.linewidth'] = 2.0
 
 class Spikes:
     def __init__(self, path, net_dict):
@@ -610,15 +611,8 @@ def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
     x = np.arange(13)  # the label locations
     w = 0.3  # the width of the bars
     fig, ax = plt.subplots(figsize=figsize)
-    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :], color=colors, edgecolor=colors)
-    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False, edgecolor=colors, hatch='///')
-
-    # colors
-    # for i, (r1, r2) in enumerate(zip(rects1, rects2)):
-    #     r1.set_color(colors[i])
-    #     r2.set_color(colors[i])
-    #     r1.set_hatch('//')
-    #     r2.set_hatch('xx')
+    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :], color=colors, edgecolor=colors, linewidth=2)
+    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False, edgecolor=colors, linewidth=2, hatch='//')
 
     # legends
     for i in range(4):
