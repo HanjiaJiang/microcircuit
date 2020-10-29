@@ -39,14 +39,19 @@ class Spikes:
         # firing rate results
         self.fr_result = []
         # firing rate criteria
-        self.fr_musig = [(2.7, 3.7), (13.8, 8.9), (2.6, 3.6), (14.6, 7.3),
-                         (0.5, 0.8), (10.2, 7.2), (2.6, 3.2),
-                         (6.8, 5.2), (7.5, 5.2), (2.8, 4.5),
-                         (6.1, 6.9), (16.9, 14.3), (3.9, 4.9)]
-        self.fr_qaurters = [(0.5, 0.6, 4.5), (7.5, 11.7, 23.3), (0.03, 0.4, 4.1), (8.5, 11.1, 21.0),
-                            (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
-                            (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
-                            (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)]
+        self.fr_cri = {
+            'musig': [
+                (2.7, 3.7), (13.8, 8.9), (2.6, 3.6), (14.6, 7.3),
+                (0.5, 0.8), (10.2, 7.2), (2.6, 3.2),
+                (6.8, 5.2), (7.5, 5.2), (2.8, 4.5),
+                (6.1, 6.9), (16.9, 14.3), (3.9, 4.9)],
+            'quarters': [
+                (0.5, 0.6, 4.5), (7.5, 11.7, 23.3), (0.03, 0.4, 4.1), (8.5, 11.1, 21.0),
+                (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
+                (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
+                (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)],
+            'n': [5, 8, 9, 9, 95, 43, 27, 23, 7, 18, 30, 15, 26]
+        }
         # others
         self.verify_dict = {}
         if os.path.isdir(self.path):
@@ -486,11 +491,11 @@ def fire_rate(spikes, begin, end):
     rates_std_all = []
     for h in list(range(len(data))):
         if len(data[h]) > 0:
-            n_fil = data[h][:, 0]
-            n_fil = n_fil.astype(int)
-            count_of_n = np.bincount(n_fil) # bin count from 0
-            count_of_n_fil = count_of_n[gids[h][0]:gids[h][1]+1] # get data with corresponding indices
-            rate_each_n = count_of_n_fil * 1000. / (end - begin)
+            ids = data[h][:, 0]
+            ids = ids.astype(int)
+            count_of_n = np.bincount(ids) # bin count from 0
+            count_of_ids = count_of_n[gids[h][0]:gids[h][1]+1] # get data with corresponding indices
+            rate_each_n = count_of_ids * 1000. / (end - begin)
             rate_averaged = np.mean(rate_each_n)
             rate_std = np.std(rate_each_n)
             rates_averaged_all.append(float('%.3f' % rate_averaged))
@@ -499,15 +504,15 @@ def fire_rate(spikes, begin, end):
             if h == 2:
                 spikes.verify_collect('data[{}]=\n{}\n'.format(h, data[h]), 'fr')
                 spikes.verify_collect('gids[{}]=\n{}\n'.format(h, gids[h]), 'fr')
-                spikes.verify_collect('len(n_fil)={}, values=\n'.format(len(n_fil)), 'fr')
-                for n in n_fil:
+                spikes.verify_collect('len(ids)={}, values=\n'.format(len(ids)), 'fr')
+                for n in ids:
                     spikes.verify_collect('{} '.format(n), 'fr')
                 spikes.verify_collect('\n', 'fr')
-                spikes.verify_collect('count_of_n(tail)=\n{}\n'.format(count_of_n[-len(count_of_n_fil):]), 'fr')
-                spikes.verify_collect('count_of_n_fil=\n{}\n'.format(count_of_n_fil), 'fr')
-                spikes.verify_collect('np.sum(count_of_n_fil)=\n{}\n'.format(np.sum(count_of_n_fil)), 'fr')
+                spikes.verify_collect('count_of_n(tail)=\n{}\n'.format(count_of_n[-len(count_of_ids):]), 'fr')
+                spikes.verify_collect('count_of_ids=\n{}\n'.format(count_of_ids), 'fr')
+                spikes.verify_collect('np.sum(count_of_ids)=\n{}\n'.format(np.sum(count_of_ids)), 'fr')
                 spikes.verify_collect('len(count_of_n)=\n{}\n'.format(len(count_of_n)), 'fr')
-                spikes.verify_collect('len(count_of_n_fil)=\n{}\n'.format(len(count_of_n_fil)), 'fr')
+                spikes.verify_collect('len(count_of_ids)=\n{}\n'.format(len(count_of_ids)), 'fr')
                 spikes.verify_collect('rate_each_n=\n{}\n'.format(rate_each_n), 'fr')
                 spikes.verify_collect('rate_averaged=\n{:.2f}\n'.format(rate_averaged), 'fr')
         else:
@@ -603,32 +608,36 @@ def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
     plt.savefig(os.path.join(path, 'boxplot_' + title + '.png'), dpi=300)
     plt.close()
 
-def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
+def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, figsize=(15, 10), ylims=(-1., 31.)):
     layers = ['L2/3', 'L4', 'L5', 'L6']
     legends = ['Exc', 'PV', 'SOM', 'VIP']
+    err_data = data[1, :]/np.sqrt(data_n) if use_SE else data[1, :]
+    err_cri = cri[0, :]/np.sqrt(cri_n) if use_SE else cri[0, :]
 
     # bars
     x = np.arange(13)  # the label locations
     w = 0.3  # the width of the bars
     fig, ax = plt.subplots(figsize=figsize)
-    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=data[1, :], color=colors, edgecolor=colors, linewidth=2)
-    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=cri[1, :], fill=False, edgecolor=colors, linewidth=2, hatch='//')
+    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=err_data, color=colors, edgecolor=colors, linewidth=2)
+    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=err_cri, fill=False, edgecolor=colors, linewidth=2, hatch='//')
 
     # legends
     for i in range(4):
         plt.scatter([], [], s=100, marker='s', label=legends[i], color=colors[i])
     legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.15))
 
-    # ticks
+    # plot settings
     ax.set_ylabel(ylbl)
     ax.set_xticks([])
     ax.set_xticklabels([])
-    ax.set_xlim((0-1.5*w, 12+1.5*w))
+    ax.set_xlim(0-1.5*w, 12+1.5*w)
+    ax.set_ylim(ylims[0], ylims[1])
 
-    # vlines
+    # vline for layer boundary
     for x in [3.5, 6.5, 9.5]:
         ax.axvline(x, 0, 1, color='k')
 
+    # mark layer
     for i, x in enumerate([1.5, 5, 8, 11]):
         ax.text(x, ax.get_ylim()[1], layers[i], horizontalalignment='center', verticalalignment='bottom')
 
@@ -638,13 +647,15 @@ def do_bars(data, cri, path, title, colors, ylbl, figsize=(15, 10)):
 
 def fr_plot(spikes):
     t0 = time.time()
-    rates = []
+    rates, n_pops = [], []
     for i in range(len(spikes.populations)):
         fpath = os.path.join(spikes.path, ('rate' + str(i) + '.npy'))
+        n_pops.append(spikes.gids[i][1]-spikes.gids[i][0]+1)
         if os.path.isfile(fpath):
             rates.append(np.load(fpath))
-    # do_boxplot(rates[::-1], spikes.fr_qaurters[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
-    do_bars(spikes.fr_result, np.array(spikes.fr_musig).T, spikes.path, 'fr', spikes.colors, 'spikes/s')
+    # do_boxplot(rates[::-1], spikes.fr_cri_qaurters[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
+    do_bars(spikes.fr_result, np.array(spikes.fr_cri['musig']).T, n_pops,
+        spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s')
     print('fr_plot() running time = {:.3f} s'.format(time.time()-t0))
 
 '''
@@ -838,7 +849,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=False):
+def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='quadratic', ylims=(-0.05, 0.45)):
     t0 = time.time()
     n_stim = len(stims)
     if len(stims) > 1:
@@ -904,9 +915,9 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
         hist, bins = np.histogram(mean_ltcs, bins=np.arange(0.0, window, bw))
         xs, ys = bins[:-1], hist/np.sum(hist)
         xy_by_layer.append([xs, ys])
-        f_cubic = interpolate.interp1d(xs, ys, kind='quadratic')
         # interpolate
-        if interpol:
+        if isinstance(interpol, str):
+            f_cubic = interpolate.interp1d(xs, ys, kind=interpol)
             xs = np.linspace(min(xs), max(xs), len(xs)*5)
             ys = f_cubic(xs)
         ax.plot(xs, ys,
@@ -916,7 +927,7 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol=Fa
             color=colors[a])
         ax.set_xlabel('mean spike latency (ms)')
         ax.set_ylabel('fraction')
-        ax.set_ylim(top=0.41)
+        ax.set_ylim(ylims[0], ylims[1])
 
         # save response spread, amplitude, layer average latency
         f.write('{:.2f}, {:.2f}, {:.2f}\n'.format(np.mean(rsp_spread), np.mean(rsp_amp), lyr_avg_ltc))

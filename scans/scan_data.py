@@ -14,12 +14,12 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 class ScanData:
     # directory list, dimension dictionary
     def __init__(self, inputs, dims=None, plotvars=None, criteria=None,
-        figsize=(16, 12), mark_flg=False, xybounds=None):
-        self.set_params(plotvars, figsize, criteria, mark_flg)
+        figsize=(16, 12), mark=False, mark_star=None, xybounds=None):
+        self.set_params(plotvars, figsize, criteria, mark, mark_star)
         self.set_dataframe(inputs, dims)
         self.set_plot(dims, xybounds)
 
-    def set_params(self, plotvars, figsize, criteria, mark_flg):
+    def set_params(self, plotvars, figsize, criteria, mark, mark_star):
         self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
         self.figsize = figsize
         if plotvars is None:
@@ -37,7 +37,8 @@ class ScanData:
         else:
             self.criteria = criteria
         # RMSE
-        self.mark_flg = mark_flg
+        self.mark = mark
+        self.mark_star = mark_star
         self.rmse_criteria = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
                             r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
                             r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
@@ -288,7 +289,7 @@ class ScanData:
             origin='lower', extent=extent,
             colors='gray', linewidths=0.5,
             vmin=vmin, vmax=vmax, zorder=4)
-        if self.mark_flg:
+        if self.mark:
             ax.clabel(ct, fmt=self.clabel_format[plotvar],
             colors='k', inline=True, fontsize=10)
 
@@ -342,7 +343,7 @@ class ScanData:
                     # self.plot_fitpatch(ax, fits, tri_fits, extent2)
 
                 # RMSE
-                if self.mark_flg:
+                if self.mark:
                     rmse_mtx = self.rmse[str(zb)][str(za)].T  # (y, x)
                     # mark best RMSEs in the triple-fit area
                     if c == 0:
@@ -350,14 +351,19 @@ class ScanData:
                         if len(rmse_mtx[np.where(all_fits==1)]) > 0:
                             best_rmse = np.min(rmse_mtx[np.where(all_fits==1)])
                             i_y, i_x = np.where(rmse_mtx==best_rmse)
-                            ax.scatter(xs[i_x], ys[i_y], s=100, marker='*',
-                            color='yellow', edgecolor='k', zorder=8)
+                            ax.scatter(xs[i_x], ys[i_y], s=200, marker='*',
+                            facecolor='none', edgecolor='k', zorder=8)
+                            # best RMSE point
                             ax.text(xs[i_x], ys[i_y],
                             '{:.1f}'.format(best_rmse),
                             color='r', fontsize=10, zorder=9)
                     # text RMSE values
                     # if plotvar == r'$r_{PV}$':
                     #     self.mark_rmse(rmse_mtx, xs, ys, all_fits)
+                if isinstance(self.mark_star, list):
+                    if c==0:
+                        as.scatter(self.mark_star[0], self.mark_star[1],
+                        s=150, marker='*', facecolor='none', edgecolor='k', zorder=8)
 
                 # many settings
                 ax.set_xlim(self.xybounds[0], self.xybounds[1])
@@ -378,7 +384,7 @@ class ScanData:
                     ax.set_ylabel(ylbl)
                     ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
-        # if self.mark_flg:
+        # if self.mark:
         #     plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         plot_name = os.getcwd().split('/')[-1] + '_' + plot_name
@@ -390,7 +396,6 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims)
-    # scandata = ScanData(inputs, dims=dims, xybounds=[3.8., 8.2, 3.8, 7.2])
-    # scandata.mark_flg = True
+    scandata = ScanData(inputs, dims=dims, mark_star=[8., 4.5], xybounds=[4.8., 10.2, 3.8, 8.2])
+    # scandata.mark = True
     # scandata.make_plots(afx='mark_')

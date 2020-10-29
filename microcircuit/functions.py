@@ -48,13 +48,18 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
     if net_dict['U-compensate'] and 'U' in syn_dict.keys():
         w /= syn_dict['U']
         w_sd /= syn_dict['U']
-    # var_n, mu_n: variance and mean of the underlying normal distribution
-    var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
-    mu_n = np.log(abs(w)) - var_n / 2.
-    weight_dict = {
-           'distribution': 'lognormal', 'mu': mu_n,
-           'sigma': np.sign(w)*np.sqrt(var_n)
-       }
+    if net_dict['recurrent_weight_distribution'] == 'lognormal':
+        # var_n, mu_n: variance and mean of the underlying normal distribution
+        var_n = np.log((w ** 2 + w_sd ** 2) / w ** 2)
+        mu_n = np.log(abs(w)) - var_n / 2.
+        weight_dict = {
+               'distribution': 'lognormal', 'mu': mu_n,
+               'sigma': np.sign(w)*np.sqrt(var_n)
+           }
+    else:
+        weight_dict = {
+            'distribution': 'normal', 'mu': w, 'sigma': w_sd
+        }
     delay_dict = {
             'distribution': 'normal_clipped',
             'mu': delay, 'sigma': delay_sd,

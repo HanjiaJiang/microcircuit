@@ -1,6 +1,6 @@
-F1 = range(500, 1501, 250)
-F2 = range(1000, 2001, 250)
-F3 = range(0, 1001, 250)
+F1 = [3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10., 10.5]
+F2 = [3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10., 10.5]
+F3 = 0
 F4 = 0
 
 localrules: all, create
@@ -10,7 +10,7 @@ rule all:
         expand('scans/{a}_{b}_{c}_{d}/ai.dat', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python -W ignore scans/scan_data.py exc pv som none {input}
+        python scans/scan_data.py g bg none none {input}
         mkdir -p ../png/
         mv *.png ../png/
         cp ../*.txt ../png/
@@ -22,7 +22,8 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python -W ignore microcircuit/create_params.py {output}
+        python microcircuit/create_params.py {output}
+        mkdir -p ../exception/
         '''
 
 rule simulate:

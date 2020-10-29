@@ -1,13 +1,13 @@
-stp = [0, 2]
-vip = range(0, 2001, 250)
-epsp = 0
+stp = [0, 1]
+vip2som = [0, 1]
+epsp = [0, 1]
 ipsp = 0
 
 localrules: all, create
 
 rule all:
     input:
-        expand('done_{a}_{b}_{c}_{d}', a=stp, b=vip, c=epsp, d=ipsp)
+        expand('done_{a}_{b}_{c}_{d}', a=stp, b=vip2som, c=epsp, d=ipsp)
     shell:
         '''
         mkdir -p png/
@@ -32,9 +32,9 @@ rule snakes:
 
 rule create:
     output:
-        expand('{a}_{b}_{c}_{d}/done', a=stp, b=vip, c=epsp, d=ipsp)
+        expand('{a}_{b}_{c}_{d}/done', a=stp, b=vip2som, c=epsp, d=ipsp)
     shell:
         '''
-        python -W ignore create_snakes.py {output}
+        python create_snakes.py {output}
         touch {output}
         '''

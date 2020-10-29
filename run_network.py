@@ -9,18 +9,18 @@ import microcircuit.create_params as create
 
 if __name__ == "__main__":
     # running settings
-    run_sim = False
+    run_sim = True
     run_analysis = True
     print_to_file = False
 
     #  model settings
     do_ai = True
-    do_response = False
+    do_response = True
     do_selectivity = False
     do_weight, testmode_weight, weight_seg_width = False, True, 100.
 
     # ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 0, 120., 1000.
+    n_stim, th_rate, stim_intrv = 10, 120., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
@@ -61,6 +61,8 @@ if __name__ == "__main__":
     scanparams.set_g(8.)
     scanparams.set_bg(4.5)
     scanparams.set_stp(2)
+    # scanparams.set_epsp(True)
+    # scanparams.net_dict['recurrent_weight_distribution'] = 'normal'
     if do_weight:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
     # scanparams.net_dict['mean_delay_exc'] = 0.2
@@ -68,10 +70,15 @@ if __name__ == "__main__":
     # scanparams.net_dict['poisson_delay'] = 0.2
     # scanparams.stim_dict['delay_th'] = np.full(13, 0.2)
     # scanparams.stim_dict['delay_th_sd'] = np.full(13, 0.1)
+    # scanparams.net_dict['K_ext'][4] = 750
+    # scanparams.net_dict['K_ext'][6] = 0
+    # scanparams.net_dict['K_ext'][7] = 1500
+    # scanparams.net_dict['K_ext'][9] = 0
+    # scanparams.net_dict['K_ext'][12] = 0
     # scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
     #                                          750, 1500, 500,
-    #                                          1250, 1250, 0,
-    #                                          750, 1500, 500])
+    #                                          1000, 1500, 0,
+    #                                          1000, 1500, 0])
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -84,12 +91,14 @@ if __name__ == "__main__":
         scanparams.set_indgs(indgs) # use the defined, if not scanned
         # set scanned parameters
         scanparams.set_stp(sys.argv[3])
-        scanparams.set_vip(sys.argv[4])
+        scanparams.set_vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
-        scanparams.set_exc(lvls[0])
-        scanparams.set_pv(lvls[1])
-        scanparams.set_som(lvls[2])
+        scanparams.set_g(lvls[0])
+        scanparams.set_bg(lvls[1])
+        # scanparams.set_exc(lvls[0])
+        # scanparams.set_pv(lvls[1])
+        # scanparams.set_som(lvls[2])
         scanparams.save_pickle(pickle_path)
     # single
     except IndexError:
@@ -153,7 +162,7 @@ if __name__ == "__main__":
             analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
         if n_stim > 0:
             if do_response:
-                analysis.response(spikes, start_stim, stims, window=ana_win, interpol=True, bw=1.)
+                analysis.response(spikes, start_stim, stims, window=ana_win, bw=1.)
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)

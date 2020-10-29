@@ -36,7 +36,7 @@ class ScanParams:
         self.net_dict['stp_dict'] = copy.deepcopy(self.stps['stp_fitted_02.pickle'])
         self.set_indgs(indgs)
         self.load_conn(conn='7-15')
-        self.vip2som(True)
+        self.set_vip2som(True)
 
     def set_weight(self, pre, post, factor):
         for i, prepop in enumerate(self.net_dict['populations']):
@@ -73,7 +73,7 @@ class ScanParams:
         self.sim_dict['data_path'] = pickle_path.replace('.pickle', '/')
 
     def set_g(self, g):
-        self.net_dict['g'] = -int(np.abs(int(g)))
+        self.net_dict['g'] = -(np.abs(g))
 
     def set_bg(self, bg):
         self.net_dict['bg_rate'] = float(bg)
@@ -125,7 +125,7 @@ class ScanParams:
     def load_conn(self, conn='7-15'):
         self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
 
-    def vip2som(self, adjust):
+    def set_vip2som(self, adjust):
         if int(adjust) != 0:
             # vip-to-som all the same across layers
             print('adjust vip-to-som conn.')

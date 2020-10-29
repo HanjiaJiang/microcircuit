@@ -50,14 +50,14 @@ def get_std_delays(std_delay_exc, std_delay_inh, number_of_pop):
     std_delays[:, [0, 4, 7, 10]] = std_delay_exc
     return std_delays
 
-def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None):
+def get_psp_mtx(mtx_e, mtx_i, flg_e, flg_i, g=None, psp_mean=0.7543, psp_rel_sd=1.2704):
     mtx = np.zeros((16, 16))
     ipsp_pv2e = mtx_i[0, 1]
     if flg_e is False:
         if isinstance(g, int) or isinstance(g, float):
-            mtx_e = np.full((4, 4), 0.7543)    # mean
+            mtx_e = np.full((4, 4), psp_mean)    # mean
         else:
-            mtx_e = np.full((4, 4), 1.2704)    # s.d. (relative)
+            mtx_e = np.full((4, 4), psp_rel_sd)    # s.d. (relative)
     # assign by layer
     for a, row in enumerate(mtx_e):
         for b, epsp in enumerate(row):
@@ -207,7 +207,8 @@ net_dict = {
     'k_th': 0.8,
     'k_e2e': 0.8,
     'k_e2i': 0.8,
-    'k_i2e': 0.2
+    'k_i2e': 0.2,
+    'recurrent_weight_distribution': 'lognormal'
     }
 
 
