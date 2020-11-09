@@ -148,29 +148,40 @@ class ScanParams:
 '''
 preliminary settings
 '''
-def set_paradox(para_dict, paradox_type, n, pops, offsets, start, duration, intrv, amp=0.1, freq=10.):
-    para_dict['stim_dict']['paradox']['type'] = paradox_type
-    para_dict['stim_dict']['paradox']['offsets'] = offsets
-    para_dict['stim_dict']['paradox']['n'] = n
-    para_dict['stim_dict']['paradox']['duration'] = duration
-    para_dict['stim_dict']['paradox']['targets'] = pops
+def set_perturb(para_dict, perturb_type, n_rep, pops, levels, start, duration, intrv, amp=0.1, freq=10.):
+    if n_rep == 0:
+        return 0.
+    para_dict['stim_dict']['perturbs']['type'] = perturb_type
+    para_dict['stim_dict']['perturbs']['levels'] = levels
+    para_dict['stim_dict']['perturbs']['n_repeat'] = n_rep
+    para_dict['stim_dict']['perturbs']['duration'] = duration
+    para_dict['stim_dict']['perturbs']['targets'] = pops
     # handle starts
-    starts_dict, n_offset, seg = {}, len(offsets), duration+intrv
-    for offset in offsets:
-        starts_dict[str(offset)] = []
-    for i in range(n):
-        tmps = np.array([start + i*n_offset*seg + j*seg for j in range(n_offset)])
-        np.random.shuffle(tmps)
-        for k, tmp in enumerate(tmps):
-            starts_dict[str(offsets[k])].append(tmp)
-    # for i, offset in enumerate(offsets):
-    #     starts_dict[str(offset)] = [start + i*n*(duration+intrv) + j*(duration+intrv) for j in range(n)]
-    para_dict['stim_dict']['paradox']['starts'] = starts_dict
-    para_dict['stim_dict']['paradox']['intrv'] = intrv
-    if paradox_type == 'ac':
-        para_dict['stim_dict']['paradox']['amplitude'] = amp
-        para_dict['stim_dict']['paradox']['frequency'] = freq
-    return n*len(offsets)*(duration+intrv)
+    starts_dict, n_levels, seg = {}, len(levels), duration+intrv
+    lvl_str = ''
+    for level in levels:
+        lvl_str += str(int(level)) + '-'
+    starts_fn = 'perturb_{:.0f}_{}_{}_{:.0f}_{:.0f}.json'.format(start, lvl_str, n_rep, duration, intrv)
+    starts_fn = os.path.join(para_dict['sim_dict']['data_path'], starts_fn)
+    if os.path.isfile(starts_fn):
+        with open(starts_fn, 'r') as jf:
+            starts_dict = json.load(jf)
+    else:
+        for level in levels:
+            starts_dict[str(level)] = []
+        for i in range(n_rep):
+            tmps = np.array([start + i*n_levels*seg + j*seg for j in range(n_levels)])
+            np.random.shuffle(tmps)
+            for k, tmp in enumerate(tmps):
+                starts_dict[str(levels[k])].append(tmp)
+        with open(starts_fn, 'w') as jf:
+            json.dump(starts_dict, jf)
+    para_dict['stim_dict']['perturbs']['starts'] = starts_dict
+    para_dict['stim_dict']['perturbs']['interval'] = intrv
+    if perturb_type == 'ac':
+        para_dict['stim_dict']['perturbs']['ac']['amplitude'] = amp
+        para_dict['stim_dict']['perturbs']['ac']['frequency'] = freq
+    return n_rep*n_levels*(duration+intrv)
 
 # set layer-specific thalamic input
 def set_thalamic(para_dict, th_starts=None, th_rate=None, orient=False, duration=10, conn_probs=None):

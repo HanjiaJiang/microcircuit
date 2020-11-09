@@ -18,20 +18,20 @@ if __name__ == "__main__":
     do_response = True
     do_selectivity = False
     do_weight, testmode_weight, weight_seg_width = False, True, 100.
+    stp = 2
 
     # ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 5000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # background input
-    # indgs = [1000,1500,750,1000]
-    indgs = [750,1500,500,1000]
+    indgs = [750,1500,500,1250] if stp == 2 else [1000,1500,750,1000]
 
     # thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 10, 120., 1000.
+    n_stim, th_rate, stim_intrv = 0, 200., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
@@ -39,14 +39,14 @@ if __name__ == "__main__":
     # conn_probs_th = np.array([0., 0., 0., 0., 0.4, 0.4, 0., 0., 0., 0.0, 0., 0., 0.0])
     t_sim += len_stim
 
-    # paradox effect
-    paradox_type = 'dc'
-    n_paradox, paradox_start, = 0, t_sim
-    paradox_duration, paradox_intrv = 600., 1000.
-    paradox_pops = [3] #[1, 5, 8, 11]
-    paradox_offsets = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]
-    # paradox_offsets = [0., 10., 20., 30., 40., 50., 60., 70., 80., 90.]
-    paradox_freq, paradox_ac_amp = 10., 0.1 # ac
+    # perturb effect
+    perturb_type = 'poisson'
+    n_repeat, perturb_start, = 0, t_sim
+    perturb_duration, perturb_intrv = 600., 1000.
+    perturb_pops = [0] #[2, 6, 9, 12] #[3] #[1, 5, 8, 11]
+    perturb_levels = np.arange(0., 201., 25.).tolist()
+    # perturb_levels = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]  # pA in ac or dc
+    perturb_freq, perturb_ac_amp = 10., 0.1 # ac
 
     # dc_extra of all populations
     dc_extra_targets, dc_extra_amps = [], []
@@ -55,12 +55,15 @@ if __name__ == "__main__":
     plot_center, plot_half_len = start_ai, 100.
     if len(stims) > 0:
         plot_center = stims[0]
+    if n_repeat > 0:
+        plot_center = t_sim
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
     scanparams.set_g(8.)
-    scanparams.set_bg(4.5)
-    scanparams.set_stp(2)
+    scanparams.set_bg(4.)
+    scanparams.set_stp(stp)
+    # scanparams.set_vip2som(False)
     # scanparams.set_epsp(True)
     # scanparams.net_dict['recurrent_weight_distribution'] = 'normal'
     if do_weight:
@@ -129,9 +132,9 @@ if __name__ == "__main__":
     # set other parameters
     create.set_thalamic(para_dict, stims, th_rate, orient=orient,
         duration=duration, conn_probs=conn_probs_th)
-    t_sim += create.set_paradox(para_dict, paradox_type, n_paradox, paradox_pops,
-        paradox_offsets, paradox_start, paradox_duration, paradox_intrv,
-        paradox_ac_amp, paradox_freq)
+    t_sim += create.set_perturb(para_dict, perturb_type, n_repeat, perturb_pops,
+        perturb_levels, perturb_start, perturb_duration, perturb_intrv,
+        perturb_ac_amp, perturb_freq)
     for target, amp in zip(dc_extra_targets, dc_extra_amps):
         para_dict['net_dict']['dc_extra'][target] = amp
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
@@ -166,7 +169,7 @@ if __name__ == "__main__":
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
-        analysis.paradox_calc(spikes, para_dict['stim_dict']['paradox'])
+        analysis.perturb_calc(spikes, para_dict['stim_dict']['perturbs'], stim_type=perturb_type, targets=perturb_pops)
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
         if do_weight:
@@ -178,7 +181,7 @@ if __name__ == "__main__":
         os.system('rm {}/*.gdf'.format(data_path))
         if testmode_weight is True:
             os.system('rm {}/*.csv'.format(data_path))
-        if n_paradox > 0:
+        if n_repeat > 0:
             affix = cwd.replace('/', '-') + '-' + data_path.replace('/', '-')
             os.chdir(data_path)
             os.system('for f in *.png; do mv -- \"$f\" \"${{f%}}{}\"; done'.format('.' + affix + '.png'))

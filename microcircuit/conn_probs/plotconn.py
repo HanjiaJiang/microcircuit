@@ -47,6 +47,7 @@ def plotconn(fn, raw=False, threshold=False, vipconn=True, vmax=1.0):
                 if mtx_real[i][j] == 1:
                     text += '*'
                     # weight = 'heavy'
+                    # fcolor = 'magenta'
             plt.text(j+0.5, 12-i+0.5, text,
             fontsize=fsize,
             color=fcolor,

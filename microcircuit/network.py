@@ -246,26 +246,41 @@ class Network:
                     )
                 self.dc.append(dc)
 
-    def create_paradox(self):
-        if self.stim_dict['paradox']['n'] > 0:
-            self.paradox_gens = []
-            duration = self.stim_dict['paradox']['duration']
-            paradox_type = self.stim_dict['paradox']['type']
-            generator_type = '{}_generator'.format(paradox_type)
-            for i, offset in enumerate(self.stim_dict['paradox']['offsets']):
-                print('paradox starts = {}'.format(self.stim_dict['paradox']['starts'][str(offset)]))
-                if offset <= 0:
+    def create_perturbs(self):
+        if self.stim_dict['perturbs']['n_repeat'] > 0:
+            self.perturbs = []
+            duration = self.stim_dict['perturbs']['duration']
+            perturbs_type = self.stim_dict['perturbs']['type']
+            generator_type = '{}_generator'.format(perturbs_type)
+            cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+            for i, level in enumerate(self.stim_dict['perturbs']['levels']):
+                print('perturbs starts = {}'.format(self.stim_dict['perturbs']['starts'][str(level)]))
+                if level <= 0:
                     continue
-                for j, start in enumerate(self.stim_dict['paradox']['starts'][str(offset)]):
-                    params = {'amplitude': offset, 'start': start, 'stop': start + duration}
-                    if paradox_type == 'ac':
-                        params['amplitude'] = self.stim_dict['paradox']['amplitude']
-                        params['frequency'] = self.stim_dict['paradox']['frequency']
-                        params['phase'] = self.stim_dict['paradox']['phase']
+                for j, start in enumerate(self.stim_dict['perturbs']['starts'][str(level)]):
+                    params = {'start': start, 'stop': start + duration}
+                    if perturbs_type == 'dc':
+                        params['amplitude'] = level
+                    elif perturbs_type == 'ac':
+                        params['amplitude'] = self.stim_dict['perturbs']['ac']['amplitude']
+                        params['frequency'] = self.stim_dict['perturbs']['ac']['frequency']
+                        params['phase'] = self.stim_dict['perturbs']['ac']['phase']
+                    elif perturbs_type == 'poisson':
+                        params['rate'] = level
+                    print(params)
                     gen = nest.Create(generator_type, params=params)
-                    self.paradox_gens.append(gen)
-                    for k in self.stim_dict['paradox']['targets']:
-                        nest.Connect(gen, self.pops[k])
+                    self.perturbs.append(gen)
+                    for k in self.stim_dict['perturbs']['targets']:
+                        if perturbs_type == 'poisson':
+                            cell_type = cell_types[k]
+                            w = calc_psc(self.net_dict['PSP_e'],
+                                self.net_dict['neuron_params']['C_m'][cell_type],
+                                self.net_dict['neuron_params']['tau_m'][cell_type],
+                                self.net_dict['neuron_params']['tau_syn_ex'])
+                            nest.Connect(gen, self.pops[k], syn_spec={'weight': w})
+                            # print('k, cell_type, w = {}, {}, {}'.format(k, cell_type, w))
+                        else:
+                            nest.Connect(gen, self.pops[k])
 
 
     def create_connections(self):
@@ -438,8 +453,7 @@ class Network:
         # self.create_thalamic_input()
         self.create_poisson()
         self.create_dc_generator()
-        self.create_paradox()
-        # self.create_ac_paradox()
+        self.create_perturbs()
         self.create_connections()
         if self.net_dict['poisson_input']:
             self.connect_poisson()

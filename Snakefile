@@ -1,4 +1,4 @@
-stp = [0, 1]
+stp = [0, 2]
 vip2som = [0, 1]
 epsp = [0, 1]
 ipsp = 0

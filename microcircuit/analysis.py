@@ -61,6 +61,32 @@ class Spikes:
             print('Spikes.__init__(): data directory created')
         self.set_labels()
 
+    def set_labels(self):
+        self.populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
+                       'L4 Exc', 'L4 PV', 'L4 SOM',
+                       'L5 Exc', 'L5 PV', 'L5 SOM',
+                       'L6 Exc', 'L6 PV', 'L6 SOM']
+
+        self.subtypes = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+
+        self.positions = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+
+        self.layer_by_pops = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+
+        self.layer_labels = ['L2/3', 'L4', 'L5', 'L6']
+
+        self.pops_by_layer = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+
+        self.colors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
+                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
+
+        self.colors_10 = [(51/255,34/255,136/255), (136/255,204/255,238/255), (68/255,170/255,153/255),
+                          (17/255,119/255,51/255), (153/255,153/255,51/255), (221/255,204/255,119/255),
+                          (204/255,102/255,119/255), (136/255,34/255,85/255), (170/255,68/255,153/255),
+                          (187/255,187/255,187/255)]
+
     def read_name(self):
         # Import filenames
         for file in os.listdir(self.path):
@@ -130,7 +156,7 @@ class Spikes:
                     data = np.concatenate(data)
                 if isinstance(data, np.ndarray) and data.ndim == 2:
                     # data = data[np.argsort(data[:, 1])]  # time consuming
-                    lyr = self.layers[j%13]
+                    lyr = self.layer_by_pops[j%13]
                     data = np.concatenate((data, np.full((len(data), 1), j),
                         np.full((len(data), 1), lyr)), axis=1)
                     df = pd.DataFrame(data=data, columns=self.df_columns[dev_type])
@@ -357,32 +383,6 @@ class Spikes:
                 f.write(value)
                 f.close()
 
-
-    def set_labels(self):
-        self.populations = ['L2/3 Exc', 'L2/3 PV', 'L2/3 SOM', 'L2/3 VIP',
-                       'L4 Exc', 'L4 PV', 'L4 SOM',
-                       'L5 Exc', 'L5 PV', 'L5 SOM',
-                       'L6 Exc', 'L6 PV', 'L6 SOM']
-
-        self.subtypes = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
-
-        self.positions = [0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 0, 1, 2]
-
-        self.layers = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
-
-        self.pops_by_layer = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-
-        self.colors = [(68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255), (204/255,187/255,68/255),
-                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
-                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255),
-                        (68/255,119/255,170/255), (238/255,102/255,119/255), (34/255,136/255,51/255)]
-
-        self.colors_10 = [(51/255,34/255,136/255), (136/255,204/255,238/255), (68/255,170/255,153/255),
-                          (17/255,119/255,51/255), (153/255,153/255,51/255), (221/255,204/255,119/255),
-                          (204/255,102/255,119/255), (136/255,34/255,85/255), (170/255,68/255,153/255),
-                          (187/255,187/255,187/255)]
-
-
 '''
 Calculation
 '''
@@ -531,7 +531,8 @@ def fire_rate(spikes, begin, end):
     return rates_averaged_all, rates_std_all
 
 
-def plot_raster(spikes, begin, end):
+def plot_raster(spikes, begin, end, figsize=(12, 9), fontsize=30.):
+
     t0 = time.time()
     data = spikes.get_data(begin, end)
     gids = spikes.gids
@@ -546,7 +547,7 @@ def plot_raster(spikes, begin, end):
     L6_label_pos = (gids_numpy_changed[10][0] + gids_numpy_changed[12][1])/2
     ylabels = ['L2/3', 'L4', 'L5', 'L6']
 
-    fig, ax = plt.subplots(figsize=(16, 12))
+    fig, ax = plt.subplots(figsize=figsize)
     for i in list(range(len(data))):
         if len(data[i]) > 0:
             times = data[i][:, 1]
@@ -556,7 +557,7 @@ def plot_raster(spikes, begin, end):
     # legend
     for i in range(4):
         plt.scatter([], [], s=100, label=spikes.subtypes[i], color=spikes.colors[i])
-    plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1))
+    plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.2), fontsize=fontsize)
 
     # set top and right frames invisible
     ax.spines['right'].set_visible(False)
@@ -565,11 +566,11 @@ def plot_raster(spikes, begin, end):
     # reset y limits to contain legend
     bottom, top = ax.get_ylim()
 
-    plt.xlabel('time (ms)')
+    plt.xlabel('time (ms)', fontsize=fontsize)
     plt.xticks(np.arange(begin, end + 1.0, (end - begin)/4.0))
     plt.yticks(
         [L23_label_pos, L4_label_pos, L5_label_pos, L6_label_pos],
-        ylabels, rotation=10
+        ylabels, rotation=10, fontsize=fontsize
         )
     fig.tight_layout()
     plt.savefig(os.path.join(spikes.path, 'raster_plot.png'), dpi=300)
@@ -608,7 +609,7 @@ def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
     plt.savefig(os.path.join(path, 'boxplot_' + title + '.png'), dpi=300)
     plt.close()
 
-def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, figsize=(15, 10), ylims=(-1., 31.)):
+def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, figsize=(12, 9), ylims=(-1., 31.), fontsize=30):
     layers = ['L2/3', 'L4', 'L5', 'L6']
     legends = ['Exc', 'PV', 'SOM', 'VIP']
     err_data = data[1, :]/np.sqrt(data_n) if use_SE else data[1, :]
@@ -624,10 +625,11 @@ def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, fi
     # legends
     for i in range(4):
         plt.scatter([], [], s=100, marker='s', label=legends[i], color=colors[i])
-    legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.15))
+    legend = plt.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.2), fontsize=fontsize)
 
     # plot settings
-    ax.set_ylabel(ylbl)
+    ax.set_ylabel(ylbl, fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
     ax.set_xticks([])
     ax.set_xticklabels([])
     ax.set_xlim(0-1.5*w, 12+1.5*w)
@@ -639,7 +641,8 @@ def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, fi
 
     # mark layer
     for i, x in enumerate([1.5, 5, 8, 11]):
-        ax.text(x, ax.get_ylim()[1], layers[i], horizontalalignment='center', verticalalignment='bottom')
+        ax.text(x, ax.get_ylim()[0]-.5, layers[i], horizontalalignment='center',
+            verticalalignment='top', fontsize=fontsize)
 
     fig.tight_layout()
     plt.savefig(os.path.join(path, 'bars_' + title + '.png'))
@@ -798,7 +801,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
             # Calculate population selectivity and plot
             len_q = int(len(SI_by_neuronbin)/4)
-            idx_lyr = spikes.layers[i]
+            idx_lyr = spikes.layer_by_pops[i]
             SIs_s1 = SI_by_neuronbin[len_q:3*len_q]
             SIs_s2 = np.concatenate((SI_by_neuronbin[:len_q], SI_by_neuronbin[3*len_q:]), axis=0)
             if raw is True:
@@ -840,7 +843,7 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
                 axs[idx_lyr].plot([0.0, duration], [ylims[1], ylims[1]], color='k', linewidth=10)
             if i < 4:
                 axs[idx_lyr].legend(loc='upper right', fontsize=16, ncol=2)
-            axs[idx_lyr].text(-25.0, np.mean(ylims), spikes.layers[idx_lyr])
+            axs[idx_lyr].text(-25.0, np.mean(ylims), spikes.layer_by_pops[idx_lyr])
     for ax in axs:
         ax.plot([0.0, bin_w*n_bin], [0.0, 0.0], color='k', linestyle='--')
     plt.xticks(xs[::2], labels=xs[::2].astype(str))
@@ -945,51 +948,105 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='q
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
     print('response() running time = {:.3f} s'.format(time.time()-t0))
 
+def perturb_plot_l23(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
+    ptitles = ['(a)', '(b)', '(c)', '(d)']
+    ptitle = ptitles[targets[0]]
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    plt.text(-45., 1.8, ptitle)
+    xlbl = r'$r_{stim}$ (spikes/s)' if stim_type == 'poisson' else r'$I_{stim}$ (pA)'
+    plt.xlabel(xlbl)
+    if normalize:
+        ylbl = r'normalized $r$'
+    else:
+        ylbl = r'$r$ (spikes/s)'
+    plt.ylabel(ylbl)
+    thin, thick = 2, 4
+    for i in range(4):
+        if isinstance(targets, list):
+            linewidth = thick if i in targets else thin
+            linestyle = '--' if i in targets else '-'
+        else:
+            linewidth = thin
+            linestyle = '-'
+        # if normalize is False and spikes.subtypes[i] in ['PV', 'VIP']:
+        #     frs = np.array(frs_all[i])/shrink
+        # else:
+        #     frs = np.array(frs_all[i])
+        ax.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+            linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+        # legend
+        # ax.plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
+    ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.3))
+    # set ylims
+    if normalize:
+        plt.ylim((0.5, 1.5))
+        # bottom, top = plt.ylim()
+        # plt.ylim((max(bottom, 0.), min(top, 2.)))
+    plt.savefig(os.path.join(spikes.path, 'perturb_L23_normalize={}.png'.format(normalize)), bbox_inches='tight')
+    plt.close()
 
-def paradox_plot(spikes, xs, frs_all, normalize=False, ylims=(0.0, 5.0), shrink=8, frs_ei=None):
+def perturb_plot(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
     fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
     purple = (170/255, 51/255, 119/255)
-    plt.xlabel('I (pA)')
-    affix = 'normalized' if normalize else ''
-    plt.ylabel('{} r (spike/s)'.format(affix))
+    xlbl = r'$r_{stim}$ (spikes/s)' if stim_type == 'poisson' else r'$I_{stim}$ (pA)'
+    plt.xlabel(xlbl)
+    if normalize:
+        ylbl = r'normalized $r$'
+    else:
+        ylbl = r'$r$ (spikes/s)'
+    plt.ylabel(ylbl)
+    thin, thick = 2, 4
+    # plot 4-group data
     for i, gids in enumerate(spikes.gids):
-        # axs[spikes.layers[i]].hlines(1., params_dict['offsets'][0], params_dict['offsets'][-1], linestyles=':', color='k')
+        if isinstance(targets, list):
+            linewidth = thick if i in targets else thin
+            linestyle = '--' if i in targets else '-'
+        else:
+            linewidth = thin
+            linestyle = '-'
         if normalize is False and spikes.subtypes[i] in ['PV', 'VIP']:
             frs = np.array(frs_all[i])/shrink
         else:
             frs = np.array(frs_all[i])
-        axs[spikes.layers[i]].plot(xs, frs, color=spikes.colors[i], linewidth=2, marker='.', markersize=10)
+        axs[spikes.layer_by_pops[i]].plot(xs, frs, color=spikes.colors[i],
+            linewidth=linewidth, marker='.', markersize=10, linestyle=linestyle)
+    # plot e-i group data
     if frs_ei is not None:
         for i, frs in enumerate(frs_ei):
-            axs[i].plot(xs, frs[0], color=spikes.colors[0], linewidth=4, marker='.', markersize=10)
+            axs[i].plot(xs, frs[0], color=spikes.colors[0], linewidth=thick, marker='.', markersize=10)
             if normalize:
-                axs[i].plot(xs, frs[1], color=purple, linewidth=4, marker='.', markersize=10)
+                axs[i].plot(xs, frs[1], color=purple, linewidth=thick, marker='.', markersize=10)
             else:
-                axs[i].plot(xs, frs[1]/shrink, color=purple, linewidth=4, marker='.', markersize=10)
+                axs[i].plot(xs, frs[1]/shrink, color=purple, linewidth=thick, marker='.', markersize=10)
     # legend
     for i in range(4):
         axs[0].plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
-    axs[0].legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.5))
-    if normalize is False and isinstance(ylims, tuple):
-        plt.ylim(ylims)
-    else:
-        plt.ylim((0., 1.5))
-    plt.savefig(os.path.join(spikes.path, 'paradox_{}.png'.format(affix)), bbox_inches='tight')
+    axs[0].legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.5))
+    # layer labels
+    for i in range(4):
+        axs[i].text(-0.3, 0.5, spikes.layer_labels[i], horizontalalignment='center', verticalalignment='center', transform=axs[i].transAxes)
+    # set ylims
+    if normalize:
+        plt.ylim((0.5, 1.5))
+        # bottom, top = plt.ylim()
+        # print(bottom, top)
+        # plt.ylim((max(bottom, 0.), min(top, 2.)))
+    plt.savefig(os.path.join(spikes.path, 'perturb_normalize={}.png'.format(normalize)), bbox_inches='tight')
     plt.close()
 
-def paradox_calc(spikes, prdx_dict):
+def perturb_calc(spikes, perturb_dict, stim_type='dc', targets=None):
     t0 = time.time()
-    if prdx_dict['n'] <= 0:
+    if perturb_dict['n_repeat'] <= 0:
         return
-    # f = open(os.path.join(spikes.path, 'paradox.dat'), 'w')
-    n_trial, duration = prdx_dict['n'], prdx_dict['duration']
+    # f = open(os.path.join(spikes.path, 'perturb.dat'), 'w')
+    n_trial, duration = perturb_dict['n_repeat'], perturb_dict['duration']
     frs_all, frs_all_norm = [], []
     spksum_by_pop, ns_by_pop = [], []
     for i, gids in enumerate(spikes.gids):
         spksum_by_stim = []
         frs, n_pop = [], gids[1] - gids[0] + 1
         # by stim. level
-        for j, (offset, starts) in enumerate(prdx_dict['starts'].items()):
+        for j, (offset, starts) in enumerate(perturb_dict['starts'].items()):
             spk_sum, fr = 0, np.nan
             # by trial
             for k, start in enumerate(starts):
@@ -1004,7 +1061,7 @@ def paradox_calc(spikes, prdx_dict):
             # f.write('{:.3f}, '.format(fr))
         spksum_by_pop.append(spksum_by_stim)
         frs_all.append(frs)
-        norm = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(prdx_dict['offsets']), np.nan)
+        norm = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(perturb_dict['levels']), np.nan)
         frs_all_norm.append(norm)
         # f.write('\n')
         ns_by_pop.append(n_pop)
@@ -1016,15 +1073,20 @@ def paradox_calc(spikes, prdx_dict):
     ns_by_pop = np.array(ns_by_pop)
     spk_sum_by_ei, n_sum_by_ei = [], []
     for i in range(4):
-        idxs = np.where(np.array(spikes.layers) == i)[0]
+        idxs = np.where(np.array(spikes.layer_by_pops) == i)[0]
         spk_sum_by_ei.append([spksum_by_pop[idxs[0], :]/ns_by_pop[idxs[0]],
         np.sum(spksum_by_pop[idxs[1:], :]/np.sum(ns_by_pop[idxs[1:]]), axis=0)])
-    frs_by_ei = (1000/(duration/2))*np.array(spk_sum_by_ei)/n_trial
-    frs_by_ei_norm = copy.deepcopy(frs_by_ei)
-    for i, frs_lyr in enumerate(frs_by_ei_norm):
-        for j, frs in enumerate(frs_lyr):
-            frs_by_ei_norm[i, j] /= frs_by_ei_norm[i, j, 0]
     # f.close()
-    paradox_plot(spikes, prdx_dict['offsets'], frs_all, normalize=False, frs_ei=frs_by_ei)
-    paradox_plot(spikes, prdx_dict['offsets'], frs_all_norm, normalize=True, frs_ei=frs_by_ei_norm)
-    print('paradox_calc() running time = {} s'.format(time.time()-t0))
+    perturb_plot(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
+    perturb_plot(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
+    perturb_plot_l23(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
+    perturb_plot_l23(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
+    # e-i group data
+    # frs_by_ei = (1000/(duration/2))*np.array(spk_sum_by_ei)/n_trial
+    # frs_by_ei_norm = copy.deepcopy(frs_by_ei)
+    # for i, frs_lyr in enumerate(frs_by_ei_norm):
+    #     for j, frs in enumerate(frs_lyr):
+    #         frs_by_ei_norm[i, j] /= frs_by_ei_norm[i, j, 0]
+    # perturb_plot(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, frs_ei=frs_by_ei)
+    # perturb_plot(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, frs_ei=frs_by_ei_norm)
+    print('perturb_calc() running time = {} s'.format(time.time()-t0))

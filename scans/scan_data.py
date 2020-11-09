@@ -13,55 +13,57 @@ np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 class ScanData:
     # directory list, dimension dictionary
-    def __init__(self, inputs, dims=None, plotvars=None, criteria=None,
-        figsize=(16, 12), mark=False, mark_star=None, xybounds=None):
-        self.set_params(plotvars, figsize, criteria, mark, mark_star)
+    def __init__(self, inputs, dims=None, mark=False, star_loc=None, xybounds=None):
+        self.set_plotvars()
+        self.set_params(mark, star_loc)
         self.set_dataframe(inputs, dims)
         self.set_plot(dims, xybounds)
 
-    def set_params(self, plotvars, figsize, criteria, mark, mark_star):
-        self.lyrs = ['L2/3', 'L4', 'L5', 'L6']
+    def set_plotvars(self, plotvars=None, figsize=(16, 12)):
+        self.plotvars = np.array([r'$r_{Exc}$', 'corr', 'CV(ISI)',
+            r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$'])
         self.figsize = figsize
-        if plotvars is None:
-            self.plotvars = [r'$r_{Exc}$', 'pairwise\ncorrelation', 'CV(ISI)', r'$r_{PV}$', r'$r_{SOM}$', r'$r_{VIP}$']
-        else:
-            self.plotvars = plotvars
+        if isinstance(plotvars, list):
+            self.plotvars = self.plotvars[np.array(plotvars)]
+            self.figsize = (len(plotvars)*3, 12)
+
+    def set_params(self, mark, star_loc):
+        self.layer_labels = ['L2/3', 'L4', 'L5', 'L6']
         self.mtxs, self.fits, self.rmse, self.rmse_n = {}, {}, {}, {}
-        # ground state criteria
-        if criteria is None:
-            self.criteria = {
-            r'$r_{Exc}$': [[0.0, 10.0], [0.0, 10.0], [0.0, 10.0], [0.0, 10.0]],
-            'pairwise\ncorrelation': [[0.0001, 0.008], [0.0001, 0.008], [0.0001, 0.008], [0.0001, 0.008]],
-            'CV(ISI)': [[0.76, 1.2], [0.76, 1.2], [0.76, 1.2], [0.76, 1.2]]
-            }
-        else:
-            self.criteria = criteria
+        # ground state criteria (Maksimov et al., 2018)
+        self.criteria = {
+            r'$r_{Exc}$': np.tile([0.0, 10.0], (4, 1)),
+            'corr': np.tile([0.0001, 0.008], (4, 1)),
+            'CV(ISI)': np.tile([0.76, 1.2],(4, 1))}
+        self.vlims = {
+            r'$r_{Exc}$': [0., 20.],
+            'corr': [-0.05, 0.05],
+            'CV(ISI)': [0.5, 1.5],
+            r'$r_{PV}$': [0., 60],
+            r'$r_{SOM}$': [0., 60],
+            r'$r_{VIP}$': [0., 60.]}
         # RMSE
         self.mark = mark
-        self.mark_star = mark_star
-        self.rmse_criteria = {r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
-                            r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
-                            r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
-                            r'$r_{VIP}$': [14.6]}
-        self.cmaps = {r'$r_{Exc}$': 'Blues',
-                        'pairwise\ncorrelation': 'RdBu',
-                        'CV(ISI)': 'Blues',
-                        r'$r_{PV}$': 'Blues',
-                        r'$r_{SOM}$': 'Blues',
-                        r'$r_{VIP}$': 'Blues'}
-        self.clabel_format = {r'$r_{Exc}$': '%1.0f',
-                        'pairwise\ncorrelation': '%1.3f',
-                        'CV(ISI)': '%1.2f',
-                        r'$r_{PV}$': '%1.0f',
-                        r'$r_{SOM}$': '%1.0f',
-                        r'$r_{VIP}$': '%1.0f'}
-        self.vlims = {r'$r_{Exc}$': [0., 10.],
-                        'pairwise\ncorrelation': [-0.02, 0.02],
-                        'CV(ISI)': [0.5, 1.5],
-                        r'$r_{PV}$': [0., 50],
-                        r'$r_{SOM}$': [0., 50],
-                        r'$r_{VIP}$': [0., 10.]
-                        }
+        self.star_loc = star_loc
+        self.rmse_criteria = {
+            r'$r_{Exc}$': [2.7, 0.5, 6.8, 6.1],
+            r'$r_{PV}$': [13.8, 10.2, 7.5, 16.9],
+            r'$r_{SOM}$': [2.6, 2.6, 2.8, 3.9],
+            r'$r_{VIP}$': [14.6]}
+        self.cmaps = {
+            r'$r_{Exc}$': 'Blues',
+            'corr': 'RdBu',
+            'CV(ISI)': 'Blues',
+            r'$r_{PV}$': 'Blues',
+            r'$r_{SOM}$': 'Blues',
+            r'$r_{VIP}$': 'Blues'}
+        self.clabel_format = {
+            r'$r_{Exc}$': '%1.0f',
+            'corr': '%1.3f',
+            'CV(ISI)': '%1.2f',
+            r'$r_{PV}$': '%1.0f',
+            r'$r_{SOM}$': '%1.0f',
+            r'$r_{VIP}$': '%1.0f'}
 
     def set_dataframe(self, inputs, dims):
         # dimensions
@@ -81,7 +83,7 @@ class ScanData:
             ai_arr = np.loadtxt(os.path.join(path_str, 'ai.dat'), delimiter=',')
             if fr_arr.shape != (13, 2) or ai_arr.shape != (4, 2):
                 print('{} failed'.format(path_str))
-            for i, lyr in enumerate(self.lyrs):
+            for i, lyr in enumerate(self.layer_labels):
                 # include items in the dataframe
                 tmp_dict = {
                     self.dims['x']: params_list[0],
@@ -93,7 +95,7 @@ class ScanData:
                     r'$r_{PV}$': fr_arr[pvs[i], 0],
                     r'$r_{SOM}$': fr_arr[soms[i], 0],
                     r'$r_{VIP}$': fr_arr[vips[i], 0],
-                    'pairwise\ncorrelation': ai_arr[i, 0],
+                    'corr': ai_arr[i, 0],
                     'CV(ISI)': ai_arr[i, 1]
                     }
                 data_list.append(tmp_dict)
@@ -113,7 +115,7 @@ class ScanData:
         else:
             self.xybounds = [self.x_lvls[0], self.x_lvls[-1], self.y_lvls[0], self.y_lvls[-1]]
         self.make_data()
-        self.make_plots()
+        # self.make_plots()
 
     # update dimensions
     def update_dims(self, dims):
@@ -141,9 +143,9 @@ class ScanData:
                 self.rmse[str(zb)][str(za)] = np.full((len(self.y_lvls), len(self.x_lvls)), 0)
                 self.rmse_n[str(zb)][str(za)] = np.full((len(self.y_lvls), len(self.x_lvls)), 0)
                 for plotvar in self.plotvars:
-                    self.mtxs[str(zb)][str(za)][plotvar] = np.full((len(self.lyrs), len(self.y_lvls), len(self.x_lvls)), np.nan)
+                    self.mtxs[str(zb)][str(za)][plotvar] = np.full((len(self.layer_labels), len(self.y_lvls), len(self.x_lvls)), np.nan)
                     if plotvar in self.criteria:
-                        self.fits[str(zb)][str(za)][plotvar] = np.full((len(self.lyrs), len(self.y_lvls), len(self.x_lvls)), 0)
+                        self.fits[str(zb)][str(za)][plotvar] = np.full((len(self.layer_labels), len(self.y_lvls), len(self.x_lvls)), 0)
 
         # data
         for i, lyr in enumerate(self.df['lyr'].tolist()):
@@ -151,7 +153,7 @@ class ScanData:
             y = self.df[self.dims['y']][i]
             za = self.df[self.dims['za']][i]
             zb = self.df[self.dims['zb']][i]
-            idx_lyr = self.lyrs.index(lyr)
+            idx_lyr = self.layer_labels.index(lyr)
             idx_x, idx_y = self.x_lvls.index(x), self.y_lvls.index(y)
             fr_exc = self.df[r'$r_{Exc}$'][i]
             fr_pv = self.df[r'$r_{PV}$'][i]
@@ -185,7 +187,8 @@ class ScanData:
                 print(self.rmse[k1][k2])
                 print(self.rmse_n[k1][k2])
 
-    def make_plots(self, afx=None):
+    def make_plots(self, afx=None, plotvars=None):
+        self.set_plotvars(plotvars)
         # plot
         for zb in self.zb_lvls:
             for za in self.za_lvls:
@@ -271,6 +274,7 @@ class ScanData:
             ax.scatter(xs, ys, color='green', s=8, marker='o', zorder=7)
         pass
 
+    # not using
     def plot_contour(self, ax, data, extent, plotvar, vmin, vmax):
         # contour
         datamin, datamax = np.nanmin(data), np.nanmax(data)
@@ -290,6 +294,18 @@ class ScanData:
             colors='gray', linewidths=0.5,
             vmin=vmin, vmax=vmax, zorder=4)
         if self.mark:
+            ax.clabel(ct, fmt=self.clabel_format[plotvar],
+            colors='k', inline=True, fontsize=10)
+
+    def contour_ai(self, ax, data, extent, plotvar, vmin, vmax):
+        datamin, datamax = np.nanmin(data), np.nanmax(data)
+        if datamin == datamax or np.isnan(datamin) or np.isnan(datamax):
+            pass
+        else:
+            ct = ax.contour(data,
+                levels=np.array([self.criteria[plotvar][0][0], self.criteria[plotvar][0][1]]),
+                origin='lower', extent=extent,
+                colors='k', linewidths=0.5, zorder=4)
             ax.clabel(ct, fmt=self.clabel_format[plotvar],
             colors='k', inline=True, fontsize=10)
 
@@ -334,10 +350,11 @@ class ScanData:
                     origin='lower', extent=extent1,
                     vmin=vmin, vmax=vmax, zorder=1)
                 im.cmap.set_over('midnightblue')
-                # self.plot_contour(ax, data, extent1, plotvar, vmin, vmax)
+                if plotvar in ['corr', 'CV(ISI)']:
+                    self.contour_ai(ax, data, extent1, plotvar, vmin, vmax)
 
                 # single- & triple-fit (not interpolated)
-                if plotvar in self.criteria:
+                if c == 0:
                     fits, tri_fits, all_fits = self.get_multifit(za, zb, plotvar, r)
                     self.plot_fitpoint(ax, tri_fits, all_fits)
                     # self.plot_fitpatch(ax, fits, tri_fits, extent2)
@@ -360,9 +377,11 @@ class ScanData:
                     # text RMSE values
                     # if plotvar == r'$r_{PV}$':
                     #     self.mark_rmse(rmse_mtx, xs, ys, all_fits)
-                if isinstance(self.mark_star, list):
+
+                # mark defined star
+                if isinstance(self.star_loc, list):
                     if c==0:
-                        as.scatter(self.mark_star[0], self.mark_star[1],
+                        ax.scatter(self.star_loc[0], self.star_loc[1],
                         s=150, marker='*', facecolor='none', edgecolor='k', zorder=8)
 
                 # many settings
@@ -382,20 +401,20 @@ class ScanData:
                 # ylabel
                 if c == 0:
                     ax.set_ylabel(ylbl)
-                    ax.text(-0.75, 0.5, self.lyrs[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+                    ax.text(-0.75, 0.5, self.layer_labels[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
-        # if self.mark:
-        #     plt.suptitle('minimum ' + r'$RMSE_{r}$' + '={:.2f}'.format(best_rmse))
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         plot_name = os.getcwd().split('/')[-1] + '_' + plot_name
         if isinstance(afx, str):
-            plot_name = afx + plot_name
+            plot_name = afx + '_' + plot_name
         fig.savefig(plot_name + '.png', bbox_inches='tight')
         plt.close()
 
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    scandata = ScanData(inputs, dims=dims, mark_star=[8., 4.5], xybounds=[4.8., 10.2, 3.8, 8.2])
-    # scandata.mark = True
-    # scandata.make_plots(afx='mark_')
+    # scandata = ScanData(inputs, dims=dims, xybounds=[3.8, 10.2, 3.8, 7.2])
+    scandata = ScanData(inputs, dims=dims, star_loc=[8., 4.5], xybounds=[3.8, 10.2, 3.8, 7.2])
+    scandata.make_plots(afx='all')
+    scandata.make_plots(afx='012', plotvars=[0, 1, 2])
+    scandata.make_plots(afx='0345', plotvars=[0, 3, 4, 5])
