@@ -4,7 +4,7 @@ import numpy as np
 import copy
 from microcircuit.conn import conn_barrel_integrate
 import microcircuit.raw_data as raw
-np.set_printoptions(precision=2, linewidth=500, suppress=True)
+np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
 '''
 Verification
@@ -419,10 +419,12 @@ def get_weight_mtx(net_dict):
 
 
 # equalize inhibitory connectivity; for a network without specific connectivity
-def eq_inh_conn(n_full, conn, lyr_gps=None):
+def eq_inh_conn(n_full, conn, lyr_gps=None, line_factor=3., threshold=0.03, i2i2=True):
     if lyr_gps is None:
         lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    conn_out = np.zeros(conn.shape)
+        # lyr_gps = [[0, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
+    conn_out = copy.deepcopy(conn)
+    # conn_out = np.zeros(conn.shape)
     for lyr_pre in lyr_gps:
         for lyr_post in lyr_gps:
             # connectivity to be calculated
@@ -447,17 +449,18 @@ def eq_inh_conn(n_full, conn, lyr_gps=None):
                 e2i_sum += n_full[exc_pre]*n_full[inh_post]*conn[inh_post, exc_pre]
 
             # i to i
-            for inh_pre in lyr_pre[1:]:
-                for inh_post in lyr_post[1:]:
-                    i2i_max += n_full[inh_pre]*n_full[inh_post]
-                    i2i_sum += n_full[inh_pre]*n_full[inh_post]*conn[inh_post, inh_pre]
+            if i2i2:
+                for inh_pre in lyr_pre[1:]:
+                    for inh_post in lyr_post[1:]:
+                        i2i_max += n_full[inh_pre]*n_full[inh_post]
+                        i2i_sum += n_full[inh_pre]*n_full[inh_post]*conn[inh_post, inh_pre]
 
             e2e = conn[exc_post, exc_pre]
             if e2i_max != 0.0:
                 e2i = e2i_sum/e2i_max
             if i2e_max != 0.0:
                 i2e = i2e_sum/i2e_max
-            if i2i_max != 0.0:
+            if i2i2 and i2i_max != 0.0:
                 i2i = i2i_sum/i2i_max
 
             # re-assign connectivity
@@ -466,10 +469,28 @@ def eq_inh_conn(n_full, conn, lyr_gps=None):
                 conn_out[exc_post, inh_pre] = i2e
             for inh_post in lyr_post[1:]:
                 conn_out[inh_post, exc_pre] = e2i
-            for inh_pre in lyr_pre[1:]:
-                for inh_post in lyr_post[1:]:
-                    conn_out[inh_post, inh_pre] = i2i
+            if i2i2:
+                for inh_pre in lyr_pre[1:]:
+                    for inh_post in lyr_post[1:]:
+                        conn_out[inh_post, inh_pre] = i2i
 
+    # print('equalized conn. matrix =\n{}'.format(conn_out))
+    # np.savetxt('conn.csv', conn, fmt='%5.3f', delimiter=',')
+    np.savetxt('conn_eq.csv', conn_out, fmt='%5.3f', delimiter=',')
+
+    # original conn.
+    # conn_thresholded = copy.deepcopy(conn)
+    # conn_thresholded[conn_thresholded<threshold] = 0.
+    # conn_thresholded = line_factor*conn_thresholded*10.
+    # conn_thresholded = line_factor*np.log(conn_thresholded*100.)
+    # np.savetxt('conn_fig.csv', conn_thresholded, fmt='%4.1f', delimiter=',')
+
+    # equalized conn. for figure
+    conn_eq_thresholded = copy.deepcopy(conn_out)
+    conn_eq_thresholded[conn_eq_thresholded<threshold] = 0.
+    conn_eq_thresholded = line_factor*conn_eq_thresholded*10.
+    # conn_eq_thresholded = line_factor*np.log(conn_eq_thresholded*100.)
+    np.savetxt('conn_eq_fig.csv', conn_eq_thresholded, fmt='%4.1f', delimiter=',')
     return conn_out
 
 # connectivity integration

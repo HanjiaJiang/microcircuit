@@ -208,7 +208,10 @@ net_dict = {
     'k_e2e': 0.8,
     'k_e2i': 0.8,
     'k_i2e': 0.2,
-    'recurrent_weight_distribution': 'lognormal'
+    # recurrent weight distribution
+    'recurrent_weight_distribution': 'lognormal',
+    # equalize inhibitory-related connection probabilities
+    'eq_inh_conn': True,
     }
 
 

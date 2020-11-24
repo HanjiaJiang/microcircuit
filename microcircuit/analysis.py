@@ -948,41 +948,78 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='q
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
     print('response() running time = {:.3f} s'.format(time.time()-t0))
 
-def perturb_plot_l23(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
-    ptitles = ['(a)', '(b)', '(c)', '(d)']
-    ptitle = ptitles[targets[0]]
-    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    plt.text(-45., 1.8, ptitle)
+def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
+        shrink=1, frs_ei=None, plotted=None, targets=None, yspan=4., figsize=(4, 6)):
+    if plotted is None:
+        plotted = [0, 1, 2, 3]
+
+    # set panels
+    panels = ['(a)', '(b)', '(c)', '(d)']
+    panel = panels[targets[0]]
+
+    # set labels
     xlbl = r'$r_{stim}$ (spikes/s)' if stim_type == 'poisson' else r'$I_{stim}$ (pA)'
-    plt.xlabel(xlbl)
     if normalize:
         ylbl = r'normalized $r$'
     else:
         ylbl = r'$r$ (spikes/s)'
+
+    # set figure
+    if normalize:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        # plt.text(-45., 1.8, panel, fontsize=40)
+    else:
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=figsize)
+    plt.xlabel(xlbl)
     plt.ylabel(ylbl)
     thin, thick = 2, 4
-    for i in range(4):
+    
+    # plot
+    for i in plotted:
+        if i >= len(frs_all):
+            continue
+        # mark stimulation target
         if isinstance(targets, list):
             linewidth = thick if i in targets else thin
             linestyle = '--' if i in targets else '-'
         else:
             linewidth = thin
             linestyle = '-'
-        # if normalize is False and spikes.subtypes[i] in ['PV', 'VIP']:
-        #     frs = np.array(frs_all[i])/shrink
-        # else:
-        #     frs = np.array(frs_all[i])
-        ax.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
-            linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
-        # legend
-        # ax.plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
-    ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.3))
-    # set ylims
+        if normalize:
+            ax.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+        else:
+            ax1.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+            ax2.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+
+
     if normalize:
         plt.ylim((0.5, 1.5))
-        # bottom, top = plt.ylim()
-        # plt.ylim((max(bottom, 0.), min(top, 2.)))
-    plt.savefig(os.path.join(spikes.path, 'perturb_L23_normalize={}.png'.format(normalize)), bbox_inches='tight')
+        ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.3))
+    else:
+        # spacing
+        ax_ylims = ax1.get_ylim()
+        yspan = min((ax_ylims[1] - ax_ylims[0])/2, yspan)
+        ax1.set_ylim((ax_ylims[1]-yspan, ax_ylims[1]))
+        ax2.set_ylim((ax_ylims[0], ax_ylims[0]+yspan))
+        # ticks
+        ax1.spines['bottom'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(labeltop=False)
+        ax2.xaxis.tick_bottom()
+        # slanted lines
+        d = .5
+        kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+            linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+        ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
+        ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+
+        ax1.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.5))
+
+    plt.savefig(os.path.join(spikes.path, 'perturb_single_normalize={}.png'.format(normalize)), bbox_inches='tight')
     plt.close()
 
 def perturb_plot(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
@@ -1079,8 +1116,8 @@ def perturb_calc(spikes, perturb_dict, stim_type='dc', targets=None):
     # f.close()
     perturb_plot(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
     perturb_plot(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
-    perturb_plot_l23(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
-    perturb_plot_l23(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
+    perturb_plot_single_layer(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
+    perturb_plot_single_layer(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
     # e-i group data
     # frs_by_ei = (1000/(duration/2))*np.array(spk_sum_by_ei)/n_trial
     # frs_by_ei_norm = copy.deepcopy(frs_by_ei)

@@ -26,7 +26,8 @@ if __name__ == "__main__":
     t_sim = start_ai + len_ai
 
     # background input
-    indgs = [750,1500,500,1250] if stp == 2 else [1000,1500,750,1000]
+    # indgs = [750,1500,500,1500] if stp == 2 else [1000,1500,750,1000]
+    indgs = [750,1500,500,1000] if stp == 2 else [1000,1500,750,1000]
 
     # thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     n_repeat, perturb_start, = 0, t_sim
     perturb_duration, perturb_intrv = 600., 1000.
     perturb_pops = [0] #[2, 6, 9, 12] #[3] #[1, 5, 8, 11]
-    perturb_levels = np.arange(0., 201., 25.).tolist()
+    perturb_levels = np.arange(0., 401., 50.).tolist()
     # perturb_levels = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]  # pA in ac or dc
     perturb_freq, perturb_ac_amp = 10., 0.1 # ac
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     # initiate ScanParams
     scanparams = create.ScanParams(indgs)
     scanparams.set_g(8.)
-    scanparams.set_bg(4.)
+    scanparams.set_bg(4.5)
     scanparams.set_stp(stp)
     # scanparams.set_vip2som(False)
     # scanparams.set_epsp(True)
@@ -93,7 +94,8 @@ if __name__ == "__main__":
         # set constant parameters
         scanparams.set_indgs(indgs) # use the defined, if not scanned
         # set scanned parameters
-        scanparams.set_stp(sys.argv[3])
+        perturb_pops = [int(sys.argv[3])]
+        # scanparams.set_stp(sys.argv[3])
         scanparams.set_vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
