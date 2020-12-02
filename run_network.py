@@ -14,25 +14,24 @@ if __name__ == "__main__":
     print_to_file = False
 
     #  model settings
-    do_ai = True
+    do_ai = False
     do_response = True
     do_selectivity = False
     do_weight, testmode_weight, weight_seg_width = False, True, 100.
-    stp = 2
+    stp = 0
 
     # ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 5000.
+    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
     len_ai = seg_ai*n_seg_ai
     t_sim = start_ai + len_ai
 
     # background input
-    # indgs = [750,1500,500,1500] if stp == 2 else [1000,1500,750,1000]
     indgs = [750,1500,500,1000] if stp == 2 else [1000,1500,750,1000]
 
     # thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 0, 200., 1000.
+    n_stim, th_rate, stim_intrv = 10, 200., 1000.
     duration, ana_win, orient = 10., 40., False
     start_stim, len_stim = t_sim, stim_intrv*n_stim
     stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
@@ -44,10 +43,10 @@ if __name__ == "__main__":
     perturb_type = 'poisson'
     n_repeat, perturb_start, = 0, t_sim
     perturb_duration, perturb_intrv = 600., 1000.
-    perturb_pops = [0] #[2, 6, 9, 12] #[3] #[1, 5, 8, 11]
-    perturb_levels = np.arange(0., 401., 50.).tolist()
+    perturb_targets = [3] #[2, 6, 9, 12] #[3] #[1, 5, 8, 11]
+    perturb_levels = np.arange(0., 201., 100.).tolist()
     # perturb_levels = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]  # pA in ac or dc
-    perturb_freq, perturb_ac_amp = 10., 0.1 # ac
+    # perturb_freq, perturb_ac_amp = 10., 0.1 # ac
 
     # dc_extra of all populations
     dc_extra_targets, dc_extra_amps = [], []
@@ -94,13 +93,14 @@ if __name__ == "__main__":
         # set constant parameters
         scanparams.set_indgs(indgs) # use the defined, if not scanned
         # set scanned parameters
-        perturb_pops = [int(sys.argv[3])]
+        perturb_targets = [int(sys.argv[3])]
         # scanparams.set_stp(sys.argv[3])
         scanparams.set_vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
         scanparams.set_ipsp(sys.argv[6])
         scanparams.set_g(lvls[0])
         scanparams.set_bg(lvls[1])
+        scanparams.set_vip(lvls[2])
         # scanparams.set_exc(lvls[0])
         # scanparams.set_pv(lvls[1])
         # scanparams.set_som(lvls[2])
@@ -134,9 +134,8 @@ if __name__ == "__main__":
     # set other parameters
     create.set_thalamic(para_dict, stims, th_rate, orient=orient,
         duration=duration, conn_probs=conn_probs_th)
-    t_sim += create.set_perturb(para_dict, perturb_type, n_repeat, perturb_pops,
-        perturb_levels, perturb_start, perturb_duration, perturb_intrv,
-        perturb_ac_amp, perturb_freq)
+    t_sim += create.set_perturb(para_dict, perturb_type, n_repeat, perturb_targets,
+        perturb_levels, perturb_start, perturb_duration, perturb_intrv)
     for target, amp in zip(dc_extra_targets, dc_extra_amps):
         para_dict['net_dict']['dc_extra'][target] = amp
     print('stims = {}'.format(para_dict['stim_dict']['th_start']))
@@ -171,7 +170,7 @@ if __name__ == "__main__":
             if do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
-        analysis.perturb_calc(spikes, para_dict['stim_dict']['perturbs'], stim_type=perturb_type, targets=perturb_pops)
+        analysis.perturb_calc(spikes, para_dict['stim_dict']['perturbs'], stim_type=perturb_type, targets=perturb_targets)
         analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
         analysis.fr_plot(spikes)
         if do_weight:

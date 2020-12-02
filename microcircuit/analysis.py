@@ -52,6 +52,9 @@ class Spikes:
                 (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)],
             'n': [5, 8, 9, 9, 95, 43, 27, 23, 7, 18, 30, 15, 26]
         }
+        # AI state data
+        self.corrs = []
+        self.cvs = []
         # others
         self.verify_dict = {}
         if os.path.isdir(self.path):
@@ -751,8 +754,12 @@ def gs_analysis(spikes, begin, end, bw=10, seg_len=5000.0, n_sample=140, n_spk_t
             except KeyError:
                 corr_proc = np.nan
             df_corr = df_corr.append({'corr': corr_proc, 'segment': i, 'layer': k}, ignore_index=True)
-        corr_avg = np.mean(df_corr[df_corr['layer']==k]['corr'].values)
-        cv_avg = np.mean(df_cv[df_cv['layer']==k]['cv'].values)
+        corrs_lyr = df_corr[df_corr['layer']==k]['corr'].values
+        cvs_lyr = df_cv[df_cv['layer']==k]['cv'].values
+        corr_avg = np.mean(corrs_lyr)
+        cv_avg = np.mean(cvs_lyr)
+        spikes.corrs.append(corrs_lyr)
+        spikes.cvs.append(cvs_lyr)
         ai[k, :] = [corr_avg, cv_avg]
 
     np.savetxt(os.path.join(spikes.path, 'ai.dat'), ai, fmt='%.10f', delimiter=',')
@@ -949,80 +956,90 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='q
     print('response() running time = {:.3f} s'.format(time.time()-t0))
 
 def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
-        shrink=1, frs_ei=None, plotted=None, targets=None, yspan=4., figsize=(4, 6)):
-    if plotted is None:
-        plotted = [0, 1, 2, 3]
-
-    # set panels
-    panels = ['(a)', '(b)', '(c)', '(d)']
-    panel = panels[targets[0]]
+        frs_ei=None, pops=None, targets=None, ylims=None, figsize=(4, 10)):
+    # print(frs_all)
+    if pops is None:
+        pops = [0, 1, 2, 3]
+    if ylims is None:
+        frs_means = np.mean(np.array([np.array(frs_all).max(axis=1), np.array(frs_all).min(axis=1)]), axis=0)
+        ylims = {
+            'Exc': (frs_means[0]-0.3, frs_means[0]+0.3),
+            'PV': (frs_means[1]-4., frs_means[1]+4.),
+            'SOM': (frs_means[2]-2., frs_means[2]+2.),
+            'VIP': (0., 1.)
+        }
 
     # set labels
     xlbl = r'$r_{stim}$ (spikes/s)' if stim_type == 'poisson' else r'$I_{stim}$ (pA)'
-    if normalize:
-        ylbl = r'normalized $r$'
-    else:
-        ylbl = r'$r$ (spikes/s)'
+    ylbl = r'normalized $r$' if normalize else r'$r$ (spikes/s)'
 
     # set figure
     if normalize:
         fig, ax = plt.subplots(1, 1, figsize=figsize)
-        # plt.text(-45., 1.8, panel, fontsize=40)
     else:
-        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=figsize)
+        fig, axs = plt.subplots(len(pops), 1, sharex=True, figsize=figsize)
+        # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=figsize)
     plt.xlabel(xlbl)
     plt.ylabel(ylbl)
-    thin, thick = 2, 4
-    
+
     # plot
-    for i in plotted:
-        if i >= len(frs_all):
-            continue
+    thin, thick = 2, 4
+    for i, pop in enumerate(pops):
+        if pop >= len(frs_all):
+            break
         # mark stimulation target
         if isinstance(targets, list):
-            linewidth = thick if i in targets else thin
-            linestyle = '--' if i in targets else '-'
+            linewidth = thick if pop in targets else thin
+            linestyle = '--' if pop in targets else '-'
         else:
             linewidth = thin
             linestyle = '-'
+        # plot
         if normalize:
-            ax.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
-                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+            ax.plot(xs, frs_all[pop], color=spikes.colors[pop], label=spikes.subtypes[pop],
+                linewidth=linewidth, marker='.', markersize=10, linestyle=linestyle)
         else:
-            ax1.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
-                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
-            ax2.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
-                linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+            axs[i].plot(xs, frs_all[pop], color=spikes.colors[pop],
+                linewidth=linewidth, marker='.', markersize=10, linestyle=linestyle)
+            if isinstance(ylims, dict):
+                axs[i].set_ylim(ylims[spikes.subtypes[pop]])
+            axs[0].plot([], [], label=spikes.subtypes[i], color=spikes.colors[i])
+            # ax1.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+            #     linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
+            # ax2.plot(xs, frs_all[i], color=spikes.colors[i], label=spikes.subtypes[i],
+            #     linewidth=linewidth, marker='.', markersize=15, linestyle=linestyle)
 
-
+    # special
     if normalize:
-        plt.ylim((0.5, 1.5))
-        ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.3))
+        # plt.ylim((0., 2.))
+        span = max(plt.ylim()[1] - 1., 1. - plt.ylim()[0])
+        plt.ylim((1. - span, 1 + span))
+        ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.2))
     else:
-        # spacing
-        ax_ylims = ax1.get_ylim()
-        yspan = min((ax_ylims[1] - ax_ylims[0])/2, yspan)
-        ax1.set_ylim((ax_ylims[1]-yspan, ax_ylims[1]))
-        ax2.set_ylim((ax_ylims[0], ax_ylims[0]+yspan))
-        # ticks
-        ax1.spines['bottom'].set_visible(False)
-        ax2.spines['top'].set_visible(False)
-        ax1.xaxis.tick_top()
-        ax1.tick_params(labeltop=False)
-        ax2.xaxis.tick_bottom()
-        # slanted lines
-        d = .5
-        kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
-            linestyle="none", color='k', mec='k', mew=1, clip_on=False)
-        ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
-        ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
-
-        ax1.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.5))
+        axs[0].legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.7))
+        # # spacing
+        # ax_ylims = ax1.get_ylim()
+        # yspan = min((ax_ylims[1] - ax_ylims[0])/2, yspan)
+        # ax1.set_ylim((ax_ylims[1]-yspan, ax_ylims[1]))
+        # ax2.set_ylim((ax_ylims[0], ax_ylims[0]+yspan))
+        # # ticks
+        # ax1.spines['bottom'].set_visible(False)
+        # ax2.spines['top'].set_visible(False)
+        # ax1.xaxis.tick_top()
+        # ax1.tick_params(labeltop=False)
+        # ax2.xaxis.tick_bottom()
+        # # slanted lines
+        # d = .5
+        # kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+        #     linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+        # ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
+        # ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+        # ax1.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.5))
 
     plt.savefig(os.path.join(spikes.path, 'perturb_single_normalize={}.png'.format(normalize)), bbox_inches='tight')
     plt.close()
 
-def perturb_plot(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
+def perturb_plot_all_layer(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
     fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
     purple = (170/255, 51/255, 119/255)
     xlbl = r'$r_{stim}$ (spikes/s)' if stim_type == 'poisson' else r'$I_{stim}$ (pA)'
@@ -1071,55 +1088,54 @@ def perturb_plot(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_
     plt.savefig(os.path.join(spikes.path, 'perturb_normalize={}.png'.format(normalize)), bbox_inches='tight')
     plt.close()
 
-def perturb_calc(spikes, perturb_dict, stim_type='dc', targets=None):
+def perturb_plots(spikes, levels, frs_all, frs_all_norm, stim_type, targets):
+    # perturb_plot_all_layer(spikes, levels, frs_all, stim_type, normalize=False, targets=targets)
+    # perturb_plot_all_layer(spikes, levels, frs_all_norm, stim_type, normalize=True, targets=targets)
+    perturb_plot_single_layer(spikes, levels, frs_all, stim_type, normalize=False, targets=targets)
+    perturb_plot_single_layer(spikes, levels, frs_all_norm, stim_type, normalize=True, targets=targets)
+
+def perturb_calc(spikes, perturb_dict, stim_type='poisson', targets=None):
     t0 = time.time()
     if perturb_dict['n_repeat'] <= 0:
         return
-    # f = open(os.path.join(spikes.path, 'perturb.dat'), 'w')
-    n_trial, duration = perturb_dict['n_repeat'], perturb_dict['duration']
+    n_repeat, duration = perturb_dict['n_repeat'], perturb_dict['duration']
     frs_all, frs_all_norm = [], []
-    spksum_by_pop, ns_by_pop = [], []
+    # spksum_by_pop, ns_by_pop = [], []
+    # fr calculation
     for i, gids in enumerate(spikes.gids):
-        spksum_by_stim = []
+        # spksum_by_stim = []
         frs, n_pop = [], gids[1] - gids[0] + 1
         # by stim. level
         for j, (offset, starts) in enumerate(perturb_dict['starts'].items()):
-            spk_sum, fr = 0, np.nan
+            spksum, fr = 0, np.nan
             # by trial
             for k, start in enumerate(starts):
                 data = spikes.get_data(start+duration/2, start+duration)[i]
                 if type(data) != np.ndarray or data.ndim != 2:
-                    spk_sum = np.nan
+                    spksum = np.nan
                     break
-                spk_sum += len(data)
-            spksum_by_stim.append(spk_sum)
-            fr = 1000*(spk_sum/n_pop)/(n_trial*(duration/2))
+                spksum += len(data)
+            # spksum_by_stim.append(spksum)
+            fr = 1000*(spksum/n_pop)/(n_repeat*(duration/2))
             frs.append(fr)
-            # f.write('{:.3f}, '.format(fr))
-        spksum_by_pop.append(spksum_by_stim)
         frs_all.append(frs)
         norm = np.array(frs)/frs[0] if frs[0] != 0 else np.full(len(perturb_dict['levels']), np.nan)
         frs_all_norm.append(norm)
-        # f.write('\n')
-        ns_by_pop.append(n_pop)
-    spksum_by_pop = np.array(spksum_by_pop)
+        # spksum_by_pop.append(spksum_by_stim)
+        # ns_by_pop.append(n_pop)
+    # print(perturb_dict)
     # print(frs_all)
-    # frs_all = (1000/(duration/2))*spksum_by_pop/n_trial
-    # print(frs_all)
-    # frs_all_norm = np.divide(frs_all, np.tile(frs_all[:, 0], (len(frs_all[0]), 1)).T)
-    ns_by_pop = np.array(ns_by_pop)
-    spk_sum_by_ei, n_sum_by_ei = [], []
-    for i in range(4):
-        idxs = np.where(np.array(spikes.layer_by_pops) == i)[0]
-        spk_sum_by_ei.append([spksum_by_pop[idxs[0], :]/ns_by_pop[idxs[0]],
-        np.sum(spksum_by_pop[idxs[1:], :]/np.sum(ns_by_pop[idxs[1:]]), axis=0)])
-    # f.close()
-    perturb_plot(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
-    perturb_plot(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
-    perturb_plot_single_layer(spikes, perturb_dict['levels'], frs_all, stim_type, normalize=False, targets=targets)
-    perturb_plot_single_layer(spikes, perturb_dict['levels'], frs_all_norm, stim_type, normalize=True, targets=targets)
+    # print(frs_all_norm)
+    perturb_plots(spikes, perturb_dict['levels'], frs_all, frs_all_norm, stim_type, targets)
+    # spksum_by_pop = np.array(spksum_by_pop)
+    # ns_by_pop = np.array(ns_by_pop)
+    # spk_sum_by_ei, n_sum_by_ei = [], []
+    # for i in range(4):
+    #     idxs = np.where(np.array(spikes.layer_by_pops) == i)[0]
+    #     spk_sum_by_ei.append([spksum_by_pop[idxs[0], :]/ns_by_pop[idxs[0]],
+    #     np.sum(spksum_by_pop[idxs[1:], :]/np.sum(ns_by_pop[idxs[1:]]), axis=0)])
     # e-i group data
-    # frs_by_ei = (1000/(duration/2))*np.array(spk_sum_by_ei)/n_trial
+    # frs_by_ei = (1000/(duration/2))*np.array(spk_sum_by_ei)/n_repeat
     # frs_by_ei_norm = copy.deepcopy(frs_by_ei)
     # for i, frs_lyr in enumerate(frs_by_ei_norm):
     #     for j, frs in enumerate(frs_lyr):
