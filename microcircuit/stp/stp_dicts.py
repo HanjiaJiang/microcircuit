@@ -158,7 +158,8 @@ def func2(x):
 #     return data
 
 if __name__ == "__main__":
-    colors = ['#66CCEE', '#CCBB44', '#AA3377',]
+    colors = ['#009988', '#EE7733', '#AA4499',]
+    # colors = ['#66CCEE', '#CCBB44', '#AA3377',]
     legends = ['U', 'F', 'D']
     EIset = ['Exc', 'PV', 'SOM', 'VIP']
     EEset = ['L23_Exc', 'L4_Exc', 'L5_Exc', 'L6_Exc']
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         names_ei, Us_ei, Fs_ei, Ds_ei = [], [], [], []
         for i, pre in enumerate(EIset):
             for j, post in enumerate(EIset):
-                name, U, F, D = pre + ' to ' + post, 0., 0., 0.
+                name, U, F, D = pre + r'$\rightarrow$' + post, 0., 0., 0.
                 try:
                     tmp = stp[pre][post]
                     U, F, D = tmp['U'], tmp['tau_fac']/1000., tmp['tau_rec']/1000.
@@ -190,7 +191,7 @@ if __name__ == "__main__":
         names_ee, Us_ee, Fs_ee, Ds_ee = [], [], [], []
         for i, pre in enumerate(EEset):
             for j, post in enumerate(EEset):
-                name, U, F, D = pre + ' to ' + post, 0., 0., 0.
+                name, U, F, D = pre + r'$\rightarrow$' + post, 0., 0., 0.
                 try:
                     tmp = stp[pre][post]
                     U, F, D = tmp['U'], tmp['tau_fac']/1000., tmp['tau_rec']/1000.
@@ -210,19 +211,20 @@ if __name__ == "__main__":
         Us, Fs, Ds, w = [Us_ei, Us_ee], [Fs_ei, Fs_ee], [Ds_ei, Ds_ee], 0.15
 
         # plot
-        fig, ax = plt.subplots(2, 1, figsize=(15, 10), sharey=True)
+        fig, ax = plt.subplots(2, 1, figsize=(12, 12), sharey=True)
         for i in range(2):
             for j, (dx, params) in enumerate(zip([-w, 0., w], [Us, Fs, Ds])):
                 ax[i].bar(xs[i]+dx, params[i], w, color=colors[j])
             for x in [3.5, 7.5, 11.5]:
                 ax[i].axvline(x, 0, 1, color='k')
-            ax[i].set_ylabel('probability')
+            ax[i].set_ylabel('probability', fontsize=20)
             secax = ax[i].secondary_yaxis('right', functions=(func1, func2))
-            secax.set_ylabel(r'$\tau$ (ms)')
+            secax.set_ylabel('ms', fontsize=20)
             ax[i].set_xticks(xs[i])
             ax[i].set_xticklabels(names[i], rotation='45')
             ax[i].set_ylim(-0.05, 1.05)
             plt.setp(ax[i].get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+            # mark papers
             if stp_fn == 'stp_fitted_02.pickle':
                 for a, paper in enumerate(papers[i]):
                     rect_sets = paper_rects[i][a]
@@ -242,8 +244,10 @@ if __name__ == "__main__":
         # legends
         for i in range(3):
             ax[0].scatter([], [], s=100, marker='s', label=legends[i], color=colors[i])
-        ax[0].legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.7))
+        ax[0].legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.8), frameon=False, fontsize=25)
+        ax[0].set_title(r'Exc$\rightarrow$Inh, Inh$\rightarrow$Exc, Inh$\rightarrow$Inh', y=1.15)
+        ax[1].set_title(r'Exc$\rightarrow$Exc', y=1.15)
 
         fig.tight_layout()
-        plt.savefig('stps:{}.png'.format(stp_fn))
+        plt.savefig('{}.png'.format(stp_fn.replace('.pickle', '')), bbox_inches='tight')
         plt.close()

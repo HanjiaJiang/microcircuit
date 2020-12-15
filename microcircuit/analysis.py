@@ -15,6 +15,7 @@ from multiprocessing import Manager
 
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 matplotlib.rcParams['font.size'] = 20.0
 matplotlib.rcParams['hatch.linewidth'] = 2.0
 
@@ -29,6 +30,19 @@ class Spikes:
         print('read_name(): {:.3f}'.format(t1-t0))
         print('load(): {:.3f}'.format(t2-t1))
 
+    # def fake_sample(self, mu, sig, n, estimate=True):
+    #     if estimate:
+    #         sig = sig*(np.sqrt(n-1)/np.sqrt(n))
+    #     fsample = np.full(n, mu)
+    #     for i in range(int(n/2)):
+    #         fsample[i] += sig
+    #         fsample[-1-i] -= sig
+    #     if n%2 == 1:
+    #         fsample[0] += sig/2
+    #         fsample[-1] -= sig/2
+    #     print('{:.4f}({:.4f}) vs. {:.4f}({:.4f})'.format(mu, sig, np.mean(fsample), np.std(fsample)))
+    #     return fsample
+
     def setup(self, path, net_dict):
         # data
         self.path = path
@@ -37,7 +51,7 @@ class Spikes:
         # net_dict
         self.net_dict = net_dict
         # firing rate results
-        self.fr_result = []
+        self.fr_result = {}
         # firing rate criteria
         self.fr_cri = {
             'musig': [
@@ -50,8 +64,14 @@ class Spikes:
                 (0.0, 0.1, 0.7), (4.3, 7.8, 14.7), (0.3, 0.6, 4.9),
                 (2.7, 5.2, 11.2), (4.3, 7.6, 8.7), (0.2, 0.8, 3.6),
                 (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)],
-            'n': [5, 8, 9, 9, 95, 43, 27, 23, 7, 18, 30, 15, 26]
+            'n': [5, 8, 9, 9, 95, 43, 27, 23, 7, 18, 30, 15, 26],
         }
+        # cri_sample = [self.fake_sample(mu, sig, n)
+        #     for i, (mu, sig, n) in enumerate(zip(
+        #     np.array(self.fr_cri['musig'])[:, 0],
+        #     np.array(self.fr_cri['musig'])[:, 1],
+        #     np.array(self.fr_cri['n'])))]
+        # self.fr_cri['fake_sample'] = cri_sample
         # AI state data
         self.corrs = []
         self.cvs = []
@@ -529,7 +549,15 @@ def fire_rate(spikes, begin, end):
     for rate_mean, rate_std in zip(rates_averaged_all, rates_std_all):
         f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
-    spikes.fr_result = np.array([rates_averaged_all, rates_std_all])
+    spikes.fr_result['musig'] = np.array([rates_averaged_all, rates_std_all])
+    # fake_sample = [spikes.fake_sample(mu, sig, gids[i][1] - gids[i][0] + 1, estimate=False)
+    #         for i, (mu, sig) in enumerate(zip(
+    #         rates_averaged_all,
+    #         rates_std_all
+    #         ))]
+    spikes.fr_result['pvalues'] = \
+        [stats.ttest_ind(fake_sample[i], spikes.fr_cri['fake_sample'][i], equal_var=False)[1]
+            for i in range(len(fake_sample))]
     print('fire_rate() running time = {:.3f} s'.format(time.time()-t0))
     return rates_averaged_all, rates_std_all
 
@@ -612,18 +640,32 @@ def do_boxplot(data, cri, path, title, colors, ylbls, xlbl, xlims=None):
     plt.savefig(os.path.join(path, 'boxplot_' + title + '.png'), dpi=300)
     plt.close()
 
-def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, figsize=(12, 9), ylims=(-1., 31.), fontsize=30):
+def label_diff(ax, xs, ys, pvalues, bw):
+    props = {'connectionstyle':'bar','arrowstyle':'-',\
+                 'shrinkA':20,'shrinkB':20,'linewidth':2}
+    for i, p in enumerate(pvalues):
+        if p <= 0.05:
+            ax.annotate('*', xy=(xs[i], min(30., ys[i]+7)),
+                horizontalalignment='center', verticalalignment='center', fontsize=20)
+            # ax.annotate('*', xy=(xs[i], 1.1*ys[i]), zorder=10, horizontalalignment='center', fontsize=20)
+            ax.hlines(min(29.5, ys[i]+6.5), xs[i]-bw/2, xs[i]+bw/2, colors='k')
+            ax.vlines([xs[i]-bw/2, xs[i]+bw/2], min(29., ys[i]+6), min(29.5, ys[i]+6.5), colors='k')
+            # ax.annotate('', xy=(xs[i], 1.1*ys[i]), xytext=(xs[i], 1.1*ys[i]), arrowprops=props)
+
+def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True,
+        # figsize=(16, 12), ylims=(-1., 31.), fontsize=30):
+        figsize=(12, 9), ylims=(-1., 31.), fontsize=30, stattest=True, pvalues=None):
     layers = ['L2/3', 'L4', 'L5', 'L6']
     legends = ['Exc', 'PV', 'SOM', 'VIP']
     err_data = data[1, :]/np.sqrt(data_n) if use_SE else data[1, :]
     err_cri = cri[0, :]/np.sqrt(cri_n) if use_SE else cri[0, :]
 
     # bars
-    x = np.arange(13)  # the label locations
-    w = 0.3  # the width of the bars
+    xs = np.arange(13)  # the label locations
+    bw = 0.3  # the width of the bars
     fig, ax = plt.subplots(figsize=figsize)
-    rects1 = ax.bar(x - w/2, data[0, :], w, yerr=err_data, color=colors, edgecolor=colors, linewidth=2)
-    rects2 = ax.bar(x + w/2, cri[0, :], w, yerr=err_cri, fill=False, edgecolor=colors, linewidth=2, hatch='//')
+    rects1 = ax.bar(xs - bw/2, data[0, :], bw, yerr=err_data, color=colors, edgecolor=colors, linewidth=2)
+    rects2 = ax.bar(xs + bw/2, cri[0, :], bw, yerr=err_cri, fill=False, edgecolor=colors, linewidth=2, hatch='//')
 
     # legends
     for i in range(4):
@@ -635,7 +677,7 @@ def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, fi
     plt.yticks(fontsize=fontsize)
     ax.set_xticks([])
     ax.set_xticklabels([])
-    ax.set_xlim(0-1.5*w, 12+1.5*w)
+    ax.set_xlim(0-1.5*bw, 12+1.5*bw)
     ax.set_ylim(ylims[0], ylims[1])
 
     # vline for layer boundary
@@ -646,6 +688,11 @@ def do_bars(data, cri, data_n, cri_n, path, title, colors, ylbl, use_SE=True, fi
     for i, x in enumerate([1.5, 5, 8, 11]):
         ax.text(x, ax.get_ylim()[0]-.5, layers[i], horizontalalignment='center',
             verticalalignment='top', fontsize=fontsize)
+
+    # mark statistical compareing
+    if isinstance(pvalues, list):
+        ys = [max(data[0, i], cri[0, i]) for i in range(len(data[0, :]))]
+        label_diff(ax, xs, ys, pvalues, bw)
 
     fig.tight_layout()
     plt.savefig(os.path.join(path, 'bars_' + title + '.png'))
@@ -660,8 +707,8 @@ def fr_plot(spikes):
         if os.path.isfile(fpath):
             rates.append(np.load(fpath))
     # do_boxplot(rates[::-1], spikes.fr_cri_qaurters[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
-    do_bars(spikes.fr_result, np.array(spikes.fr_cri['musig']).T, n_pops,
-        spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s')
+    do_bars(spikes.fr_result['musig'], np.array(spikes.fr_cri['musig']).T, n_pops,
+        spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s', pvalues=spikes.fr_result['pvalues'])
     print('fr_plot() running time = {:.3f} s'.format(time.time()-t0))
 
 '''
@@ -859,7 +906,10 @@ def selectivity(spikes, stims, duration, bin_w=10.0, n_bin=10, raw=False):
 
 
 # responses to transient/thalamic input
-def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='quadratic', ylims=(-0.05, 0.45)):
+def response(spikes, begin, stims, window, bw=1.0, exportplot=False,
+        interpol='quadratic', ylims=(-0.05, 0.45), ptitle='STPs',
+        figsize=(8, 4), font_puff=5/4):
+    matplotlib.rcParams['font.size'] = matplotlib.rcParams['font.size']*font_puff
     t0 = time.time()
     n_stim = len(stims)
     if len(stims) > 1:
@@ -869,7 +919,8 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='q
     f = open(os.path.join(spikes.path, 'sf.dat'), 'w')
 
     # plot settings
-    fig, ax = plt.subplots(figsize=(8, 4), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    plt.title(ptitle)
     colors = ['hotpink', 'dodgerblue', 'black', 'black']
     linestyles = ['solid', 'solid', 'solid', 'dashed']
     xy_by_layer, empty_flg = [], False
@@ -954,9 +1005,12 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False, interpol='q
         xy_by_layer = []
     np.save(os.path.join(spikes.path, 'lts_distr.npy'), xy_by_layer)
     print('response() running time = {:.3f} s'.format(time.time()-t0))
+    matplotlib.rcParams['font.size'] = matplotlib.rcParams['font.size']/font_puff
 
 def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
         frs_ei=None, pops=None, targets=None, ylims=None, figsize=(4, 10)):
+    fontsize_puff = 5/4
+    matplotlib.rcParams['font.size'] = matplotlib.rcParams['font.size']*fontsize_puff
     # print(frs_all)
     if pops is None:
         pops = [0, 1, 2, 3]
@@ -976,6 +1030,15 @@ def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
     # set figure
     if normalize:
         fig, ax = plt.subplots(1, 1, figsize=figsize)
+        target_str = ''
+        for target in targets:
+            target_str += '{}, '.format(spikes.subtypes[target])
+        target_str = target_str[:-2] + ' activated'
+        ax.set_title(target_str, y=1.0, pad=100)
+        # ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{:.1f}'))
+        # yticks = ax.get_yticks()[ax.get_yticks()>=0.]
+        # ax.set_yticks(yticks)
+        # ax.set_yticklabels(yticks)
     else:
         fig, axs = plt.subplots(len(pops), 1, sharex=True, figsize=figsize)
         # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=figsize)
@@ -1014,7 +1077,7 @@ def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
         # plt.ylim((0., 2.))
         span = max(plt.ylim()[1] - 1., 1. - plt.ylim()[0])
         plt.ylim((1. - span, 1 + span))
-        ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.2))
+        ax.legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.16))
     else:
         axs[0].legend(loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.7))
         # # spacing
@@ -1038,6 +1101,7 @@ def perturb_plot_single_layer(spikes, xs, frs_all, stim_type, normalize=False,
 
     plt.savefig(os.path.join(spikes.path, 'perturb_single_normalize={}.png'.format(normalize)), bbox_inches='tight')
     plt.close()
+    matplotlib.rcParams['font.size'] = matplotlib.rcParams['font.size']/fontsize_puff
 
 def perturb_plot_all_layer(spikes, xs, frs_all, stim_type, normalize=False, shrink=1, frs_ei=None, targets=None):
     fig, axs = plt.subplots(4, 1, figsize=(6, 15), sharex=True, sharey=True)
@@ -1094,7 +1158,7 @@ def perturb_plots(spikes, levels, frs_all, frs_all_norm, stim_type, targets):
     perturb_plot_single_layer(spikes, levels, frs_all, stim_type, normalize=False, targets=targets)
     perturb_plot_single_layer(spikes, levels, frs_all_norm, stim_type, normalize=True, targets=targets)
 
-def perturb_calc(spikes, perturb_dict, stim_type='poisson', targets=None):
+def perturb_calc(spikes, perturb_dict):
     t0 = time.time()
     if perturb_dict['n_repeat'] <= 0:
         return
@@ -1126,7 +1190,7 @@ def perturb_calc(spikes, perturb_dict, stim_type='poisson', targets=None):
     # print(perturb_dict)
     # print(frs_all)
     # print(frs_all_norm)
-    perturb_plots(spikes, perturb_dict['levels'], frs_all, frs_all_norm, stim_type, targets)
+    perturb_plots(spikes, perturb_dict['levels'], frs_all, frs_all_norm, perturb_dict['type'], perturb_dict['targets'])
     # spksum_by_pop = np.array(spksum_by_pop)
     # ns_by_pop = np.array(ns_by_pop)
     # spk_sum_by_ei, n_sum_by_ei = [], []

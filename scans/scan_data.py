@@ -7,7 +7,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from scipy.interpolate import interp1d, interp2d
-matplotlib.rcParams['font.size'] = 15.0
+matplotlib.rcParams['font.size'] = 25.0
 np.set_printoptions(precision=3, linewidth=500, suppress=True)
 # from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -36,12 +36,12 @@ class ScanData:
             'corr': np.tile([0.0001, 0.008], (4, 1)),
             'CV(ISI)': np.tile([0.76, 1.2],(4, 1))}
         self.vlims = {
-            r'$r_{Exc}$': [0., 20.],
+            r'$r_{Exc}$': [0., 10.],
             'corr': [-0.05, 0.05],
             'CV(ISI)': [0.5, 1.5],
-            r'$r_{PV}$': [0., 60],
-            r'$r_{SOM}$': [0., 60],
-            r'$r_{VIP}$': [0., 60.]}
+            r'$r_{PV}$': [0., 100],
+            r'$r_{SOM}$': [0., 100],
+            r'$r_{VIP}$': [0., 10]}
         # RMSE
         self.mark = mark
         self.star_loc = star_loc
@@ -323,12 +323,19 @@ class ScanData:
 
     def colormap(self, za, zb, afx=None):
         # set plotting variables
-        fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharex=True, sharey=True)
+        fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
         extent1 = [xs[0], xs[-1], ys[0], ys[-1]]
         plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg', r'$r_{bg}$')
+        # add invisible frame for x and y labels
+        fig.add_subplot(111, frameon=False)
+        plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+        plt.xlabel(xlbl)
+        plt.ylabel(ylbl)
+        plt.gca().xaxis.set_label_coords(.5, 0.25)
+        plt.gca().yaxis.set_label_coords(-0.01, 0.65)
         # loop variables to plot
         for c, plotvar in enumerate(self.plotvars):
             vmin, vmax = self.vlims[plotvar][0], self.vlims[plotvar][1]
@@ -388,20 +395,26 @@ class ScanData:
                 ax.set_xlim(self.xybounds[0], self.xybounds[1])
                 ax.set_ylim(self.xybounds[2], self.xybounds[3])
                 ax.set_aspect(float((self.xybounds[1] - self.xybounds[0])/(self.xybounds[3] - self.xybounds[2])))
+                ax.tick_params(axis='both', labelsize=matplotlib.rcParams['font.size']*.7)
 
                 # titles
                 if r == 0:
-                    ax.set_title(plotvar + '\n ')
+                    ax.set_title(plotvar, y=1.0, pad=50)
+                    # xlabels and colorbars
+                    # ax.set_xlabel(xlbl)
+                    cbar = fig.colorbar(im, ax=axs[:, c], location='bottom', shrink=0.8, aspect=10)
+                    cbar.ax.tick_params(labelsize=matplotlib.rcParams['font.size']*.8)
 
-                # xlabels and colorbars
-                if r == 3:
-                    ax.set_xlabel(xlbl)
-                    cbar = fig.colorbar(im, ax=axs[:, c], orientation='horizontal', shrink=0.8, aspect=10)
+                # if plotvar == r'$r_{VIP}$' and r == 0:
+                #     ax.set_xlabel(xlbl)
+
+                if r < 3 and plotvar != r'$r_{VIP}$':
+                    plt.setp(ax.get_xticklabels(), visible=False)
 
                 # ylabel
                 if c == 0:
-                    ax.set_ylabel(ylbl)
-                    ax.text(-0.75, 0.5, self.layer_labels[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+                    # ax.set_ylabel(ylbl)
+                    ax.text(-0.8, 0.5, self.layer_labels[r], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
         plot_name = '{}={},{}={}'.format(self.dims['za'], str(za), self.dims['zb'], str(zb))
         plot_name = os.getcwd().split('/')[-1] + '_' + plot_name
@@ -413,8 +426,8 @@ class ScanData:
 if __name__ == '__main__':
     inputs = sys.argv[5:]
     dims = sys.argv[1:5]
-    # scandata = ScanData(inputs, dims=dims, xybounds=[3.8, 10.2, 3.8, 7.2])
-    scandata = ScanData(inputs, dims=dims, star_loc=[8., 4.5], xybounds=[3.8, 10.2, 3.8, 7.2])
+    scandata = ScanData(inputs, dims=dims, xybounds=[3.8, 10.2, 3.8, 7.2])
+    # scandata = ScanData(inputs, dims=dims, star_loc=[8., 4.5], xybounds=[3.8, 10.2, 3.8, 7.2])
     scandata.make_plots(afx='all')
     scandata.make_plots(afx='012', plotvars=[0, 1, 2])
     scandata.make_plots(afx='0345', plotvars=[0, 3, 4, 5])

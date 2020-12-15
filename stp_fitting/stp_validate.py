@@ -12,6 +12,7 @@ if __name__ == '__main__':
         stp = pickle.load(p)
     with open('exp-data_02.json', 'r') as js:
         exp = json.load(js)
+    # run by pairs in fitted STPs
     for prek, prev in stp.items():
         for postk, postv in prev.items():
             pre_subtype, post_subtype = prek.replace('_', '-'), postk.replace('_', '-')
@@ -23,6 +24,7 @@ if __name__ == '__main__':
                 'tau_fac': F,
                 'tau_rec': D
             }
+            # match with the exp. data and validate
             for k, v in exp.items():
                 if v['pre_subtype'] == pre_subtype and v['post_subtype'] == post_subtype:
                     spk_isi = float(v['spk_isi'])

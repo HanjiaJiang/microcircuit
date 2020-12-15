@@ -5,83 +5,114 @@ import numpy as np
 import multiprocessing as mp
 import microcircuit.network as network
 import microcircuit.analysis as analysis
-import microcircuit.create_params as create
+import create_params as create
+
+class RunNetwork:
+    def __init__(self, run_sim=True, run_analysis=True, stp=2,
+                do_ai=True, do_response=True, do_sel=False, indgs=None):
+        self.run_sim = run_sim
+        self.run_analysis = run_analysis
+        self.do_ai = do_ai
+        self.do_response = do_response
+        self.do_selectivity = do_sel
+        self.stp = stp
+        if indgs is None:
+            self.indgs = [750,1500,500,1250] if stp == 2 else [1000,1500,750,1000]
+        else:
+            self.indgs = indgs
+        self.t_sim = 0.
+
+    def set_wr(self, enable=False, testmode=True, seg_w=100.):
+        self.wr = {
+            'enabled': enable, 'testmode': testmode, 'seg_width': seg_w
+        }
+
+    def set_ai(self, n=1, start=2000., length=2000.):
+        self.ai = {
+            'start': start,
+            'end': start + n*length,
+            'n_seg': n,
+            'len_seg': length
+        }
+        self.t_sim += self.ai['end']
+
+    def set_th(self, n=0, rate=200., seg_w=1000., duration=10.,
+                conn_probs=None, ana_win=40.,):
+        len_stim = seg_w*n
+        starts = list(range(int(self.t_sim + seg_w/2), \
+            int(self.t_sim + len_stim), int(seg_w)))
+        starts = np.array(starts).astype(float)
+        self.thalamus_start = self.t_sim    # start of thalamus section
+        self.thalamus_ana_win = ana_win
+        self.thalamus = {
+            'th_start': starts, # times of stimuli
+            'th_rate': rate,
+            'th_duration': duration,
+            'conn_probs_th': conn_probs,
+        }
+        self.t_sim += seg_w*n
+
+    def set_perturb(self, stype='poisson', n=0, duration=600., intrv=1000.,
+                    targets=[0], levels=None):
+        if levels is None:
+            levels = np.arange(0., 401., 50.)
+        self.perturbs = {
+            'type': stype,
+            'n_repeat': n,
+            'start': self.t_sim,
+            'duration': duration,
+            'interval': intrv,
+            'targets': targets,
+            'levels': levels
+        }
+        self.t_sim += n*len(levels)*(duration+intrv)
+
+    def set_dc_extra(self, targets=[], amps=[]):
+        self.dc_extra = {'targets': targets, 'amplitudes': amps}
+
+    def set_raster_plot(self, center=None, half=None):
+        self.raster_half = 100.
+        if isinstance(center, float) and isinstance(half, float):
+            self.raster_center = center
+            self.raster_half = half
+        else:
+            self.raster_center = run.ai['start']
+            if len(run.thalamus['th_start']) > 0:
+                self.raster_center = self.thalamus['th_start'][0]
+            if run.perturbs['n_repeat'] > 0:
+                self.raster_center = self.perturbs['start']
 
 if __name__ == "__main__":
-    # running settings
-    run_sim = True
-    run_analysis = True
-    print_to_file = False
-
-    #  model settings
-    do_ai = False
-    do_response = True
-    do_selectivity = False
-    do_weight, testmode_weight, weight_seg_width = False, True, 100.
-    stp = 0
+    # initiate with running and model settings
+    run = RunNetwork(run_sim=False, run_analysis=True, stp=2,
+                    do_ai=True, do_response=True)
 
     # ai segments
-    n_seg_ai, start_ai, seg_ai = 1, 2000., 2000.
-    len_ai = seg_ai*n_seg_ai
-    t_sim = start_ai + len_ai
+    run.set_ai(n=1, start=2000., length=5000.)
 
-    # background input
-    indgs = [750,1500,500,1000] if stp == 2 else [1000,1500,750,1000]
-
-    # thalamic input
+    # set thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
     # Landisman, Connors, 2007, Cerebral Cortex: VPM >300 spikes/s in burst
-    n_stim, th_rate, stim_intrv = 10, 200., 1000.
-    duration, ana_win, orient = 10., 40., False
-    start_stim, len_stim = t_sim, stim_intrv*n_stim
-    stims = list(range(int(start_stim + stim_intrv/2), int(start_stim + len_stim), int(stim_intrv)))
-    conn_probs_th = None
-    # conn_probs_th = np.array([0., 0., 0., 0., 0.4, 0.4, 0., 0., 0., 0.0, 0., 0., 0.0])
-    t_sim += len_stim
+    run.set_th(n=0, rate=100.)
 
     # perturb effect
-    perturb_type = 'poisson'
-    n_repeat, perturb_start, = 0, t_sim
-    perturb_duration, perturb_intrv = 600., 1000.
-    perturb_targets = [3] #[2, 6, 9, 12] #[3] #[1, 5, 8, 11]
-    perturb_levels = np.arange(0., 201., 100.).tolist()
-    # perturb_levels = [0., 20., 40., 60., 80., 100., 120., 140., 160., 180.]  # pA in ac or dc
-    # perturb_freq, perturb_ac_amp = 10., 0.1 # ac
+    # perturb_levels = np.arange(0., 201., 100.).tolist()
+    run.set_perturb(n=0, stype='poisson', duration=600., intrv=1000.,
+                    targets=[2], levels=np.arange(0., 201., 100.))
 
-    # dc_extra of all populations
-    dc_extra_targets, dc_extra_amps = [], []
+    # weight recorder
+    run.set_wr(enable=False, testmode=True, seg_w=100.)
+
+    # dc_extra
+    run.set_dc_extra(targets=[], amps=[])
 
     # others
-    plot_center, plot_half_len = start_ai, 100.
-    if len(stims) > 0:
-        plot_center = stims[0]
-    if n_repeat > 0:
-        plot_center = t_sim
+    run.set_raster_plot(center=None, half=None)
 
     # initiate ScanParams
-    scanparams = create.ScanParams(indgs)
-    scanparams.set_g(8.)
-    scanparams.set_bg(4.5)
-    scanparams.set_stp(stp)
-    # scanparams.set_vip2som(False)
-    # scanparams.set_epsp(True)
-    # scanparams.net_dict['recurrent_weight_distribution'] = 'normal'
-    if do_weight:
+    scanparams = create.ScanParams(indgs=run.indgs, stp=run.stp, g=-8., bg=4.)
+    if run.wr['enabled']:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
-    # scanparams.net_dict['mean_delay_exc'] = 0.2
-    # scanparams.net_dict['mean_delay_inh'] = 0.2
-    # scanparams.net_dict['poisson_delay'] = 0.2
-    # scanparams.stim_dict['delay_th'] = np.full(13, 0.2)
-    # scanparams.stim_dict['delay_th_sd'] = np.full(13, 0.1)
-    # scanparams.net_dict['K_ext'][4] = 750
-    # scanparams.net_dict['K_ext'][6] = 0
-    # scanparams.net_dict['K_ext'][7] = 1500
-    # scanparams.net_dict['K_ext'][9] = 0
-    # scanparams.net_dict['K_ext'][12] = 0
-    # scanparams.net_dict['K_ext'] = np.array([750, 1500, 500, 1000,
-    #                                          750, 1500, 500,
-    #                                          1000, 1500, 0,
-    #                                          1000, 1500, 0])
 
     # get pickle, scan or single
     cwd = os.getcwd()
@@ -91,9 +122,9 @@ if __name__ == "__main__":
         scanparams.load_pickle(pickle_path)
         lvls_str, lvls = scanparams.read_levels(pickle_path)
         # set constant parameters
-        scanparams.set_indgs(indgs) # use the defined, if not scanned
+        scanparams.set_indgs(run.indgs) # use the defined, if not scanned
         # set scanned parameters
-        perturb_targets = [int(sys.argv[3])]
+        run.perturbs['targets'] = [int(sys.argv[3])]
         # scanparams.set_stp(sys.argv[3])
         scanparams.set_vip2som(sys.argv[4])
         scanparams.set_epsp(sys.argv[5])
@@ -127,69 +158,66 @@ if __name__ == "__main__":
     on_server = (False if mp.cpu_count() <= 10 else True)
     cpu_ratio = (0.5 if mp.cpu_count() <= 10 else 1.)
 
-    # set print to file
-    if print_to_file:
-        exec(analysis.set2txt(data_path))
-
     # set other parameters
-    create.set_thalamic(para_dict, stims, th_rate, orient=orient,
-        duration=duration, conn_probs=conn_probs_th)
-    t_sim += create.set_perturb(para_dict, perturb_type, n_repeat, perturb_targets,
-        perturb_levels, perturb_start, perturb_duration, perturb_intrv)
-    for target, amp in zip(dc_extra_targets, dc_extra_amps):
+    scanparams.set_thalamic(para_dict, run.thalamus)
+    scanparams.set_perturb(para_dict, run.perturbs)
+    for target, amp in zip(run.dc_extra['targets'], run.dc_extra['amplitudes']):
         para_dict['net_dict']['dc_extra'][target] = amp
-    print('stims = {}'.format(para_dict['stim_dict']['th_start']))
+    print('th_start = {}'.format(para_dict['stim_dict']['th_start']))
 
     # set simulation
     para_dict['sim_dict']['local_num_threads'] = int(mp.cpu_count() * cpu_ratio)
-    para_dict['sim_dict']['t_sim'] = t_sim
+    para_dict['sim_dict']['t_sim'] = run.t_sim
 
     # delete existing files
-    if run_sim == True and os.path.isdir(data_path):
-        os.system('rm {}/*.gdf {}/*.csv'.format(data_path, data_path))
+    if os.path.isdir(data_path):
+        os.system('rm {}'.format(os.path.join(data_path, '*.png')))
+        if run.run_sim == True:
+            os.system('rm {} {}'. \
+                format(os.path.join(data_path, '*.gdf'), \
+                os.path.join(data_path, '*.csv')))
 
     # initialize and run
     net = network.Network(para_dict['sim_dict'], para_dict['net_dict'],
-                          para_dict['stim_dict'], test=testmode_weight)
+                          para_dict['stim_dict'], test=run.wr['testmode'])
     net.setup()
-    if run_sim:
+    if run.run_sim:
         # print parameters
-        create.print_all(para_dict)
+        scanparams.print_all(para_dict)
         net.simulate()
 
     # analysis
-    if run_analysis:
+    if run.run_analysis:
         spikes = analysis.Spikes(data_path, para_dict['net_dict'])
         mean_fr, std_fr = \
-            analysis.fire_rate(spikes, start_ai, start_ai + len_ai)
-        if do_ai and n_seg_ai > 0:
-            analysis.gs_analysis(spikes, start_ai, start_ai + len_ai, bw=10, seg_len=seg_ai)
-        if n_stim > 0:
-            if do_response:
-                analysis.response(spikes, start_stim, stims, window=ana_win, bw=1.)
-            if do_selectivity:
-                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=True)
-                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=duration, raw=False)
-        analysis.perturb_calc(spikes, para_dict['stim_dict']['perturbs'], stim_type=perturb_type, targets=perturb_targets)
-        analysis.plot_raster(spikes, plot_center - plot_half_len, plot_center + plot_half_len)
+            analysis.fire_rate(spikes, run.ai['start'], run.ai['end'])
+        if run.do_ai and run.ai['n_seg'] > 0:
+            analysis.gs_analysis(spikes, run.ai['start'], run.ai['end'], bw=10, seg_len=run.ai['len_seg'])
+        if len(run.thalamus['th_start']) > 0:
+            if run.do_response:
+                analysis.response(spikes, run.thalamus_start, run.thalamus['th_start'],
+                    window=run.thalamus_ana_win, bw=1., ptitle='STPs', figsize=(8,5),
+                    ylims=(-0.04, 0.35))
+            if run.do_selectivity:
+                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=run.thalamus['duration'], raw=True)
+                analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=run.thalamus['duration'], raw=False)
+        analysis.perturb_calc(spikes, para_dict['stim_dict']['perturbs'])
+        analysis.plot_raster(spikes, run.raster_center - run.raster_half, run.raster_center + run.raster_half)
         analysis.fr_plot(spikes)
-        if do_weight:
-            spikes.stationary_musig(start_ai, start_ai + len_ai, sw=weight_seg_width, verify=testmode_weight)
+        if run.wr['enabled']:
+            spikes.stationary_musig(run.ai['start'], run.ai['end'], sw=run.wr['seg_width'], verify=run.wr['testmode'])
         spikes.verify_print(data_path)
 
-    # delete recording files, move .png files
+    # delete recording files, copy .png files
     if on_server and os.path.isdir(data_path):
-        os.system('rm {}/*.gdf'.format(data_path))
-        if testmode_weight is True:
-            os.system('rm {}/*.csv'.format(data_path))
-        if n_repeat > 0:
+        os.system('rm {}'.format(os.path.join(data_path, '*.gdf')))
+        if run.wr['testmode'] is True:
+            os.system('rm -f {}'.format(os.path.join(data_path, '*.csv')))
+        if run.perturbs['n_repeat'] > 0:
             affix = cwd.replace('/', '-') + '-' + data_path.replace('/', '-')
             os.chdir(data_path)
-            os.system('for f in *.png; do mv -- \"$f\" \"${{f%}}{}\"; done'.format('.' + affix + '.png'))
+            os.system('for f in *.png; do cp -- \"$f\" \"../${{f%}}{}\"; done'.format('.' + affix + '.png'))
             os.chdir(cwd)
-
-    if print_to_file:
-        exec(analysis.end2txt())
 
     # copy exception
     xcpt_path = os.path.join(data_path, 'ai_xcpt.dat')

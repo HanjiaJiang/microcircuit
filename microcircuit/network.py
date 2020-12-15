@@ -343,6 +343,18 @@ class Network:
                 self.net_dict['neuron_params']['C_m'][cell_type],
                 self.net_dict['neuron_params']['tau_m'][cell_type],
                 self.net_dict['neuron_params']['tau_syn_ex'])
+            # syn_dict_poisson = {
+            #     'model': 'static_synapse',
+            #      'weight': {
+            #          'distribution': 'normal_clipped',
+            #          'mu': w,
+            #          'sigma': (
+            #              w * self.stim_dict['PSP_sd']
+            #              ),
+            #          'low': 0.0
+            #          },
+            #     'delay': self.net_dict['poisson_delay']
+            #     }
             syn_dict_poisson = {
                 'model': 'static_synapse',
                  'weight': w,

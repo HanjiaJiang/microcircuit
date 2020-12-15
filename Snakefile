@@ -22,7 +22,7 @@ rule snakes:
         'done_{a}_{b}_{c}_{d}'
     shell:
         '''
-        cp -r microcircuit/ scans/ snake-gs.sh cluster.json config.yml run_network.py $(dirname {input})
+        cp -r microcircuit/ scans/ *.sh *.json *.yml *.py $(dirname {input})
         cd $(dirname {input})
         sbatch snake-gs.sh
         cd ..

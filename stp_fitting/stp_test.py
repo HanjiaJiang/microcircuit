@@ -1,13 +1,16 @@
 import os
 import sys
+import pdb
 import copy
 import nest
 import pickle
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 # from microcircuit.functions import verify_collect, verify_print
-matplotlib.rcParams['font.size'] = 15.0
+matplotlib.rcParams['font.size'] = 20.0
+matplotlib.rcParams['lines.linewidth'] = 4.
 np.set_printoptions(precision=2, linewidth=500, suppress=True)
 
 class ConnTest:
@@ -20,6 +23,7 @@ class ConnTest:
                     spk_isi=50.0,
                     verify=False,
                     w=100.):
+        print('STP test: {} to {}'.format(pre_subtype, post_subtype))
         self.setup(syn_dict, pre_subtype, post_subtype, pprs, peaks, spk_n, spk_isi, verify, w)
         self.init_flg = True
         os.system('mkdir -p stp-data/')
@@ -246,14 +250,17 @@ class ConnTest:
         return self.result['fitness']
 
     # peaks: (de)polarizations
-    def calc_peaks(self, vs, ts):
+    def calc_peaks(self, vs, ts, fsize=30, lwidth=2, figsize=(10,8)):
+        matplotlib.rcParams['font.size'] = fsize
         # get parameters
         spk_n = self.spk_n
         isi = self.spk_isi
         spk_ts = self.spk_ts[-1]
         # plot
         if self.verify or self.init_flg:
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=figsize)
+            plt.xlabel('time (ms)')
+            plt.ylabel('normalized PSP')
         # calculation
         baseline = vs[ts==spk_ts[0]]
         ts_peak = []
@@ -277,27 +284,30 @@ class ConnTest:
             # else:
             #     plt.text(t_start+self.bisyn_delay, -peak, '{:.4f}'.format(peak))
             ts_peak.append(ts_ith[vs_ith==v_peak][0])
-
+        # plot
         if self.verify or self.init_flg:
-            ax.plot(ts, vs/self.result['peaks'][0], color='b', label='sim.')
-            if self.pre_subtype == 'Exc':
-                ax.plot(ts_peak, self.exp_data['peaks_norm'], color='r', marker='.', label='exp.')
-                # plt.text(spk_ts+self.bisyn_delay, self.exp_data['peaks_norm'], self.result['peaks_norm'].astype(str))
-            else:
-                ax.plot(ts_peak, -self.exp_data['peaks_norm'], color='r', marker='.', label='exp.')
-                # plt.text(spk_ts+self.bisyn_delay, -self.exp_data['peaks_norm'], self.result['peaks_norm'].astype(str))
+            ax.plot(ts, vs/self.result['peaks'][0], color='b', label='sim', zorder=1)
+            sign = 1. if self.pre_subtype == 'Exc' else -1.
+            ax.scatter(ts_peak, sign*self.exp_data['peaks_norm'], color='r', marker='.', s=300, label='exp', zorder=2)
+            # plt.text(spk_ts+self.bisyn_delay, self.exp_data['peaks_norm'], self.result['peaks_norm'].astype(str))
             ax.spines['right'].set_visible(False)
-            ax.spines['left'].set_visible(False)
+            # ax.spines['left'].set_visible(False)
             ax.spines['top'].set_visible(False)
             ax.set_xticks(list(range(0, 500, 50)))
-            ax.set_yticks([])
-            plt.legend()
-            plt.xlim((0, 120))
-            plt.xlabel('time (ms)')
-            plt.title('U = {:.2f}, F = {:.0f} ms, D = {:.0f} ms'.format(self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
-            # plt.title('{}\nU={:.2f}, F={:.0f}ms, D={:.0f}ms'.format(self.conn_name, self.syn_dict['U'], self.syn_dict['tau_fac'], self.syn_dict['tau_rec']), fontsize=20)
-            plt.savefig('stp-data/stp:calc_peaks():{}.png'.format(self.conn_name))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            # ax.set_yticks([])
+            plt.legend(frameon=False)
+            plt.xlim((-2, 120))
+            plt.title(r'{}$\rightarrow${}'
+                '\n'
+                'U={:.2f}, F={:.0f} ms, D={:.0f} ms'.
+                format(self.pre_subtype, self.post_subtype,
+                self.syn_dict['U'], self.syn_dict['tau_fac'],
+                self.syn_dict['tau_rec']), fontsize=30.)
+            plt.tight_layout()
+            plt.savefig('stp-data/stp:calc_peaks():{}.png'.format(self.conn_name), figsize=figsize)
             # plt.show()
+        matplotlib.rcParams['font.size'] = 20.0
 
 
     def calc_psp(self, vs_raw, ts_raw):
@@ -411,21 +421,21 @@ class ConnTest:
 
 if __name__ == '__main__':
     # neuron parameters
-    pre_subtype = 'Exc'
-    post_subtype = 'SOM'
+    pre_subtype = 'PV'
+    post_subtype = 'Exc'
 
     # stimulation parameters
     spk_n = 10
-    spk_isi = 10.0
+    spk_isi = 50.0
 
     # experimental data
-    pprs = None
-    peaks = np.array([0.16, 0.31, 0.45, 0.55, 0.67, 0.75, 0.82, 0.88, 0.93, 0.99])
+    pprs = np.array([1.0, 0.64, 0.0, 0.0, 0.0, 0.0, 0.35, 0.35])
+    peaks = None
 
     # tsodyks Parameters
-    U = 0.3
-    F = 200
-    D = 0
+    U = 0.55
+    F = 40
+    D = 200
 
     # recording
     # wr = nest.Create('weight_recorder', params={"withrport": True})

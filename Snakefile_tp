@@ -1,6 +1,6 @@
 F1 = [8.]
-F2 = [4., 4.5]
-F3 = [1000, 1250, 1500]
+F2 = [4.5]
+F3 = [1250]
 F4 = 0
 
 localrules: all, create
@@ -12,7 +12,7 @@ rule all:
         '''
         # python scans/scan_data.py g bg vip none {input}
         mkdir -p ../png/
-        mv *.png ../png/
+        cp *.png ../png/
         cp ../*.txt ../png/
 
         '''
@@ -22,7 +22,7 @@ rule create:
         expand('scans/{a}_{b}_{c}_{d}.pickle', a=F1, b=F2, c=F3, d=F4)
     shell:
         '''
-        python microcircuit/create_params.py {output}
+        python create_params.py {output}
         mkdir -p ../exception/
         '''
 
