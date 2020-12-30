@@ -30,6 +30,9 @@ class ScanParams:
         self.load_conn(conn=conn)
         self.set_vip2som(vip2som)
 
+    def set_lognormal(self, ln):
+        self.net_dict['recurrent_weight_distribution'] = 'lognormal' if ln is True else 'normal'
+
     # save the parameters to pickle (Snakefile)
     def save_pickle(self, pickle_path=None):
         if pickle_path is None:
@@ -87,7 +90,7 @@ class ScanParams:
         self.net_dict['epsp']['use'] = False if lyr_specific == False else True
 
     def set_ipsp(self, lyr_specific):
-        self.net_dict['ipsp']['use'] = False if lyr_specific else True
+        self.net_dict['ipsp']['use'] = False if lyr_specific == False else True
 
     def set_ctsp(self, ctsp):
         if int(ctsp) == 0:

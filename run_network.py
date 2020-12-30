@@ -111,6 +111,9 @@ if __name__ == "__main__":
 
     # initiate ScanParams
     scanparams = create.ScanParams(indgs=run.indgs, stp=run.stp, g=-8., bg=4.)
+    # scanparams.set_epsp(True)
+    # scanparams.set_ipsp(True)
+    scanparams.set_lognormal(False)
     if run.wr['enabled']:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
 

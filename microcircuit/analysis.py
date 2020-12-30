@@ -30,18 +30,18 @@ class Spikes:
         print('read_name(): {:.3f}'.format(t1-t0))
         print('load(): {:.3f}'.format(t2-t1))
 
-    # def fake_sample(self, mu, sig, n, estimate=True):
-    #     if estimate:
-    #         sig = sig*(np.sqrt(n-1)/np.sqrt(n))
-    #     fsample = np.full(n, mu)
-    #     for i in range(int(n/2)):
-    #         fsample[i] += sig
-    #         fsample[-1-i] -= sig
-    #     if n%2 == 1:
-    #         fsample[0] += sig/2
-    #         fsample[-1] -= sig/2
-    #     print('{:.4f}({:.4f}) vs. {:.4f}({:.4f})'.format(mu, sig, np.mean(fsample), np.std(fsample)))
-    #     return fsample
+    def fake_sample(self, mu, sig, n, estimate=True):
+        if estimate:
+            sig = sig*(np.sqrt(n-1)/np.sqrt(n))
+        fsample = np.full(n, mu)
+        for i in range(int(n/2)):
+            fsample[i] += sig
+            fsample[-1-i] -= sig
+        if n%2 == 1:
+            fsample[0] += sig/2
+            fsample[-1] -= sig/2
+        print('{:.4f}({:.4f}) vs. {:.4f}({:.4f})'.format(mu, sig, np.mean(fsample), np.std(fsample)))
+        return fsample
 
     def setup(self, path, net_dict):
         # data
@@ -66,12 +66,12 @@ class Spikes:
                 (0.4, 2.6, 11.5), (4.6, 17.2, 22.0), (0.5, 1.7, 6.9)],
             'n': [5, 8, 9, 9, 95, 43, 27, 23, 7, 18, 30, 15, 26],
         }
-        # cri_sample = [self.fake_sample(mu, sig, n)
-        #     for i, (mu, sig, n) in enumerate(zip(
-        #     np.array(self.fr_cri['musig'])[:, 0],
-        #     np.array(self.fr_cri['musig'])[:, 1],
-        #     np.array(self.fr_cri['n'])))]
-        # self.fr_cri['fake_sample'] = cri_sample
+        cri_sample = [self.fake_sample(mu, sig, n)
+            for i, (mu, sig, n) in enumerate(zip(
+            np.array(self.fr_cri['musig'])[:, 0],
+            np.array(self.fr_cri['musig'])[:, 1],
+            np.array(self.fr_cri['n'])))]
+        self.fr_cri['fake_sample'] = cri_sample
         # AI state data
         self.corrs = []
         self.cvs = []
@@ -550,11 +550,11 @@ def fire_rate(spikes, begin, end):
         f_rates.write(str(rate_mean) + ', ' + str(rate_std) + '\n')
     f_rates.close()
     spikes.fr_result['musig'] = np.array([rates_averaged_all, rates_std_all])
-    # fake_sample = [spikes.fake_sample(mu, sig, gids[i][1] - gids[i][0] + 1, estimate=False)
-    #         for i, (mu, sig) in enumerate(zip(
-    #         rates_averaged_all,
-    #         rates_std_all
-    #         ))]
+    fake_sample = [spikes.fake_sample(mu, sig, gids[i][1] - gids[i][0] + 1, estimate=False)
+            for i, (mu, sig) in enumerate(zip(
+            rates_averaged_all,
+            rates_std_all
+            ))]
     spikes.fr_result['pvalues'] = \
         [stats.ttest_ind(fake_sample[i], spikes.fr_cri['fake_sample'][i], equal_var=False)[1]
             for i in range(len(fake_sample))]
