@@ -40,7 +40,7 @@ class Spikes:
         if n%2 == 1:
             fsample[0] += sig/2
             fsample[-1] -= sig/2
-        print('{:.4f}({:.4f}) vs. {:.4f}({:.4f})'.format(mu, sig, np.mean(fsample), np.std(fsample)))
+        # print('{:.4f}({:.4f}) vs. {:.4f}({:.4f})'.format(mu, sig, np.mean(fsample), np.std(fsample)))
         return fsample
 
     def setup(self, path, net_dict):

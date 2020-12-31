@@ -2,7 +2,8 @@ import os
 import nest
 import numpy as np
 import copy
-from microcircuit.conn import conn_barrel_integrate
+import microcircuit.conn as reconn
+# from microcircuit.conn import conn_barrel_integrate
 import microcircuit.raw_data as raw
 np.set_printoptions(precision=3, linewidth=500, suppress=True)
 
@@ -494,13 +495,11 @@ def eq_inh_conn(n_full, conn, lyr_gps=None, line_factor=3., threshold=0.03, i2i2
     return conn_out
 
 # connectivity integration
-def renew_conn(conn_probs, exp_csv=None):
-    if exp_csv is None:
-        exp=raw.exp
-    else:
-        exp=np.loadtxt(exp_csv, delimiter=',')
-    print('conn. map before =\n{}'.format(conn_probs))
-    conn_probs = conn_barrel_integrate(raw.mouse_dict, raw.bbp, exp, raw.allen, (exp>0)*1)  # flags: use exp. data if > 0
+def renew_conn(exp_csv, extrapolate):
+    renewconn = reconn.RenewConn()
+    exp=np.loadtxt(exp_csv, delimiter=',')
+    conn_probs = renewconn.conn_barrel_integrate(
+        raw.mouse_dict, raw.bbp, exp, raw.allen, extrapolate=extrapolate)
     np.savetxt(exp_csv.replace('raw', 'conn'), conn_probs, fmt='%.4f', delimiter=',')
     print('conn. map renewed =\n{}'.format(conn_probs))
     return conn_probs

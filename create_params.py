@@ -15,7 +15,7 @@ np.set_printoptions(suppress=True, precision=4)
 objects
 '''
 class ScanParams:
-    def __init__(self, indgs=[750,1500,500,1000], conn='7-15', g=-8., bg=4.5, stp=2, vip2som=True):
+    def __init__(self, indgs=[750,1500,500,1000], conn='0715', g=-8., bg=4.5, stp=2, vip2som=True):
         # parameter dicts
         self.conn = conn
         self.net_dict = copy.deepcopy(net_dict)
@@ -27,7 +27,7 @@ class ScanParams:
         self.net_dict['bg_rate'] = bg
         self.net_dict['stp_dict'] = copy.deepcopy(self.stps[list(self.stps)[stp]])
         self.set_indgs(indgs)
-        self.load_conn(conn=conn)
+        self.load_conn(fn=conn)
         self.set_vip2som(vip2som)
 
     def set_lognormal(self, ln):
@@ -86,11 +86,11 @@ class ScanParams:
     def set_bg(self, bg):
         self.net_dict['bg_rate'] = float(bg)
 
-    def set_epsp(self, lyr_specific):
-        self.net_dict['epsp']['use'] = False if lyr_specific == False else True
+    def set_epsp(self, use):
+        self.net_dict['epsp']['use'] = False if use == False else True
 
-    def set_ipsp(self, lyr_specific):
-        self.net_dict['ipsp']['use'] = False if lyr_specific == False else True
+    def set_ipsp(self, use):
+        self.net_dict['ipsp']['use'] = False if use == False else True
 
     def set_ctsp(self, ctsp):
         if int(ctsp) == 0:
@@ -121,11 +121,13 @@ class ScanParams:
         exc, pv, som, vip = indgs[0], indgs[1], indgs[2], indgs[3]
         self.net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
 
-    def renew_conn(self, raw):
-        self.net_dict['conn_probs'] = func.renew_conn(net_dict['conn_probs'], 'microcircuit/conn_probs/raw_{}.csv'.format(raw))
+    def renew_conn(self, fn='0715', extrapolate=True):
+        self.net_dict['conn_probs'] = func.renew_conn(
+            'microcircuit/conn_probs/raw_{}.csv'.format(fn),
+            extrapolate=extrapolate)
 
-    def load_conn(self, conn='7-15'):
-        self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(conn), delimiter=',')
+    def load_conn(self, fn='0715'):
+        self.net_dict['conn_probs'] = np.loadtxt('microcircuit/conn_probs/conn_{}.csv'.format(fn), delimiter=',')
 
     def set_vip2som(self, adjust):
         if int(adjust) != 0:

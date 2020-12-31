@@ -10,5 +10,5 @@ mkdir -p data
 #SBATCH -e ./data/err-sg.txt
 
 source activate nest-log
-python $PWD/run_network.py
+python $PWD/run_network.py ${TMPDIR}
 cp $PWD/* $PWD/data/

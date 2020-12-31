@@ -84,8 +84,8 @@ class RunNetwork:
 
 if __name__ == "__main__":
     # initiate with running and model settings
-    run = RunNetwork(run_sim=False, run_analysis=True, stp=2,
-                    do_ai=True, do_response=True)
+    run = RunNetwork(run_sim=True, run_analysis=True, stp=2,
+                    do_ai=True, do_response=True, indgs=[750, 1500, 500, 3250])
 
     # ai segments
     run.set_ai(n=1, start=2000., length=5000.)
@@ -110,7 +110,8 @@ if __name__ == "__main__":
     run.set_raster_plot(center=None, half=None)
 
     # initiate ScanParams
-    scanparams = create.ScanParams(indgs=run.indgs, stp=run.stp, g=-8., bg=4.)
+    scanparams = create.ScanParams(indgs=run.indgs, conn='1230', stp=run.stp, g=-8., bg=4.)
+    # scanparams.renew_conn(extrapolate=False)
     # scanparams.set_epsp(True)
     # scanparams.set_ipsp(True)
     scanparams.set_lognormal(False)
@@ -119,19 +120,22 @@ if __name__ == "__main__":
 
     # get pickle, scan or single
     cwd = os.getcwd()
+    single_path = None
     try:
         # scan, load pickle file
-        pickle_path = sys.argv[1]
+        arg1, arg2, arg3 = sys.argv[1], sys.argv[2], sys.argv[3]
+        arg4, arg5, arg6 = sys.argv[4], sys.argv[5], sys.argv[6]
+        pickle_path = arg1
         scanparams.load_pickle(pickle_path)
         lvls_str, lvls = scanparams.read_levels(pickle_path)
         # set constant parameters
         scanparams.set_indgs(run.indgs) # use the defined, if not scanned
         # set scanned parameters
-        run.perturbs['targets'] = [int(sys.argv[3])]
+        run.perturbs['targets'] = [int(arg3)]
         # scanparams.set_stp(sys.argv[3])
-        scanparams.set_vip2som(sys.argv[4])
-        scanparams.set_epsp(sys.argv[5])
-        scanparams.set_ipsp(sys.argv[6])
+        scanparams.set_vip2som(arg4)
+        scanparams.set_epsp(arg5)
+        scanparams.set_ipsp(arg6)
         scanparams.set_g(lvls[0])
         scanparams.set_bg(lvls[1])
         scanparams.set_vip(lvls[2])
@@ -143,6 +147,7 @@ if __name__ == "__main__":
     except IndexError:
         print('No scanning input; do single simulation')
         # handle data path and copy files
+        # single_path = sys.argv[1]
         single_path = os.path.join(cwd, 'data')
         os.system('mkdir -p ' + single_path)
         os.system('cp run_network.py ' + single_path)
@@ -155,6 +160,8 @@ if __name__ == "__main__":
     # get parameters from pickle
     with open(pickle_path, 'rb') as handle:
         para_dict = pickle.load(handle)
+    if single_path is not None:
+        para_dict['sim_dict']['data_path'] = single_path
     data_path = para_dict['sim_dict']['data_path']
 
     # cpu number / on server or not
@@ -221,6 +228,7 @@ if __name__ == "__main__":
             os.chdir(data_path)
             os.system('for f in *.png; do cp -- \"$f\" \"../${{f%}}{}\"; done'.format('.' + affix + '.png'))
             os.chdir(cwd)
+        # os.system('cp {} ./'.format(os.path.join(data_path, '*')))
 
     # copy exception
     xcpt_path = os.path.join(data_path, 'ai_xcpt.dat')
