@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import microcircuit.network as network
+import microcircuit.conn as conn
 
 class PlotConn():
     def __init__(self, path):
@@ -31,23 +32,6 @@ class PlotConn():
                 plotconn.plot_by_subtype(os.path.join(self.probs_path, fn), dtype='raw')
 
     def parameters(self):
-        self.exp_mtx = [[1,2,1,1,1,0,0,1,0,0,1,0,0],
-                        [1,1,1,1,0,0,0,0,0,0,0,0,0],
-                        [1,1,1,1,0,0,0,0,0,0,0,0,0],
-                        [1,1,1,1,0,0,0,0,0,0,0,0,0],
-
-                        [1,0,0,0,1,1,1,1,0,0,1,0,0],
-                        [0,0,0,0,2,1,1,0,0,0,0,0,0],
-                        [0,0,0,2,1,1,1,0,0,0,0,0,0],
-
-                        [1,0,0,0,1,0,0,1,2,2,1,0,0],
-                        [0,0,0,0,0,0,0,2,2,2,0,0,0],
-                        [0,0,0,2,0,0,0,2,2,2,0,0,0],
-
-                        [1,0,0,0,1,0,0,1,0,0,1,2,2],
-                        [0,0,0,0,0,0,0,0,0,0,2,2,2],
-                        [0,0,0,2,0,0,0,0,0,0,2,2,2]]
-
         self.pops = ['Exc', 'PV', 'SOM', 'VIP',
                     'Exc', 'PV', 'SOM',
                     'Exc', 'PV', 'SOM',
@@ -57,21 +41,19 @@ class PlotConn():
         self.positions = [2/13, 5.5/13, 8.5/13, 11.5/13]
         self.bbp_data = np.loadtxt(os.path.join(self.probs_path, 'raw_bbp.csv'), delimiter=',')
 
-    def plot_by_subtype(self, fn, vmin=-1.0, vmax=1.0, cmap='RdBu', fontsizes=(12, 15), dtype='conn'):
+    def plot_by_subtype(self, fn, vmin=-2.0, vmax=2.0, cmap='RdBu', fontsizes=(12, 15), dtype='conn', thr=None):
         # get data
         data = np.loadtxt(fn, delimiter=',')
+        # need to import bbp data, if it is raw data
         if dtype == 'raw':
-            raw = copy.deepcopy(data)
+            # raw = copy.deepcopy(data)
             for i, row in enumerate(data):
                 for j, item in enumerate(row):
                     if data[i, j] == 0.:
                         data[i, j] = self.bbp_data[i, j]
-        else:
-            fn_raw = os.path.join(os.path.dirname(fn), os.path.basename(fn).replace('conn', 'raw'))
-            # print(fn_raw)
-            raw = np.loadtxt(fn_raw, delimiter=',') if os.path.isfile(fn_raw) else np.ones(data.shape)
-        # print(fn)
-        # print(raw)
+        # else:
+        #     raw_fn = os.path.join(os.path.dirname(fn), os.path.basename(fn).replace('conn', 'raw'))
+        #     raw = np.loadtxt(raw_fn, delimiter=',') if os.path.isfile(raw_fn) else np.ones(data.shape)
 
         # color map
         data[:, [1,2,3,5,6,8,9,11,12]] *= -1.
@@ -79,45 +61,29 @@ class PlotConn():
             extent=[0, 13, 0, 13], vmin=vmin, vmax=vmax)
 
         # values
-        mtx_real = self.exp_mtx
+        flg_fn = os.path.join(os.path.dirname(fn), os.path.basename(fn).replace('raw', 'flg').replace('conn', 'flg'))
+        flg_mtx = np.loadtxt(flg_fn, delimiter=',')
         for i in range(13):
             for j in range(13):
                 prob = np.abs(data[i, j])
-                if prob < 0.01:
+                if thr is not None and prob < thr:
                     continue
-                text = '{:.0f}%'.format(prob*100)
-                fcolor = 'k'
-                # fcolor = 'g' if raw[i, j] == 0. else 'k'
-                if '7-15' in fn:
-                    weight = 'heavy' if mtx_real[i][j] == 1 else 'normal'
-                    fsize = fontsizes[1] if mtx_real[i][j] == 1 else fontsizes[0]
-                    if 'vip' in fn and mtx_real[i][j] == 2:
-                        text += '*'
-                else:
-                    weight = 'heavy' if raw[i, j] > 0. else 'normal'
-                    fsize = fontsizes[1] if raw[i, j] == 1 else fontsizes[0]
+                text, fcolor = '{:.0f}%'.format(prob*100), 'k'
+                weight = 'heavy' if flg_mtx[i][j] == 1 else 'normal'
+                fsize = fontsizes[1] if flg_mtx[i][j] == 1 else fontsizes[0]
+                if flg_mtx[i][j] == 2:
+                    text += '*'
                 plt.text(j+0.5, 12-i+0.5, text,
-                fontsize=fsize,
-                color=fcolor,
-                horizontalalignment='center',
-                verticalalignment='center',
-                weight=weight
-                )
+                    fontsize=fsize, color=fcolor, horizontalalignment='center',
+                    verticalalignment='center', weight=weight)
         ax = plt.gca()
 
         # source/target labels
-        # plt.xlabel('presynaptic')
-        # plt.ylabel('postsynaptic')
         plt.text(6.5/13, 1.15, 'presynaptic', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=20)
         plt.text(-0.15, 6.5/13, 'postsynaptic', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, rotation='90', fontsize=20)
         for i in range(4):
             plt.text(self.positions[i], 1.1, self.layers[i], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=20)
             plt.text(-0.1, 1-self.positions[i], self.layers[i], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=20)
-
-        # layer labels
-        # for i in range(4):
-        #     plt.text(-0.14, lyr_pos[i], lyr_lbls[3-i], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-        #     plt.text(1 - lyr_pos[i], 1.12, lyr_lbls[3-i], horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
         # population labels
         plt.xticks(np.arange(0.5, 13, 1.0), self.pops)
@@ -140,7 +106,3 @@ if __name__ == '__main__':
     probs_path = './microcircuit/conn_probs/'
     plotconn = PlotConn(probs_path)
     plotconn.run_plots()
-    # fns = os.listdir(probs_path)
-    # for fn in fns:
-    #     if fn.startswith('conn') and fn.endswith('.csv'):
-    #         plotconn.plot_by_subtype(fn)

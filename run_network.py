@@ -85,7 +85,7 @@ class RunNetwork:
 if __name__ == "__main__":
     # initiate with running and model settings
     run = RunNetwork(run_sim=True, run_analysis=True, stp=2,
-                    do_ai=True, do_response=True, indgs=[750, 1500, 500, 3250])
+                    do_ai=True, do_response=True, indgs=[750, 1500, 500, 1250])
 
     # ai segments
     run.set_ai(n=1, start=2000., length=5000.)
@@ -110,11 +110,9 @@ if __name__ == "__main__":
     run.set_raster_plot(center=None, half=None)
 
     # initiate ScanParams
-    scanparams = create.ScanParams(indgs=run.indgs, conn='1230', stp=run.stp, g=-8., bg=4.)
+    scanparams = create.ScanParams(indgs=run.indgs, conn='0715', stp=run.stp, g=-8., bg=4.5)
     # scanparams.renew_conn(extrapolate=False)
-    # scanparams.set_epsp(True)
-    # scanparams.set_ipsp(True)
-    scanparams.set_lognormal(False)
+    # scanparams.set_lognormal(False)
     if run.wr['enabled']:
         scanparams.net_dict['rec_dev'].append('weight_recorder')
 
@@ -148,11 +146,9 @@ if __name__ == "__main__":
         print('No scanning input; do single simulation')
         # handle data path and copy files
         # single_path = sys.argv[1]
-        single_path = os.path.join(cwd, 'data')
+        single_path = os.path.join(cwd, 'data/')
         os.system('mkdir -p ' + single_path)
-        os.system('cp run_network.py ' + single_path)
-        os.system('cp config.yml ' + single_path)
-        os.system('cp -r microcircuit/ ' + single_path)
+        os.system('cp -r *.py *.yml microcircuit/ ' + single_path)
         # create pickle file
         pickle_path = os.path.join(single_path, 'para_dict.pickle')
         scanparams.save_pickle(pickle_path)
@@ -206,7 +202,7 @@ if __name__ == "__main__":
         if len(run.thalamus['th_start']) > 0:
             if run.do_response:
                 analysis.response(spikes, run.thalamus_start, run.thalamus['th_start'],
-                    window=run.thalamus_ana_win, bw=1., ptitle='STPs', figsize=(8,5),
+                    window=run.thalamus_ana_win, bw=1., ptitle='no STPs', figsize=(8,5),
                     ylims=(-0.04, 0.35))
             if run.do_selectivity:
                 analysis.selectivity(spikes, para_dict['stim_dict']['th_start'], duration=run.thalamus['duration'], raw=True)

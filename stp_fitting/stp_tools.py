@@ -1,6 +1,10 @@
-import numpy as np
+import os
+import json
+import pickle
 import string
+import numpy as np
 import pandas as pd
+
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 20.0
@@ -72,3 +76,15 @@ def colormap(prefix, name, data, xs, ys, zs, v_range, xlbl='x', ylbl='y', cmap='
     fig.savefig(plot_name)
     plt.close()
     return plot_name
+
+def print_pickle(pk_path):
+    with open(pk_path, 'rb') as h:
+        pk_dict = pickle.load(h)
+        print(pk_path + ':')
+        print(json.dumps(pk_dict, indent=4, sort_keys=True))
+
+if __name__ == '__main__':
+    pickle_paths = [f for f in os.listdir() if f.endswith('.pickle')]
+    pickle_paths.sort()
+    for pk_path in pickle_paths:
+        print_pickle(pk_path)

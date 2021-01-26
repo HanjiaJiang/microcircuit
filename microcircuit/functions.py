@@ -59,7 +59,7 @@ def assign_syn(source_name, target_name, w, w_sd, delay, delay_sd, network):
            }
     else:
         weight_dict = {
-            'distribution': 'normal', 'mu': w, 'sigma': w_sd
+            'distribution': 'normal_clipped', 'mu': w, 'sigma': w_sd
         }
     delay_dict = {
             'distribution': 'normal_clipped',

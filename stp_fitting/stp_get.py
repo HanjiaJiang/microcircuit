@@ -1,5 +1,5 @@
 '''
-get exp data to be fitted and dump to pickle
+get exp data from .json to be fitted and dump to .pickle
 '''
 import sys
 import json

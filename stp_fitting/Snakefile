@@ -12,6 +12,7 @@ rule all:
         'stp_fitted.pickle'
     shell:
         '''
+        # save each connection's fitting result to a common .pickle
         python -W ignore stp_save.py
         mv stp:*.csv stp:*.png stp-results/
         mv stp:*.pickle prog.*.txt stp-data/
@@ -25,6 +26,7 @@ rule get:
     shell:
         '''
         mkdir -p stp-data/ stp-results/
+        # get exp data from .json to be fitted and dump to .pickle
         python -W ignore stp_get.py {input} {output}
         '''
 
@@ -35,6 +37,7 @@ rule run:
         'stp-data/done_{a}'
     shell:
         '''
+        # the fitting
         python -W ignore stp_fitting.py {input} {Us} {Fs} {Ds} {n_bestpoints}
         > {output}
         '''

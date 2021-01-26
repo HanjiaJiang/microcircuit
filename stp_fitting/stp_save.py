@@ -1,5 +1,5 @@
 '''
-save each fitting result to a common pickle file
+save each connection's fitting result to a common .pickle
 '''
 import os
 import pickle
@@ -11,8 +11,10 @@ if __name__ == '__main__':
             with open(f, 'rb') as p:
                 # the individual stp fitting result
                 tmp_dict = pickle.load(p)
+                # replace names like L4-Exc to L4_Exc; to be improved
                 pre_subtype = tmp_dict['pre_subtype'].replace('-', '_')
                 post_subtype = tmp_dict['post_subtype'].replace('-', '_')
+                # collect
                 syn_dict = tmp_dict['syn_dict']
                 if pre_subtype not in stp_dicts.keys():
                     stp_dicts[pre_subtype] = {}

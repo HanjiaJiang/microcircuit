@@ -1,5 +1,5 @@
 '''
-the fitting loop is here
+the fitting
 '''
 import os
 import sys

@@ -28,6 +28,7 @@ class ScanData:
             self.figsize = (len(plotvars)*3, 12)
 
     def set_params(self, mark, star_loc):
+        self.interpolate = True
         self.layer_labels = ['L2/3', 'L4', 'L5', 'L6']
         self.mtxs, self.fits, self.rmse, self.rmse_n = {}, {}, {}, {}
         # ground state criteria (Maksimov et al., 2018)
@@ -187,7 +188,8 @@ class ScanData:
                 print(self.rmse[k1][k2])
                 print(self.rmse_n[k1][k2])
 
-    def make_plots(self, afx=None, plotvars=None):
+    def make_plots(self, afx=None, plotvars=None, interpolate=True):
+        self.interpolate = interpolate
         self.set_plotvars(plotvars)
         # plot
         for zb in self.zb_lvls:
@@ -325,7 +327,13 @@ class ScanData:
         # set plotting variables
         fig, axs = plt.subplots(4, len(self.plotvars), figsize=self.figsize, sharey=True)
         xs, ys = np.array(self.x_lvls), np.array(self.y_lvls)
-        extent1 = [xs[0], xs[-1], ys[0], ys[-1]]
+        extent = [xs[0], xs[-1], ys[0], ys[-1]]
+        if self.interpolate is False:
+            dx, dy = xs[1] - xs[0], ys[1] - ys[0]
+            extent[0] -= dx/2
+            extent[1] += dx/2
+            extent[2] -= dy/2
+            extent[3] += dy/2
         plt.setp(axs, xticks=xs[::2], yticks=ys[::2])
         xlbl, ylbl = self.dims['x'], self.dims['y']
         ylbl = ylbl.replace('bg', r'$r_{bg}$')
@@ -343,7 +351,10 @@ class ScanData:
             for r in range(4):
                 ax = axs[r, c]
                 # plot interpolated data (y, x)
-                data = self.interpol(self.mtxs[str(zb)][str(za)][plotvar][r].T)
+                if self.interpolate:
+                    data = self.interpol(self.mtxs[str(zb)][str(za)][plotvar][r].T)
+                else:
+                    data = self.mtxs[str(zb)][str(za)][plotvar][r].T
                 if plotvar == r'$r_{VIP}$' and r > 0:
                     ax.axis('off')
                     data = np.full(data.shape, np.nan)
@@ -354,17 +365,16 @@ class ScanData:
                 # simple grid (for colorbar)
                 im = ax.imshow(data, interpolation='none',
                     cmap=self.cmaps[plotvar],
-                    origin='lower', extent=extent1,
+                    origin='lower', extent=extent,
                     vmin=vmin, vmax=vmax, zorder=1)
                 im.cmap.set_over('midnightblue')
                 if plotvar in ['corr', 'CV(ISI)']:
-                    self.contour_ai(ax, data, extent1, plotvar, vmin, vmax)
+                    self.contour_ai(ax, data, extent, plotvar, vmin, vmax)
 
                 # single- & triple-fit (not interpolated)
                 if c == 0:
                     fits, tri_fits, all_fits = self.get_multifit(za, zb, plotvar, r)
                     self.plot_fitpoint(ax, tri_fits, all_fits)
-                    # self.plot_fitpatch(ax, fits, tri_fits, extent2)
 
                 # RMSE
                 if self.mark:
@@ -389,7 +399,7 @@ class ScanData:
                 if isinstance(self.star_loc, list):
                     if c==0:
                         ax.scatter(self.star_loc[0], self.star_loc[1],
-                        s=150, marker='*', facecolor='none', edgecolor='k', zorder=8)
+                        color='red', s=8, marker='o', zorder=8)
 
                 # many settings
                 ax.set_xlim(self.xybounds[0], self.xybounds[1])
@@ -428,6 +438,6 @@ if __name__ == '__main__':
     dims = sys.argv[1:5]
     scandata = ScanData(inputs, dims=dims, xybounds=[3.8, 10.2, 3.8, 7.2])
     # scandata = ScanData(inputs, dims=dims, star_loc=[8., 4.5], xybounds=[3.8, 10.2, 3.8, 7.2])
-    scandata.make_plots(afx='all')
-    scandata.make_plots(afx='012', plotvars=[0, 1, 2])
-    scandata.make_plots(afx='0345', plotvars=[0, 3, 4, 5])
+    scandata.make_plots(afx='all', interpolate=False)
+    scandata.make_plots(afx='012', plotvars=[0, 1, 2], interpolate=False)
+    scandata.make_plots(afx='0345', plotvars=[0, 3, 4, 5], interpolate=False)

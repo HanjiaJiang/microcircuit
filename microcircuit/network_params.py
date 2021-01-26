@@ -86,10 +86,6 @@ net_dict = {
     # 190717: round up to fit 8 clusters
     'N_full': np.array(
         [1691, 88, 72, 90, 1656, 85, 48, 1095, 109, 105, 1288, 56, 67]), # mouse column (fairly distribution among 3 classes)
-        # [1691, 136, 47, 64, 1656, 89, 44, 1095, 114, 100, 1288, 67, 56]), # mouse column (VIP summed across all layers)
-        # [1688, 136, 48, 48, 1656, 88, 48, 1096, 112, 104, 1288, 64, 56]), # mouse column (rounded)
-        # [5096, 520, 64, 88, 4088, 288, 64, 3264, 544, 144, 4424, 288, 104]),  # rat column (rounded)
-    # rat C2 barrel column totally 18976 cells
     # 'N_full': np.array([5099, 521, 67, 88, 4089, 287, 61, 3267, 540, 140, 4425, 290, 102]),
     # Connection probabilities. The first index corresponds to the targets
     # and the second to the sources.
@@ -161,7 +157,7 @@ net_dict = {
         't_ref': 2.0},
     'ctsp_dependent_psc': True,
     # EPSPs: Lefort et al., 2009, Neuron
-    'epsp': {
+    'lyr-spe-epsp': {
         'use': False,
         'means':
             np.array([[0.7001, 0.7800, 0.4673, 0.3783],
@@ -177,7 +173,7 @@ net_dict = {
             # np.full((4, 4), 1.0) # previous
         },
     # IPSPs from different interneurons: Ma et al., 2012, J. Neurosci.
-    'ipsp': {
+    'cell-spe-epsp': {
         'use': False,
         'means':
             np.array([[0.0000, -2.7000, -1.0400, -1.7460],
@@ -210,8 +206,11 @@ net_dict = {
     'k_i2e': 0.2,
     # recurrent weight distribution
     'recurrent_weight_distribution': 'lognormal',
-    # # equalize inhibitory-related connection probabilities
-    # 'eq_inh_conn': False,
+    # in vivo EPSPs
+    'in-vivo-epsp': {
+        'thalamocortical': (0.49, 0.27),    # Bruno, Sakmann, 2006, Cortex is ...
+        'intracortical': (0.43, 0.16),      # Jouhanneau et al., 2015, In vivo ...
+    },
     }
 
 
@@ -230,16 +229,20 @@ def net_update(n_dict):
         ),
         # epsp and ipsp
         'psp_means': get_psp_mtx(
-            n_dict['epsp']['means'],
-            n_dict['ipsp']['means'],
-            n_dict['epsp']['use'],
-            n_dict['ipsp']['use'],
-            n_dict['g']),
+            n_dict['lyr-spe-epsp']['means'],
+            n_dict['cell-spe-epsp']['means'],
+            n_dict['lyr-spe-epsp']['use'],
+            n_dict['cell-spe-epsp']['use'],
+            g=n_dict['g']),
+            # psp_mean=.43,
+            # psp_rel_sd=.16),
         'psp_stds': get_psp_mtx(
-            n_dict['epsp']['stds'],
-            n_dict['ipsp']['stds'],
-            n_dict['epsp']['use'],
-            n_dict['ipsp']['use'])
+            n_dict['lyr-spe-epsp']['stds'],
+            n_dict['cell-spe-epsp']['stds'],
+            n_dict['lyr-spe-epsp']['use'],
+            n_dict['cell-spe-epsp']['use']),
+            # psp_mean=.43,
+            # psp_rel_sd=.16),
     }
     n_dict.update(updated_dict)
 

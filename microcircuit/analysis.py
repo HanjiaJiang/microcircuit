@@ -598,7 +598,7 @@ def plot_raster(spikes, begin, end, figsize=(12, 9), fontsize=30.):
     bottom, top = ax.get_ylim()
 
     plt.xlabel('time (ms)', fontsize=fontsize)
-    plt.xticks(np.arange(begin, end + 1.0, (end - begin)/4.0))
+    plt.xticks(np.arange(begin, end + 1.0, (end - begin)/4.0), fontsize=fontsize)
     plt.yticks(
         [L23_label_pos, L4_label_pos, L5_label_pos, L6_label_pos],
         ylabels, rotation=10, fontsize=fontsize
@@ -708,7 +708,9 @@ def fr_plot(spikes):
             rates.append(np.load(fpath))
     # do_boxplot(rates[::-1], spikes.fr_cri_qaurters[::-1], spikes.path, 'fr', spikes.colors[::-1], spikes.subtypes[::-1], 'firing rate (spike/s)', xlims=(-1.0, 60.0))
     do_bars(spikes.fr_result['musig'], np.array(spikes.fr_cri['musig']).T, n_pops,
-        spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s', pvalues=spikes.fr_result['pvalues'])
+        spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s')
+        # do_bars(spikes.fr_result['musig'], np.array(spikes.fr_cri['musig']).T, n_pops,
+        #     spikes.fr_cri['n'], spikes.path, 'fr', spikes.colors, 'spikes/s', pvalues=spikes.fr_result['pvalues'])
     print('fr_plot() running time = {:.3f} s'.format(time.time()-t0))
 
 '''
@@ -981,6 +983,7 @@ def response(spikes, begin, stims, window, bw=1.0, exportplot=False,
             f_cubic = interpolate.interp1d(xs, ys, kind=interpol)
             xs = np.linspace(min(xs), max(xs), len(xs)*5)
             ys = f_cubic(xs)
+            ys[ys<0] = 0
         ax.plot(xs, ys,
             linestyle=linestyles[a],
             linewidth=3,

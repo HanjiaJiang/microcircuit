@@ -4,10 +4,11 @@ import copy
 import json
 import pickle
 import numpy as np
+import microcircuit.functions as func
+import microcircuit.conn as conn
 from microcircuit.network_params import net_dict
 from microcircuit.sim_params import sim_dict
 from microcircuit.stimulus_params import stim_dict
-import microcircuit.functions as func
 from microcircuit.stp.stp_dicts import stps
 np.set_printoptions(suppress=True, precision=4)
 
@@ -122,7 +123,8 @@ class ScanParams:
         self.net_dict['K_ext'] = np.array([exc, pv, som, vip, exc, pv, som, exc, pv, som, exc, pv, som])
 
     def renew_conn(self, fn='0715', extrapolate=True):
-        self.net_dict['conn_probs'] = func.renew_conn(
+        renewconn = conn.RenewConn()
+        self.net_dict['conn_probs'] = renewconn.renew_conn(
             'microcircuit/conn_probs/raw_{}.csv'.format(fn),
             extrapolate=extrapolate)
 

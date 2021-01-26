@@ -289,7 +289,7 @@ class Network:
         # renew_conn(self.net_dict)
         verify_collect('weight_mat=\n{}\n'.format(self.weight_mat), 'lognormal')
         verify_collect('weight_mat_std=\n{}\n'.format(self.weight_mat_std), 'lognormal')
-        eq_inh_conn(self.net_dict['N_full'], self.net_dict['conn_probs'])
+        # eq_inh_conn(self.net_dict['N_full'], self.net_dict['conn_probs'])
         for i, target_pop in enumerate(self.pops):
             for j, source_pop in enumerate(self.pops):
                 p = self.net_dict['conn_probs'][i, j]

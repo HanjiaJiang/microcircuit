@@ -1,0 +1,9 @@
+1: Exc->PV and Exc->SOM: Petersen
+
+2: Exc->PV and Exc->SOM: Kapfer (in use)
+
+3: ?
+
+4: 2 without VIP STPs
+
+5: 4 without Exc STPs

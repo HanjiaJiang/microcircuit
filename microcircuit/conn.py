@@ -3,6 +3,7 @@ import numpy as np
 from scipy import integrate
 from multiprocessing import Process
 from multiprocessing import Manager
+import microcircuit.raw_data as raw
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 
 class RenewConn:
@@ -161,3 +162,12 @@ class RenewConn:
 
     def integrand_vol(self, r1, r2, phi, z1, z2, phi_max):
         return 2 * r1 * r2 * (phi_max - phi)
+
+    # connectivity integration
+    def renew_conn(self, exp_csv, extrapolate):
+        exp=np.loadtxt(exp_csv, delimiter=',')
+        conn_probs = self.conn_barrel_integrate(
+            raw.mouse_dict, raw.bbp, exp, raw.allen, extrapolate=extrapolate)
+        np.savetxt(exp_csv.replace('raw', 'conn'), conn_probs, fmt='%.4f', delimiter=',')
+        print('conn. map renewed =\n{}'.format(conn_probs))
+        return conn_probs
