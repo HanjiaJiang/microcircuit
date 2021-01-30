@@ -85,10 +85,10 @@ class RunNetwork:
 if __name__ == "__main__":
     # initiate with running and model settings
     run = RunNetwork(run_sim=True, run_analysis=True, stp=2,
-                    do_ai=True, do_response=True, indgs=[750, 1500, 500, 1250])
+                    do_ai=True, do_response=True, indgs=[750, 1500, 500, 1000])
 
     # ai segments
-    run.set_ai(n=1, start=2000., length=5000.)
+    run.set_ai(n=1, start=2000., length=2000.)
 
     # set thalamic input
     # Bruno, Simons, 2002: 1.4 spikes/20-ms deflection
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     run.set_raster_plot(center=None, half=None)
 
     # initiate ScanParams
-    scanparams = create.ScanParams(indgs=run.indgs, conn='0715', stp=run.stp, g=-8., bg=4.5)
+    scanparams = create.ScanParams(indgs=run.indgs, conn='0715', stp=run.stp, g=-8., bg=4.)
     # scanparams.renew_conn(extrapolate=False)
     # scanparams.set_lognormal(False)
     if run.wr['enabled']:

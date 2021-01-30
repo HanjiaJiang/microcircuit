@@ -66,19 +66,7 @@ class Network:
         self.weight_mat = get_weight_mtx(self.net_dict)
         self.weight_mat_std = self.net_dict['psp_stds']
         self.dc_extra = self.net_dict['dc_extra']
-        # if self.net_dict['poisson_input']:
-        #     self.DC_amp_e = np.zeros(len(self.net_dict['populations']))
-        # else:
-        #     if nest.Rank() == 0:
-        #         print(
-        #             '''
-        #             no poisson input provided
-        #             calculating dc input to compensate
-        #             '''
-        #             )
-        #     self.DC_amp_e = compute_DC(self.net_dict, self.w_ext)
-
-
+        ctsp = self.net_dict['ctsp'][self.net_dict['ctsp']['source']]
         # Create cortical populations.
         self.pops = []
         if os.path.isfile(os.path.join(self.data_path, 'population_GIDs.dat')):
@@ -90,8 +78,9 @@ class Network:
             population = nest.Create(
                 self.net_dict['neuron_model'], int(self.nr_neurons[i])
                 )
-            E_L, V_th, C_m, tau_m, V_reset = assign_ctsp(pop, self.net_dict)
-            # print('self.dc_extra[i] = {}'.format(self.dc_extra[i]))
+            E_L, V_reset, V_th = ctsp['E_L'][i], ctsp['V_reset'][i], ctsp['V_th'][i]
+            C_m, tau_m = ctsp['C_m'][i], ctsp['tau_m'][i]
+            # print('{} ctsp: {}, {}, {}, {}, {}'.format(pop, E_L, V_th, C_m, tau_m, V_reset))
             nest.SetStatus(
                 population, {
                     'tau_syn_ex': self.net_dict['neuron_params']['tau_syn_ex'],
@@ -100,7 +89,7 @@ class Network:
                     'V_th': V_th,
                     'C_m': C_m,
                     'tau_m': tau_m,
-                    'V_reset': self.net_dict['neuron_params']['V_reset']['default'],
+                    'V_reset': V_reset,
                     't_ref': self.net_dict['neuron_params']['t_ref'],
                     'I_e': self.dc_extra[i]
                     # 'I_e': self.DC_amp_e[i]
@@ -252,7 +241,7 @@ class Network:
             duration = self.stim_dict['perturbs']['duration']
             perturbs_type = self.stim_dict['perturbs']['type']
             generator_type = '{}_generator'.format(perturbs_type)
-            cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
+            ctsp = self.net_dict['ctsp'][self.net_dict['ctsp']['source']]
             for i, level in enumerate(self.stim_dict['perturbs']['levels']):
                 print('perturbs starts = {}'.format(self.stim_dict['perturbs']['starts'][str(level)]))
                 if level <= 0:
@@ -272,13 +261,10 @@ class Network:
                     self.perturbs.append(gen)
                     for k in self.stim_dict['perturbs']['targets']:
                         if perturbs_type == 'poisson':
-                            cell_type = cell_types[k]
                             w = calc_psc(self.net_dict['PSP_e'],
-                                self.net_dict['neuron_params']['C_m'][cell_type],
-                                self.net_dict['neuron_params']['tau_m'][cell_type],
+                                ctsp['C_m'][k], ctsp['tau_m'][k],
                                 self.net_dict['neuron_params']['tau_syn_ex'])
                             nest.Connect(gen, self.pops[k], syn_spec={'weight': w})
-                            # print('k, cell_type, w = {}, {}, {}'.format(k, cell_type, w))
                         else:
                             nest.Connect(gen, self.pops[k])
 
@@ -322,9 +308,9 @@ class Network:
 
     def connect_poisson(self):
         """ Connects the Poisson generators to the microcircuit."""
-        cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
         self.bg_parrots = []
         copysynapse = 'static_synapse_wr_bg'
+        ctsp = self.net_dict['ctsp'][self.net_dict['ctsp']['source']]
         if 'weight_recorder' in self.net_dict['rec_dev']:
             if copysynapse not in self.copysynapses:
                 print('copysynapse = {}'.format(copysynapse))
@@ -335,13 +321,8 @@ class Network:
             print('Poisson background input is connected')
         for i, target_pop in enumerate(self.pops):
             conn_dict_poisson = {'rule': 'all_to_all'}
-            if self.net_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
-                cell_type = cell_types[i]
-            else:
-                cell_type = 'default'
             w = calc_psc(self.net_dict['PSP_e'],
-                self.net_dict['neuron_params']['C_m'][cell_type],
-                self.net_dict['neuron_params']['tau_m'][cell_type],
+                ctsp['C_m'][i], ctsp['tau_m'][i],
                 self.net_dict['neuron_params']['tau_syn_ex'])
             # syn_dict_poisson = {
             #     'model': 'static_synapse',
@@ -378,19 +359,14 @@ class Network:
 
     def connect_thalamus(self):
         """ Connects the thalamic population to the microcircuit."""
-        cell_types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
         psp = self.stim_dict['PSP_th']
+        ctsp = self.net_dict['ctsp'][self.net_dict['ctsp']['source']]
         if nest.Rank() == 0:
             print('Thalamus connection established')
         for i, target_pop in enumerate(self.pops):
             if self.stim_dict['conn_probs_th'][i] == 0.0:
                 continue
-            if self.net_dict['ctsp'] and self.net_dict['ctsp_dependent_psc']:
-                cell_type = cell_types[i]
-            else:
-                cell_type = 'default'
-            C_m = self.net_dict['neuron_params']['C_m'][cell_type]
-            tau_m = self.net_dict['neuron_params']['tau_m'][cell_type]
+            C_m, tau_m = ctsp['C_m'][i], ctsp['tau_m'][i]
             tau_syn = self.net_dict['neuron_params']['tau_syn_ex']
             if isinstance(psp, np.ndarray):
                 mu = calc_psc(psp[i], C_m, tau_m, tau_syn)

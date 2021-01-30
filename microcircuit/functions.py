@@ -351,26 +351,6 @@ def connect_recurrent(source_name,
         )
     return total_conn_nr
 
-# assign ctsp
-def assign_ctsp(pop, net_dict):
-    E_L = net_dict['neuron_params']['E_L']['default']
-    V_th = net_dict['neuron_params']['V_th']['default']
-    C_m = net_dict['neuron_params']['C_m']['default']
-    tau_m = net_dict['neuron_params']['tau_m']['default']
-    V_reset = net_dict['neuron_params']['V_reset']['default']
-    if net_dict['ctsp'] is True:
-        for celltype in ['Exc', 'PV', 'SOM', 'VIP']:
-            if celltype in pop:
-                E_L = net_dict['neuron_params']['E_L'][celltype]
-                V_th = net_dict['neuron_params']['V_th'][celltype]
-                C_m = net_dict['neuron_params']['C_m'][celltype]
-                tau_m = net_dict['neuron_params']['tau_m'][celltype]
-                V_reset = net_dict['neuron_params']['V_reset'][celltype]
-                break
-    # print('pop={}, E_L={}, V_th={}, C_m={}, tau_m={}'.format(pop, E_L, V_th, C_m, tau_m))
-    return E_L, V_th, C_m, tau_m, V_reset
-
-
 # calculate celltype-specific psc
 def calc_psc(psp_val, C_m, tau_m, tau_syn):
     PSC_e_over_PSP_e = (((C_m) ** (-1) * tau_m * tau_syn / (
@@ -382,38 +362,20 @@ def calc_psc(psp_val, C_m, tau_m, tau_syn):
     return PSC_e
 
 
-# get psc from single psp
-def get_weight(psp_val, net_dict):
-    C_m = net_dict['neuron_params']['C_m']['default']
-    tau_m = net_dict['neuron_params']['tau_m']['default']
-    tau_syn_ex = net_dict['neuron_params']['tau_syn_ex']
-    return calc_psc(psp_val, C_m, tau_m, tau_syn_ex)
-
-
 # get the psc matrix
-def get_weight_mtx(net_dict):
+def get_weight_mtx(net_dict, lyr_spe=False):
     np.set_printoptions(precision=2, linewidth=500, suppress=True)
-    lyrs = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
-    types = ['Exc', 'PV', 'SOM', 'VIP', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM', 'Exc', 'PV', 'SOM']
-    pscs = np.zeros((len(types), len(types)))
-    taus = np.zeros(pscs.shape)
-    verify_collect('psps=\n{}\n'.format(net_dict['psp_means']), 'psc')
-    for i, trg_type in enumerate(types):    # post
-        for j, src_type in enumerate(types):    # pre
+    ctsp = net_dict['ctsp']
+    ctsp_scr = ctsp['source']
+    mtx_shape = (len(net_dict['populations']), len(net_dict['populations']))
+    pscs, taus = np.zeros(mtx_shape), np.zeros(mtx_shape)
+    for i, trg in enumerate(net_dict['populations']):    # post
+        for j, src in enumerate(net_dict['populations']):    # pre
             psp = net_dict['psp_means'][i, j]
-            tau_syn = net_dict['neuron_params']['tau_syn_ex']
-            # for inhibitory connections
-            if src_type != 'Exc':
-                tau_syn = net_dict['neuron_params']['tau_syn_in']
-            taus[i, j] = tau_syn
-            if net_dict['ctsp'] and net_dict['ctsp_dependent_psc']:
-                type = trg_type
-            else:
-                type = 'default'
-            pscs[i, j] = calc_psc(psp,
-                net_dict['neuron_params']['C_m'][type],
-                net_dict['neuron_params']['tau_m'][type],
-                tau_syn)
+            tau_syn = net_dict['neuron_params']['tau_syn_ex'] if 'Exc' in src else net_dict['neuron_params']['tau_syn_in']
+            pscs[i, j] = calc_psc(psp, ctsp[ctsp_scr]['C_m'][i], ctsp[ctsp_scr]['tau_m'][i], tau_syn)
+            taus[i, j] = tau_syn    # verify
+    verify_collect('psps=\n{}\n'.format(net_dict['psp_means']), 'psc')
     verify_collect('pscs=\n{}\n'.format(pscs), 'psc')
     verify_collect('taus=\n{}\n'.format(taus), 'psc')
     return pscs

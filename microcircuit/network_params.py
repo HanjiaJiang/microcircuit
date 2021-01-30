@@ -130,23 +130,48 @@ net_dict = {
     # inhibitory connections (in relative units).
     'rel_std_delay': 0.5,
     # Parameters of the neurons.
-    # 190701 cell-type specific parameters
+    'ctsp': {
+        'source': 'neske-lyr',
+        'default': {
+            'tau_m': 10.0, 'C_m': 200.0, 'E_L': -67.0, 'V_reset': -67.0, 'V_th': -40.0,
+        },
+        'neske-lyr':{
+            'tau_m': [10.5, 3.1, 11.8, 10.9, 10.5, 3.1, 11.8, 12.1, 4.01, 11.7, 12.1, 4.01, 11.7],
+            'C_m': [229.8, 93.9, 123.3, 86.5, 229.8, 93.9, 123.3, 269.2, 81.0, 146.8, 269.2, 81.0, 146.8],
+            'E_L': [-67.4, -66.4, -59.9, -65.7, -67.4, -66.4, -59.9, -63.2, -67.1, -63.2, -63.2, -67.1, -63.2],
+            'V_reset': [-67.4, -66.4, -59.9, -65.7, -67.4, -66.4, -59.9, -63.2, -67.1, -63.2, -63.2, -67.1, -63.2],
+            'V_th': [-41.5, -41.6, -41.8, -43.7, -41.5, -41.6, -41.8, -45.2, -42.3, -48.1, -45.2, -42.3, -48.1],
+        },
+        'neske-avg':{
+            'tau_m': [11.1, 3.6, 11.8, 10.9, 11.1, 3.6, 11.8, 11.1, 3.6, 11.8, 11.1, 3.6, 11.8],
+            'C_m': [240.2, 85.5, 133.4, 86.5, 240.2, 85.5, 133.4, 240.2, 85.5, 133.4, 240.2, 85.5, 133.4],
+            'E_L': [-65.9, -66.8, -61.5, -65.7, -65.9, -66.8, -61.5, -65.9, -66.8, -61.5, -65.9, -66.8, -61.5],
+            'V_reset': [-65.9, -66.8, -61.5, -65.7, -65.9, -66.8, -61.5, -65.9, -66.8, -61.5, -65.9, -66.8, -61.5],
+            'V_th': [-42.8, -42.0, -44.8, -43.7, -42.8, -42.0, -44.8, -42.8, -42.0, -44.8, -42.8, -42.0, -44.8],
+        },
+        'neske-old':{
+            'tau_m': [13.0, 3.6, 11.8, 10.9, 13.0, 3.6, 11.8, 13.0, 3.6, 11.8, 13.0, 3.6, 11.8],
+            'C_m': [322.0, 86.2, 134.0, 86.5, 322.0, 86.2, 134.0, 322.0, 86.2, 134.0, 322.0, 86.2, 134.0],
+            'E_L': [-63.3, -66.8, -61.6, -65.7, -63.3, -66.8, -61.6, -63.3, -66.8, -61.6, -63.3, -66.8, -61.6],
+            'V_reset': [-63.3, -66.8, -61.6, -65.7, -63.3, -66.8, -61.6, -63.3, -66.8, -61.6, -63.3, -66.8, -61.6],
+            'V_th': [-45.6, -42.0, -45.0, -43.7, -45.6, -42.0, -45.0, -45.6, -42.0, -45.0, -45.6, -42.0, -45.0],
+        }
+    },
     'neuron_params': {
         # Membrane potential average for the neurons (in mV).
         'V0_mean': -62.0, #-58.0,
         # Standard deviation of the average membrane potential (in mV).
         'V0_sd': 5.0, #10.0,
         # Reset membrane potential of the neurons (in mV).
-        'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7}, # Neske, Patrick, Connors, 2015 (in vitro)
+        'E_L': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7},
         # Threshold potential of the neurons (in mV).
-        # 'V_th': {'default': -40.0, 'Exc': -41.0, 'PV': -40.5, 'SOM': -40.3, 'VIP': -41.2}, # Gentet, Petersen, 2012 (in vivo)
-        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.9, 'SOM': -45.0, 'VIP': -43.7}, # Neske, Patrick, Connors, 2015 (in vitro)
+        'V_th': {'default': -40.0, 'Exc': -45.6, 'PV': -42.0, 'SOM': -45.0, 'VIP': -43.7},
         # Membrane potential after a spike (in mV).
         'V_reset': {'default': -67.0, 'Exc': -63.3, 'PV': -66.8, 'SOM': -61.6, 'VIP': -65.7},
         # Membrane capacitance (in pF).
-        'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5}, # Neske, Patrick, Connors, 2015 (in vitro)
+        'C_m': {'default': 200.0, 'Exc': 322.0, 'PV': 86.2, 'SOM': 134.0, 'VIP': 86.5},
         # Membrane time constant (in ms).
-        'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9}, # Neske, Patrick, Connors, 2015 (in vitro)
+        'tau_m': {'default': 10.0, 'Exc': 13.0, 'PV': 3.6, 'SOM': 11.8, 'VIP': 10.9},
         # Time constant of postsynaptic excitatory currents (in ms).
         'tau_syn_ex': 2.0, #2.1, # Allen Institue,
         # Time constant of postsynaptic inhibitory currents (in ms).
@@ -155,7 +180,6 @@ net_dict = {
         'tau_syn_E': 0.5,   # not using
         # Refractory period of the neurons after a spike (in ms).
         't_ref': 2.0},
-    'ctsp_dependent_psc': True,
     # EPSPs: Lefort et al., 2009, Neuron
     'lyr-spe-epsp': {
         'use': False,
@@ -192,8 +216,6 @@ net_dict = {
     'dc_extra': np.zeros(13).astype(float),
     # max firing rate
     'fmax': False,
-    # cell-type specific parameters
-    'ctsp': True,
     # STP
     'stp_dict': {},
     # selectivity
